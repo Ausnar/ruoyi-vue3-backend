@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeExtinguisherMapper">
+    
+    <resultMap type="FeExtinguisher" id="FeExtinguisherResult">
+        <result property="extinguisherId"    column="extinguisher_id"    />
+        <result property="labelCode"    column="label_code"    />
+        <result property="specification"    column="specification"    />
+        <result property="sensorId"    column="sensor_id"    />
+        <result property="sensorCode"    column="sensor_code"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="deptName"    column="dept_name"    />
+        <result property="productName"    column="product_name"    />
+        <result property="manufacturer"    column="manufacturer"    />
+        <result property="serviceProvider"    column="service_provider"    />
+        <result property="productionDate"    column="production_date"    />
+        <result property="inspectionDate"    column="inspection_date"    />
+        <result property="expiryDate"    column="expiry_date"    />
+        <result property="scrapDate"    column="scrap_date"    />
+        <result property="firePointId"    column="fire_point_id"    />
+        <result property="installLocation"    column="install_location"    />
+        <result property="qrCode"    column="qr_code"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectFeExtinguisherVo">
+        select e.extinguisher_id, e.label_code, e.specification, e.sensor_id, e.sensor_code, e.dept_id, d.dept_name, e.product_name, e.manufacturer, e.service_provider, e.production_date, e.inspection_date, e.expiry_date, e.scrap_date, e.fire_point_id, e.install_location, e.qr_code, e.status, e.create_by, e.create_time, e.update_by, e.update_time, e.remark, e.del_flag
+        from fe_extinguisher e
+        left join sys_dept d on e.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectFeExtinguisherList" parameterType="FeExtinguisher" resultMap="FeExtinguisherResult">
+        <include refid="selectFeExtinguisherVo"/>
+        <where>  
+            <if test="labelCode != null  and labelCode != ''"> and label_code = #{labelCode}</if>
+            <if test="specification != null  and specification != ''"> and specification = #{specification}</if>
+            <if test="sensorId != null "> and sensor_id = #{sensorId}</if>
+            <if test="sensorCode != null  and sensorCode != ''"> and sensor_code = #{sensorCode}</if>
+            <if test="deptId != null "> and dept_id = #{deptId}</if>
+            <if test="productName != null  and productName != ''"> and product_name like concat('%', #{productName}, '%')</if>
+            <if test="manufacturer != null  and manufacturer != ''"> and manufacturer = #{manufacturer}</if>
+            <if test="serviceProvider != null  and serviceProvider != ''"> and service_provider = #{serviceProvider}</if>
+            <if test="productionDate != null "> and production_date = #{productionDate}</if>
+            <if test="inspectionDate != null "> and inspection_date = #{inspectionDate}</if>
+            <if test="expiryDate != null "> and expiry_date = #{expiryDate}</if>
+            <if test="scrapDate != null "> and scrap_date = #{scrapDate}</if>
+            <if test="firePointId != null "> and fire_point_id = #{firePointId}</if>
+            <if test="installLocation != null  and installLocation != ''"> and install_location = #{installLocation}</if>
+            <if test="qrCode != null  and qrCode != ''"> and qr_code = #{qrCode}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectFeExtinguisherByExtinguisherId" parameterType="Long" resultMap="FeExtinguisherResult">
+        <include refid="selectFeExtinguisherVo"/>
+        where extinguisher_id = #{extinguisherId}
+    </select>
+
+    <insert id="insertFeExtinguisher" parameterType="FeExtinguisher" useGeneratedKeys="true" keyProperty="extinguisherId">
+        insert into fe_extinguisher
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="labelCode != null and labelCode != ''">label_code,</if>
+            <if test="specification != null">specification,</if>
+            <if test="sensorId != null">sensor_id,</if>
+            <if test="sensorCode != null">sensor_code,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="productName != null">product_name,</if>
+            <if test="manufacturer != null">manufacturer,</if>
+            <if test="serviceProvider != null">service_provider,</if>
+            <if test="productionDate != null">production_date,</if>
+            <if test="inspectionDate != null">inspection_date,</if>
+            <if test="expiryDate != null">expiry_date,</if>
+            <if test="scrapDate != null">scrap_date,</if>
+            <if test="firePointId != null">fire_point_id,</if>
+            <if test="installLocation != null">install_location,</if>
+            <if test="qrCode != null">qr_code,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="labelCode != null and labelCode != ''">#{labelCode},</if>
+            <if test="specification != null">#{specification},</if>
+            <if test="sensorId != null">#{sensorId},</if>
+            <if test="sensorCode != null">#{sensorCode},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="productName != null">#{productName},</if>
+            <if test="manufacturer != null">#{manufacturer},</if>
+            <if test="serviceProvider != null">#{serviceProvider},</if>
+            <if test="productionDate != null">#{productionDate},</if>
+            <if test="inspectionDate != null">#{inspectionDate},</if>
+            <if test="expiryDate != null">#{expiryDate},</if>
+            <if test="scrapDate != null">#{scrapDate},</if>
+            <if test="firePointId != null">#{firePointId},</if>
+            <if test="installLocation != null">#{installLocation},</if>
+            <if test="qrCode != null">#{qrCode},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateFeExtinguisher" parameterType="FeExtinguisher">
+        update fe_extinguisher
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="labelCode != null and labelCode != ''">label_code = #{labelCode},</if>
+            <if test="specification != null">specification = #{specification},</if>
+            <if test="sensorId != null">sensor_id = #{sensorId},</if>
+            <if test="sensorCode != null">sensor_code = #{sensorCode},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="productName != null">product_name = #{productName},</if>
+            <if test="manufacturer != null">manufacturer = #{manufacturer},</if>
+            <if test="serviceProvider != null">service_provider = #{serviceProvider},</if>
+            <if test="productionDate != null">production_date = #{productionDate},</if>
+            <if test="inspectionDate != null">inspection_date = #{inspectionDate},</if>
+            <if test="expiryDate != null">expiry_date = #{expiryDate},</if>
+            <if test="scrapDate != null">scrap_date = #{scrapDate},</if>
+            <if test="firePointId != null">fire_point_id = #{firePointId},</if>
+            <if test="installLocation != null">install_location = #{installLocation},</if>
+            <if test="qrCode != null">qr_code = #{qrCode},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where extinguisher_id = #{extinguisherId}
+    </update>
+
+    <delete id="deleteFeExtinguisherByExtinguisherId" parameterType="Long">
+        delete from fe_extinguisher where extinguisher_id = #{extinguisherId}
+    </delete>
+
+    <delete id="deleteFeExtinguisherByExtinguisherIds" parameterType="String">
+        delete from fe_extinguisher where extinguisher_id in 
+        <foreach item="extinguisherId" collection="array" open="(" separator="," close=")">
+            #{extinguisherId}
+        </foreach>
+    </delete>
+</mapper>

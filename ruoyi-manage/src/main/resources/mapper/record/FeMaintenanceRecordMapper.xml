@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.record.mapper.FeMaintenanceRecordMapper">
+    
+    <resultMap type="FeMaintenanceRecord" id="FeMaintenanceRecordResult">
+        <result property="recordId"    column="record_id"    />
+        <result property="extinguisherId"    column="extinguisher_id"    />
+        <result property="labelCode"    column="label_code"    />
+        <result property="maintenanceType"    column="maintenance_type"    />
+        <result property="maintenanceDate"    column="maintenance_date"    />
+        <result property="maintenancePerson"    column="maintenance_person"    />
+        <result property="maintenanceCompany"    column="maintenance_company"    />
+        <result property="maintenanceResult"    column="maintenance_result"    />
+        <result property="problemDesc"    column="problem_desc"    />
+        <result property="solution"    column="solution"    />
+        <result property="cost"    column="cost"    />
+        <result property="nextMaintenanceDate"    column="next_maintenance_date"    />
+        <result property="attachments"    column="attachments"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectFeMaintenanceRecordVo">
+        select record_id, extinguisher_id, label_code, maintenance_type, maintenance_date, maintenance_person, maintenance_company, maintenance_result, problem_desc, solution, cost, next_maintenance_date, attachments, create_by, create_time, update_by, update_time, remark from fe_maintenance_record
+    </sql>
+
+    <select id="selectFeMaintenanceRecordList" parameterType="FeMaintenanceRecord" resultMap="FeMaintenanceRecordResult">
+        <include refid="selectFeMaintenanceRecordVo"/>
+        <where>  
+            <if test="extinguisherId != null "> and extinguisher_id = #{extinguisherId}</if>
+            <if test="labelCode != null  and labelCode != ''"> and label_code = #{labelCode}</if>
+            <if test="maintenanceType != null  and maintenanceType != ''"> and maintenance_type = #{maintenanceType}</if>
+            <if test="maintenanceDate != null "> and maintenance_date = #{maintenanceDate}</if>
+            <if test="maintenancePerson != null  and maintenancePerson != ''"> and maintenance_person = #{maintenancePerson}</if>
+            <if test="maintenanceCompany != null  and maintenanceCompany != ''"> and maintenance_company = #{maintenanceCompany}</if>
+            <if test="maintenanceResult != null  and maintenanceResult != ''"> and maintenance_result = #{maintenanceResult}</if>
+            <if test="problemDesc != null  and problemDesc != ''"> and problem_desc = #{problemDesc}</if>
+            <if test="solution != null  and solution != ''"> and solution = #{solution}</if>
+            <if test="cost != null "> and cost = #{cost}</if>
+            <if test="nextMaintenanceDate != null "> and next_maintenance_date = #{nextMaintenanceDate}</if>
+            <if test="attachments != null  and attachments != ''"> and attachments = #{attachments}</if>
+        </where>
+    </select>
+    
+    <select id="selectFeMaintenanceRecordByRecordId" parameterType="Long" resultMap="FeMaintenanceRecordResult">
+        <include refid="selectFeMaintenanceRecordVo"/>
+        where record_id = #{recordId}
+    </select>
+
+    <insert id="insertFeMaintenanceRecord" parameterType="FeMaintenanceRecord" useGeneratedKeys="true" keyProperty="recordId">
+        insert into fe_maintenance_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="extinguisherId != null">extinguisher_id,</if>
+            <if test="labelCode != null and labelCode != ''">label_code,</if>
+            <if test="maintenanceType != null">maintenance_type,</if>
+            <if test="maintenanceDate != null">maintenance_date,</if>
+            <if test="maintenancePerson != null">maintenance_person,</if>
+            <if test="maintenanceCompany != null">maintenance_company,</if>
+            <if test="maintenanceResult != null">maintenance_result,</if>
+            <if test="problemDesc != null">problem_desc,</if>
+            <if test="solution != null">solution,</if>
+            <if test="cost != null">cost,</if>
+            <if test="nextMaintenanceDate != null">next_maintenance_date,</if>
+            <if test="attachments != null">attachments,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="extinguisherId != null">#{extinguisherId},</if>
+            <if test="labelCode != null and labelCode != ''">#{labelCode},</if>
+            <if test="maintenanceType != null">#{maintenanceType},</if>
+            <if test="maintenanceDate != null">#{maintenanceDate},</if>
+            <if test="maintenancePerson != null">#{maintenancePerson},</if>
+            <if test="maintenanceCompany != null">#{maintenanceCompany},</if>
+            <if test="maintenanceResult != null">#{maintenanceResult},</if>
+            <if test="problemDesc != null">#{problemDesc},</if>
+            <if test="solution != null">#{solution},</if>
+            <if test="cost != null">#{cost},</if>
+            <if test="nextMaintenanceDate != null">#{nextMaintenanceDate},</if>
+            <if test="attachments != null">#{attachments},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateFeMaintenanceRecord" parameterType="FeMaintenanceRecord">
+        update fe_maintenance_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="extinguisherId != null">extinguisher_id = #{extinguisherId},</if>
+            <if test="labelCode != null and labelCode != ''">label_code = #{labelCode},</if>
+            <if test="maintenanceType != null">maintenance_type = #{maintenanceType},</if>
+            <if test="maintenanceDate != null">maintenance_date = #{maintenanceDate},</if>
+            <if test="maintenancePerson != null">maintenance_person = #{maintenancePerson},</if>
+            <if test="maintenanceCompany != null">maintenance_company = #{maintenanceCompany},</if>
+            <if test="maintenanceResult != null">maintenance_result = #{maintenanceResult},</if>
+            <if test="problemDesc != null">problem_desc = #{problemDesc},</if>
+            <if test="solution != null">solution = #{solution},</if>
+            <if test="cost != null">cost = #{cost},</if>
+            <if test="nextMaintenanceDate != null">next_maintenance_date = #{nextMaintenanceDate},</if>
+            <if test="attachments != null">attachments = #{attachments},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where record_id = #{recordId}
+    </update>
+
+    <delete id="deleteFeMaintenanceRecordByRecordId" parameterType="Long">
+        delete from fe_maintenance_record where record_id = #{recordId}
+    </delete>
+
+    <delete id="deleteFeMaintenanceRecordByRecordIds" parameterType="String">
+        delete from fe_maintenance_record where record_id in 
+        <foreach item="recordId" collection="array" open="(" separator="," close=")">
+            #{recordId}
+        </foreach>
+    </delete>
+</mapper>

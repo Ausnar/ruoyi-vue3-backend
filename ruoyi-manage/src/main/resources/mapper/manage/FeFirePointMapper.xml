@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeFirePointMapper">
+    
+    <resultMap type="FeFirePoint" id="FeFirePointResult">
+        <result property="firePointId"    column="fire_point_id"    />
+        <result property="firePointCode"    column="fire_point_code"    />
+        <result property="firePointName"    column="fire_point_name"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="deptName"    column="dept_name"    />
+        <result property="pointType"    column="point_type"    />
+        <result property="location"    column="location"    />
+        <result property="floor"    column="floor"    />
+        <result property="building"    column="building"    />
+        <result property="longitude"    column="longitude"    />
+        <result property="latitude"    column="latitude"    />
+        <result property="contactPerson"    column="contact_person"    />
+        <result property="contactPhone"    column="contact_phone"    />
+        <result property="qrCode"    column="qr_code"    />
+        <result property="sortOrder"    column="sort_order"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectFeFirePointVo">
+        select f.fire_point_id, f.fire_point_code, f.fire_point_name, f.dept_id, d.dept_name, f.point_type, f.location, f.floor, f.building, f.longitude, f.latitude, f.contact_person, f.contact_phone, f.qr_code, f.sort_order, f.status, f.create_by, f.create_time, f.update_by, f.update_time, f.remark, f.del_flag
+        from fe_fire_point f
+        left join sys_dept d on f.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectFeFirePointList" parameterType="FeFirePoint" resultMap="FeFirePointResult">
+        <include refid="selectFeFirePointVo"/>
+        <where>  
+            <if test="firePointCode != null  and firePointCode != ''"> and fire_point_code = #{firePointCode}</if>
+            <if test="firePointName != null  and firePointName != ''"> and fire_point_name like concat('%', #{firePointName}, '%')</if>
+            <if test="deptId != null "> and dept_id = #{deptId}</if>
+            <if test="pointType != null  and pointType != ''"> and point_type = #{pointType}</if>
+            <if test="location != null  and location != ''"> and location = #{location}</if>
+            <if test="floor != null  and floor != ''"> and floor = #{floor}</if>
+            <if test="building != null  and building != ''"> and building = #{building}</if>
+            <if test="longitude != null "> and longitude = #{longitude}</if>
+            <if test="latitude != null "> and latitude = #{latitude}</if>
+            <if test="contactPerson != null  and contactPerson != ''"> and contact_person = #{contactPerson}</if>
+            <if test="contactPhone != null  and contactPhone != ''"> and contact_phone = #{contactPhone}</if>
+            <if test="qrCode != null  and qrCode != ''"> and qr_code = #{qrCode}</if>
+            <if test="sortOrder != null "> and sort_order = #{sortOrder}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectFeFirePointByFirePointId" parameterType="Long" resultMap="FeFirePointResult">
+        <include refid="selectFeFirePointVo"/>
+        where fire_point_id = #{firePointId}
+    </select>
+
+    <insert id="insertFeFirePoint" parameterType="FeFirePoint" useGeneratedKeys="true" keyProperty="firePointId">
+        insert into fe_fire_point
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="firePointCode != null and firePointCode != ''">fire_point_code,</if>
+            <if test="firePointName != null">fire_point_name,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="pointType != null">point_type,</if>
+            <if test="location != null">location,</if>
+            <if test="floor != null">floor,</if>
+            <if test="building != null">building,</if>
+            <if test="longitude != null">longitude,</if>
+            <if test="latitude != null">latitude,</if>
+            <if test="contactPerson != null">contact_person,</if>
+            <if test="contactPhone != null">contact_phone,</if>
+            <if test="qrCode != null">qr_code,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="firePointCode != null and firePointCode != ''">#{firePointCode},</if>
+            <if test="firePointName != null">#{firePointName},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="pointType != null">#{pointType},</if>
+            <if test="location != null">#{location},</if>
+            <if test="floor != null">#{floor},</if>
+            <if test="building != null">#{building},</if>
+            <if test="longitude != null">#{longitude},</if>
+            <if test="latitude != null">#{latitude},</if>
+            <if test="contactPerson != null">#{contactPerson},</if>
+            <if test="contactPhone != null">#{contactPhone},</if>
+            <if test="qrCode != null">#{qrCode},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateFeFirePoint" parameterType="FeFirePoint">
+        update fe_fire_point
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="firePointCode != null and firePointCode != ''">fire_point_code = #{firePointCode},</if>
+            <if test="firePointName != null">fire_point_name = #{firePointName},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="pointType != null">point_type = #{pointType},</if>
+            <if test="location != null">location = #{location},</if>
+            <if test="floor != null">floor = #{floor},</if>
+            <if test="building != null">building = #{building},</if>
+            <if test="longitude != null">longitude = #{longitude},</if>
+            <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="contactPerson != null">contact_person = #{contactPerson},</if>
+            <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="qrCode != null">qr_code = #{qrCode},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where fire_point_id = #{firePointId}
+    </update>
+
+    <delete id="deleteFeFirePointByFirePointId" parameterType="Long">
+        delete from fe_fire_point where fire_point_id = #{firePointId}
+    </delete>
+
+    <delete id="deleteFeFirePointByFirePointIds" parameterType="String">
+        delete from fe_fire_point where fire_point_id in 
+        <foreach item="firePointId" collection="array" open="(" separator="," close=")">
+            #{firePointId}
+        </foreach>
+    </delete>
+</mapper>

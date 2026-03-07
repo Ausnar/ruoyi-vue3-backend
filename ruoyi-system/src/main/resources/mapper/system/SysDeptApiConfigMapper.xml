@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.SysDeptApiConfigMapper">
+    
+    <resultMap type="SysDeptApiConfig" id="SysDeptApiConfigResult">
+        <result property="configId"    column="config_id"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="contractNo"    column="contract_no"    />
+        <result property="apiId"    column="api_id"    />
+        <result property="apiKey"    column="api_key"    />
+        <result property="status"    column="status"    />
+        <result property="expireDate"    column="expire_date"    />
+        <result property="remark"    column="remark"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <!-- 关联查询字段 -->
+        <result property="deptName"    column="dept_name"    />
+        <result property="deptLeader"    column="dept_leader"    />
+        <result property="deptPhone"    column="dept_phone"    />
+        <result property="expireStatus"    column="expire_status"    />
+        <result property="daysRemaining"    column="days_remaining"    />
+    </resultMap>
+
+    <sql id="selectSysDeptApiConfigVo">
+        select 
+            c.config_id, c.dept_id, c.contract_no, c.api_id, c.api_key, 
+            c.status, c.expire_date, c.remark, 
+            c.create_by, c.create_time, c.update_by, c.update_time,
+            d.dept_name,
+            d.leader as dept_leader,
+            d.phone as dept_phone,
+            CASE 
+                WHEN c.expire_date IS NULL THEN NULL
+                WHEN c.expire_date &lt; CURDATE() THEN '已过期'
+                WHEN c.expire_date &lt;= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN '即将过期'
+                ELSE '正常'
+            END as expire_status,
+            DATEDIFF(c.expire_date, CURDATE()) as days_remaining
+        from sys_dept_api_config c
+        left join sys_dept d on c.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectSysDeptApiConfigList" parameterType="SysDeptApiConfig" resultMap="SysDeptApiConfigResult">
+        <include refid="selectSysDeptApiConfigVo"/>
+        <where>
+            <if test="deptId != null "> and c.dept_id = #{deptId}</if>
+            <if test="contractNo != null  and contractNo != ''"> and c.contract_no like concat('%', #{contractNo}, '%')</if>
+            <if test="status != null  and status != ''"> and c.status = #{status}</if>
+            <if test="expireDate != null "> and c.expire_date = #{expireDate}</if>
+        </where>
+        order by c.dept_id
+    </select>
+    
+    <select id="selectSysDeptApiConfigByConfigId" parameterType="Long" resultMap="SysDeptApiConfigResult">
+        <include refid="selectSysDeptApiConfigVo"/>
+        where c.config_id = #{configId}
+    </select>
+    
+    <select id="checkDeptUnique" resultType="int">
+        select count(*) from sys_dept_api_config
+        where dept_id = #{deptId}
+        <if test="configId != null">
+            and config_id != #{configId}
+        </if>
+    </select>
+
+    <insert id="insertSysDeptApiConfig" parameterType="SysDeptApiConfig" useGeneratedKeys="true" keyProperty="configId">
+        insert into sys_dept_api_config
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="deptId != null">dept_id,</if>
+            <if test="contractNo != null">contract_no,</if>
+            <if test="apiId != null">api_id,</if>
+            <if test="apiKey != null">api_key,</if>
+            <if test="status != null">status,</if>
+            <if test="expireDate != null">expire_date,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="deptId != null">#{deptId},</if>
+            <if test="contractNo != null">#{contractNo},</if>
+            <if test="apiId != null">#{apiId},</if>
+            <if test="apiKey != null">#{apiKey},</if>
+            <if test="status != null">#{status},</if>
+            <if test="expireDate != null">#{expireDate},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateSysDeptApiConfig" parameterType="SysDeptApiConfig">
+        update sys_dept_api_config
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="contractNo != null">contract_no = #{contractNo},</if>
+            <if test="apiId != null">api_id = #{apiId},</if>
+            <if test="apiKey != null">api_key = #{apiKey},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="expireDate != null">expire_date = #{expireDate},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where config_id = #{configId}
+    </update>
+
+    <delete id="deleteSysDeptApiConfigByConfigId" parameterType="Long">
+        delete from sys_dept_api_config where config_id = #{configId}
+    </delete>
+
+    <delete id="deleteSysDeptApiConfigByConfigIds" parameterType="String">
+        delete from sys_dept_api_config where config_id in 
+        <foreach item="configId" collection="array" open="(" separator="," close=")">
+            #{configId}
+        </foreach>
+    </delete>
+</mapper>

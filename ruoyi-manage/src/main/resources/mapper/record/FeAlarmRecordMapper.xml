@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.record.mapper.FeAlarmRecordMapper">
+    
+    <resultMap type="FeAlarmRecord" id="FeAlarmRecordResult">
+        <result property="alarmId"    column="alarm_id"    />
+        <result property="alarmNo"    column="alarm_no"    />
+        <result property="sensorId"    column="sensor_id"    />
+        <result property="extinguisherId"    column="extinguisher_id"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="alarmType"    column="alarm_type"    />
+        <result property="alarmLevel"    column="alarm_level"    />
+        <result property="alarmContent"    column="alarm_content"    />
+        <result property="alarmValue"    column="alarm_value"    />
+        <result property="alarmTime"    column="alarm_time"    />
+        <result property="handleStatus"    column="handle_status"    />
+        <result property="handlePerson"    column="handle_person"    />
+        <result property="handleTime"    column="handle_time"    />
+        <result property="handleResult"    column="handle_result"    />
+        <result property="isNotified"    column="is_notified"    />
+        <result property="notifyTime"    column="notify_time"    />
+        <result property="createTime"    column="create_time"    />
+    </resultMap>
+
+    <sql id="selectFeAlarmRecordVo">
+        select alarm_id, alarm_no, sensor_id, extinguisher_id, dept_id, alarm_type, alarm_level, alarm_content, alarm_value, alarm_time, handle_status, handle_person, handle_time, handle_result, is_notified, notify_time, create_time from fe_alarm_record
+    </sql>
+
+    <select id="selectFeAlarmRecordList" parameterType="FeAlarmRecord" resultMap="FeAlarmRecordResult">
+        <include refid="selectFeAlarmRecordVo"/>
+        <where>  
+            <if test="alarmNo != null  and alarmNo != ''"> and alarm_no = #{alarmNo}</if>
+            <if test="sensorId != null "> and sensor_id = #{sensorId}</if>
+            <if test="extinguisherId != null "> and extinguisher_id = #{extinguisherId}</if>
+            <if test="deptId != null "> and dept_id = #{deptId}</if>
+            <if test="alarmType != null  and alarmType != ''"> and alarm_type = #{alarmType}</if>
+            <if test="alarmLevel != null  and alarmLevel != ''"> and alarm_level = #{alarmLevel}</if>
+            <if test="alarmContent != null  and alarmContent != ''"> and alarm_content = #{alarmContent}</if>
+            <if test="alarmValue != null  and alarmValue != ''"> and alarm_value = #{alarmValue}</if>
+            <if test="alarmTime != null "> and alarm_time = #{alarmTime}</if>
+            <if test="handleStatus != null  and handleStatus != ''"> and handle_status = #{handleStatus}</if>
+            <if test="handleResult != null  and handleResult != ''"> and handle_result = #{handleResult}</if>
+            <if test="isNotified != null  and isNotified != ''"> and is_notified = #{isNotified}</if>
+            <if test="notifyTime != null "> and notify_time = #{notifyTime}</if>
+        </where>
+    </select>
+    
+    <select id="selectFeAlarmRecordByAlarmId" parameterType="Long" resultMap="FeAlarmRecordResult">
+        <include refid="selectFeAlarmRecordVo"/>
+        where alarm_id = #{alarmId}
+    </select>
+
+    <insert id="insertFeAlarmRecord" parameterType="FeAlarmRecord" useGeneratedKeys="true" keyProperty="alarmId">
+        insert into fe_alarm_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="alarmNo != null">alarm_no,</if>
+            <if test="sensorId != null">sensor_id,</if>
+            <if test="extinguisherId != null">extinguisher_id,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="alarmType != null and alarmType != ''">alarm_type,</if>
+            <if test="alarmLevel != null">alarm_level,</if>
+            <if test="alarmContent != null">alarm_content,</if>
+            <if test="alarmValue != null">alarm_value,</if>
+            <if test="alarmTime != null">alarm_time,</if>
+            <if test="handleStatus != null">handle_status,</if>
+            <if test="handlePerson != null">handle_person,</if>
+            <if test="handleTime != null">handle_time,</if>
+            <if test="handleResult != null">handle_result,</if>
+            <if test="isNotified != null">is_notified,</if>
+            <if test="notifyTime != null">notify_time,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="alarmNo != null">#{alarmNo},</if>
+            <if test="sensorId != null">#{sensorId},</if>
+            <if test="extinguisherId != null">#{extinguisherId},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="alarmType != null and alarmType != ''">#{alarmType},</if>
+            <if test="alarmLevel != null">#{alarmLevel},</if>
+            <if test="alarmContent != null">#{alarmContent},</if>
+            <if test="alarmValue != null">#{alarmValue},</if>
+            <if test="alarmTime != null">#{alarmTime},</if>
+            <if test="handleStatus != null">#{handleStatus},</if>
+            <if test="handlePerson != null">#{handlePerson},</if>
+            <if test="handleTime != null">#{handleTime},</if>
+            <if test="handleResult != null">#{handleResult},</if>
+            <if test="isNotified != null">#{isNotified},</if>
+            <if test="notifyTime != null">#{notifyTime},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateFeAlarmRecord" parameterType="FeAlarmRecord">
+        update fe_alarm_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="alarmNo != null">alarm_no = #{alarmNo},</if>
+            <if test="sensorId != null">sensor_id = #{sensorId},</if>
+            <if test="extinguisherId != null">extinguisher_id = #{extinguisherId},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="alarmType != null and alarmType != ''">alarm_type = #{alarmType},</if>
+            <if test="alarmLevel != null">alarm_level = #{alarmLevel},</if>
+            <if test="alarmContent != null">alarm_content = #{alarmContent},</if>
+            <if test="alarmValue != null">alarm_value = #{alarmValue},</if>
+            <if test="alarmTime != null">alarm_time = #{alarmTime},</if>
+            <if test="handleStatus != null">handle_status = #{handleStatus},</if>
+            <if test="handlePerson != null">handle_person = #{handlePerson},</if>
+            <if test="handleTime != null">handle_time = #{handleTime},</if>
+            <if test="handleResult != null">handle_result = #{handleResult},</if>
+            <if test="isNotified != null">is_notified = #{isNotified},</if>
+            <if test="notifyTime != null">notify_time = #{notifyTime},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where alarm_id = #{alarmId}
+    </update>
+
+    <delete id="deleteFeAlarmRecordByAlarmId" parameterType="Long">
+        delete from fe_alarm_record where alarm_id = #{alarmId}
+    </delete>
+
+    <delete id="deleteFeAlarmRecordByAlarmIds" parameterType="String">
+        delete from fe_alarm_record where alarm_id in 
+        <foreach item="alarmId" collection="array" open="(" separator="," close=")">
+            #{alarmId}
+        </foreach>
+    </delete>
+</mapper>

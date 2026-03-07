@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeSensorMapper">
+    
+    <resultMap type="FeSensor" id="FeSensorResult">
+        <result property="sensorId"    column="sensor_id"    />
+        <result property="sensorCode"    column="sensor_code"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="deptName"    column="dept_name"    />
+        <result property="gatewayCode"    column="gateway_code"    />
+        <result property="pressure"    column="pressure"    />
+        <result property="temperature"    column="temperature"    />
+        <result property="batteryLevel"    column="battery_level"    />
+        <result property="lastOnlineTime"    column="last_online_time"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectFeSensorVo">
+        select s.sensor_id, s.sensor_code, s.dept_id, d.dept_name, s.gateway_code, s.pressure, s.temperature, s.battery_level, s.last_online_time, s.status, s.create_by, s.create_time, s.update_by, s.update_time, s.remark, s.del_flag
+        from fe_sensor s
+        left join sys_dept d on s.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectFeSensorList" parameterType="FeSensor" resultMap="FeSensorResult">
+        <include refid="selectFeSensorVo"/>
+        <where>  
+            <if test="sensorCode != null  and sensorCode != ''"> and sensor_code = #{sensorCode}</if>
+            <if test="deptId != null "> and dept_id = #{deptId}</if>
+            <if test="gatewayCode != null  and gatewayCode != ''"> and gateway_code = #{gatewayCode}</if>
+            <if test="pressure != null "> and pressure = #{pressure}</if>
+            <if test="temperature != null "> and temperature = #{temperature}</if>
+            <if test="batteryLevel != null "> and battery_level = #{batteryLevel}</if>
+            <if test="lastOnlineTime != null "> and last_online_time = #{lastOnlineTime}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectFeSensorBySensorId" parameterType="Long" resultMap="FeSensorResult">
+        <include refid="selectFeSensorVo"/>
+        where sensor_id = #{sensorId}
+    </select>
+
+    <insert id="insertFeSensor" parameterType="FeSensor" useGeneratedKeys="true" keyProperty="sensorId">
+        insert into fe_sensor
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="sensorCode != null and sensorCode != ''">sensor_code,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="gatewayCode != null">gateway_code,</if>
+            <if test="pressure != null">pressure,</if>
+            <if test="temperature != null">temperature,</if>
+            <if test="batteryLevel != null">battery_level,</if>
+            <if test="lastOnlineTime != null">last_online_time,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="sensorCode != null and sensorCode != ''">#{sensorCode},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="gatewayCode != null">#{gatewayCode},</if>
+            <if test="pressure != null">#{pressure},</if>
+            <if test="temperature != null">#{temperature},</if>
+            <if test="batteryLevel != null">#{batteryLevel},</if>
+            <if test="lastOnlineTime != null">#{lastOnlineTime},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateFeSensor" parameterType="FeSensor">
+        update fe_sensor
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="sensorCode != null and sensorCode != ''">sensor_code = #{sensorCode},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="gatewayCode != null">gateway_code = #{gatewayCode},</if>
+            <if test="pressure != null">pressure = #{pressure},</if>
+            <if test="temperature != null">temperature = #{temperature},</if>
+            <if test="batteryLevel != null">battery_level = #{batteryLevel},</if>
+            <if test="lastOnlineTime != null">last_online_time = #{lastOnlineTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where sensor_id = #{sensorId}
+    </update>
+
+    <delete id="deleteFeSensorBySensorId" parameterType="Long">
+        delete from fe_sensor where sensor_id = #{sensorId}
+    </delete>
+
+    <delete id="deleteFeSensorBySensorIds" parameterType="String">
+        delete from fe_sensor where sensor_id in 
+        <foreach item="sensorId" collection="array" open="(" separator="," close=")">
+            #{sensorId}
+        </foreach>
+    </delete>
+</mapper>
