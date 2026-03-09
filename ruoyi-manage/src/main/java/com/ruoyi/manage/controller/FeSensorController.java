@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.controller.BaseController;
@@ -18,6 +19,8 @@ import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.manage.domain.FeSensor;
 import com.ruoyi.manage.service.IFeSensorService;
+import com.ruoyi.manage.domain.FeSensorHistory;
+import com.ruoyi.manage.service.IFeSensorHistoryService;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
 
@@ -33,6 +36,9 @@ public class FeSensorController extends BaseController
 {
     @Autowired
     private IFeSensorService feSensorService;
+
+    @Autowired
+    private IFeSensorHistoryService feSensorHistoryService;
 
     /**
      * 查询传感器管理列表
@@ -100,5 +106,43 @@ public class FeSensorController extends BaseController
     public AjaxResult remove(@PathVariable Long[] sensorIds)
     {
         return toAjax(feSensorService.deleteFeSensorBySensorIds(sensorIds));
+    }
+
+    /**
+     * 查询传感器历史数据列表
+     */
+    @PreAuthorize("@ss.hasPermi('manage:sensor:query')")
+    @GetMapping("/history/list")
+    public TableDataInfo listHistory(FeSensorHistory feSensorHistory)
+    {
+        startPage();
+        List<FeSensorHistory> list = feSensorHistoryService.selectFeSensorHistoryList(feSensorHistory);
+        return getDataTable(list);
+    }
+
+    /**
+     * 获取传感器历史数据（用于图表）
+     */
+    @PreAuthorize("@ss.hasPermi('manage:sensor:query')")
+    @GetMapping("/history/chart")
+    public AjaxResult getChartData(@RequestParam("sensorId") Long sensorId,
+                                   @RequestParam(value = "startTime", required = false) String startTime,
+                                   @RequestParam(value = "endTime", required = false) String endTime)
+    {
+        List<FeSensorHistory> list = feSensorHistoryService.selectFeSensorHistoryBySensorId(sensorId, startTime, endTime);
+        return success(list);
+    }
+
+    /**
+     * 导出传感器历史数据
+     */
+    @PreAuthorize("@ss.hasPermi('manage:sensor:export')")
+    @Log(title = "传感器历史数据", businessType = BusinessType.EXPORT)
+    @PostMapping("/history/export")
+    public void exportHistory(HttpServletResponse response, FeSensorHistory feSensorHistory)
+    {
+        List<FeSensorHistory> list = feSensorHistoryService.selectFeSensorHistoryList(feSensorHistory);
+        ExcelUtil<FeSensorHistory> util = new ExcelUtil<FeSensorHistory>(FeSensorHistory.class);
+        util.exportExcel(response, list, "传感器历史数据");
     }
 }

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeSensorHistoryMapper">
+
+    <resultMap type="FeSensorHistory" id="FeSensorHistoryResult">
+        <result property="historyId"    column="history_id"    />
+        <result property="sensorId"    column="sensor_id"    />
+        <result property="sensorCode"    column="sensor_code"    />
+        <result property="pressure"    column="pressure"    />
+        <result property="temperature"    column="temperature"    />
+        <result property="batteryLevel"    column="battery_level"    />
+        <result property="signalStrength"    column="signal_strength"    />
+        <result property="status"    column="status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createTime"    column="create_time"    />
+    </resultMap>
+
+    <sql id="selectFeSensorHistoryVo">
+        select history_id, sensor_id, sensor_code, pressure, temperature, battery_level, signal_strength, status, create_time
+        from fe_sensor_history
+    </sql>
+
+    <select id="selectFeSensorHistoryList" parameterType="FeSensorHistory" resultMap="FeSensorHistoryResult">
+        <include refid="selectFeSensorHistoryVo"/>
+        <where>
+            <if test="sensorId != null "> and sensor_id = #{sensorId}</if>
+            <if test="sensorCode != null  and sensorCode != ''"> and sensor_code = #{sensorCode}</if>
+            <if test="startTime != null and startTime != ''"> and create_time &gt;= #{startTime}</if>
+            <if test="endTime != null and endTime != ''"> and create_time &lt;= #{endTime}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectFeSensorHistoryByHistoryId" parameterType="Long" resultMap="FeSensorHistoryResult">
+        <include refid="selectFeSensorHistoryVo"/>
+        where history_id = #{historyId}
+    </select>
+
+    <select id="selectFeSensorHistoryBySensorId" resultMap="FeSensorHistoryResult">
+        <include refid="selectFeSensorHistoryVo"/>
+        where sensor_id = #{sensorId}
+        <if test="startTime != null and startTime != ''">
+            and create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            and create_time &lt;= #{endTime}
+        </if>
+        order by create_time asc
+    </select>
+
+    <insert id="insertFeSensorHistory" parameterType="FeSensorHistory" useGeneratedKeys="true" keyProperty="historyId">
+        insert into fe_sensor_history
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="sensorId != null">sensor_id,</if>
+            <if test="sensorCode != null and sensorCode != ''">sensor_code,</if>
+            <if test="pressure != null">pressure,</if>
+            <if test="temperature != null">temperature,</if>
+            <if test="batteryLevel != null">battery_level,</if>
+            <if test="signalStrength != null">signal_strength,</if>
+            <if test="status != null">status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="sensorId != null">#{sensorId},</if>
+            <if test="sensorCode != null and sensorCode != ''">#{sensorCode},</if>
+            <if test="pressure != null">#{pressure},</if>
+            <if test="temperature != null">#{temperature},</if>
+            <if test="batteryLevel != null">#{batteryLevel},</if>
+            <if test="signalStrength != null">#{signalStrength},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <delete id="deleteFeSensorHistoryByHistoryId" parameterType="Long">
+        delete from fe_sensor_history where history_id = #{historyId}
+    </delete>
+
+    <delete id="deleteFeSensorHistoryByHistoryIds" parameterType="String">
+        delete from fe_sensor_history where history_id in
+        <foreach item="historyId" collection="array" open="(" separator="," close=")">
+            #{historyId}
+        </foreach>
+    </delete>
+</mapper>
