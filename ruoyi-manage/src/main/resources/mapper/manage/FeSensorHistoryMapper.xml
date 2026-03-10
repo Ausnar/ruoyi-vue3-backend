@@ -14,7 +14,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="signalStrength"    column="signal_strength"    />
         <result property="status"    column="status"    />
         <result property="createTime"    column="create_time"    />
-        <result property="createTime"    column="create_time"    />
     </resultMap>
 
     <sql id="selectFeSensorHistoryVo">
@@ -61,7 +60,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="signalStrength != null">signal_strength,</if>
             <if test="status != null">status,</if>
             <if test="createTime != null">create_time,</if>
-            <if test="createTime != null">create_time,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="sensorId != null">#{sensorId},</if>
@@ -71,7 +69,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="batteryLevel != null">#{batteryLevel},</if>
             <if test="signalStrength != null">#{signalStrength},</if>
             <if test="status != null">#{status},</if>
-            <if test="createTime != null">#{createTime},</if>
             <if test="createTime != null">#{createTime},</if>
          </trim>
     </insert>

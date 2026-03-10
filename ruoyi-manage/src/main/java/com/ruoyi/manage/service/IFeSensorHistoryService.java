@@ -40,4 +40,9 @@ public interface IFeSensorHistoryService
      * 批量删除传感器历史数据
      */
     public int deleteFeSensorHistoryByHistoryIds(Long[] historyIds);
+
+    /**
+     * 新增历史数据并同步更新传感器最新数据
+     */
+    public int insertFeSensorHistoryAndSync(FeSensorHistory feSensorHistory);
 }

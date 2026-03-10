@@ -3,8 +3,11 @@ package com.ruoyi.manage.service.impl;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.manage.mapper.FeSensorHistoryMapper;
+import com.ruoyi.manage.mapper.FeSensorMapper;
 import com.ruoyi.manage.domain.FeSensorHistory;
+import com.ruoyi.manage.domain.FeSensor;
 import com.ruoyi.manage.service.IFeSensorHistoryService;
 
 /**
@@ -18,6 +21,9 @@ public class FeSensorHistoryServiceImpl implements IFeSensorHistoryService
 {
     @Autowired
     private FeSensorHistoryMapper feSensorHistoryMapper;
+
+    @Autowired
+    private FeSensorMapper feSensorMapper;
 
     /**
      * 查询传感器历史数据
@@ -71,5 +77,30 @@ public class FeSensorHistoryServiceImpl implements IFeSensorHistoryService
     public int deleteFeSensorHistoryByHistoryIds(Long[] historyIds)
     {
         return feSensorHistoryMapper.deleteFeSensorHistoryByHistoryIds(historyIds);
+    }
+
+    /**
+     * 新增历史数据并同步更新传感器最新数据
+     */
+    @Override
+    @Transactional
+    public int insertFeSensorHistoryAndSync(FeSensorHistory feSensorHistory)
+    {
+        // 1. 新增历史数据
+        int result = feSensorHistoryMapper.insertFeSensorHistory(feSensorHistory);
+
+        // 2. 根据传感器编号更新传感器最新数据
+        if (feSensorHistory.getSensorCode() != null) {
+            FeSensor feSensor = new FeSensor();
+            feSensor.setSensorCode(feSensorHistory.getSensorCode());
+            feSensor.setPressure(feSensorHistory.getPressure());
+            feSensor.setTemperature(feSensorHistory.getTemperature());
+            feSensor.setBatteryLevel(feSensorHistory.getBatteryLevel());
+            feSensor.setStatus(feSensorHistory.getStatus());
+            feSensor.setLastOnlineTime(feSensorHistory.getCreateTime());
+            feSensorMapper.updateFeSensorByCode(feSensor);
+        }
+
+        return result;
     }
 }

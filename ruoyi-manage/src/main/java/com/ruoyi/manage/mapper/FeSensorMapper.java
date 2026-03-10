@@ -53,9 +53,17 @@ public interface FeSensorMapper
 
     /**
      * 批量删除传感器管理
-     * 
+     *
      * @param sensorIds 需要删除的数据主键集合
      * @return 结果
      */
     public int deleteFeSensorBySensorIds(Long[] sensorIds);
+
+    /**
+     * 根据传感器编号更新传感器最新数据
+     *
+     * @param feSensor 传感器数据
+     * @return 结果
+     */
+    public int updateFeSensorByCode(FeSensor feSensor);
 }

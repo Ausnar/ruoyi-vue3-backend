@@ -110,9 +110,22 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </delete>
 
     <delete id="deleteFeSensorBySensorIds" parameterType="String">
-        delete from fe_sensor where sensor_id in 
+        delete from fe_sensor where sensor_id in
         <foreach item="sensorId" collection="array" open="(" separator="," close=")">
             #{sensorId}
         </foreach>
     </delete>
+
+    <!-- 根据传感器编号更新传感器最新数据 -->
+    <update id="updateFeSensorByCode" parameterType="FeSensor">
+        update fe_sensor
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="pressure != null">pressure = #{pressure},</if>
+            <if test="temperature != null">temperature = #{temperature},</if>
+            <if test="batteryLevel != null">battery_level = #{batteryLevel},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="lastOnlineTime != null">last_online_time = #{lastOnlineTime},</if>
+        </trim>
+        where sensor_code = #{sensorCode}
+    </update>
 </mapper>
