@@ -13,6 +13,12 @@ ruoyi:
   # 验证码类型 math 数字计算 char 字符验证
   captchaType: math
 
+# Coze AI 配置
+coze:
+  apiKey: pat_NhuajOi7Q6FtFI4TfO3cJRb4vBuaRDyH576oNtDG54qFqFqfAHV5Eh7fVakErA9c
+  botId: 7610361495519641615
+  apiUrl: https://api.coze.cn/v3/chat
+
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为8080
