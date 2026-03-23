@@ -46,11 +46,19 @@ public interface SysDeptMapper
 
     /**
      * 根据ID查询所有子部门（正常状态）
-     * 
+     *
      * @param deptId 部门ID
      * @return 子部门数
      */
     public int selectNormalChildrenDeptById(Long deptId);
+
+    /**
+     * 根据父部门ID查询所有子部门ID列表（包含父部门自身）
+     *
+     * @param deptId 父部门ID
+     * @return 子部门ID列表
+     */
+    public List<Long> selectDeptAndChildrenIds(Long deptId);
 
     /**
      * 是否存在子节点

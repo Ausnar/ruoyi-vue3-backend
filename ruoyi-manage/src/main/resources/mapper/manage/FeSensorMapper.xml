@@ -33,7 +33,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectFeSensorVo"/>
         <where>  
             <if test="sensorCode != null  and sensorCode != ''"> and sensor_code = #{sensorCode}</if>
-            <if test="deptId != null "> and dept_id = #{deptId}</if>
+            <if test="deptId != null "> and s.dept_id = #{deptId}</if>
             <if test="gatewayCode != null  and gatewayCode != ''"> and gateway_code = #{gatewayCode}</if>
             <if test="pressure != null "> and pressure = #{pressure}</if>
             <if test="temperature != null "> and temperature = #{temperature}</if>

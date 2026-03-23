@@ -116,9 +116,17 @@ public interface ISysDeptService
 
     /**
      * 删除部门管理信息
-     * 
+     *
      * @param deptId 部门ID
      * @return 结果
      */
     public int deleteDeptById(Long deptId);
+
+    /**
+     * 根据父部门ID查询所有子部门ID列表（包含父部门自身）
+     *
+     * @param deptId 父部门ID
+     * @return 子部门ID列表
+     */
+    public List<Long> selectDeptAndChildrenIds(Long deptId);
 }

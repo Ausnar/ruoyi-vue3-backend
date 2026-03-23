@@ -1,6 +1,7 @@
 package com.ruoyi.system.domain;
 
 import java.util.Date;
+import java.util.List;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -64,6 +65,9 @@ public class SysDeptApiConfig extends BaseEntity
     /** 剩余天数 */
     @Excel(name = "剩余天数")
     private Integer daysRemaining;
+
+    /** 部门ID列表（用于数据权限过滤） */
+    private List<Long> deptIds;
 
     public void setConfigId(Long configId) 
     {
@@ -180,9 +184,19 @@ public class SysDeptApiConfig extends BaseEntity
         this.daysRemaining = daysRemaining;
     }
 
-    public Integer getDaysRemaining() 
+    public Integer getDaysRemaining()
     {
         return daysRemaining;
+    }
+
+    public void setDeptIds(List<Long> deptIds)
+    {
+        this.deptIds = deptIds;
+    }
+
+    public List<Long> getDeptIds()
+    {
+        return deptIds;
     }
 
     @Override

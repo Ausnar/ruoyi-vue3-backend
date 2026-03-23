@@ -40,7 +40,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <where>  
             <if test="firePointCode != null  and firePointCode != ''"> and fire_point_code = #{firePointCode}</if>
             <if test="firePointName != null  and firePointName != ''"> and fire_point_name like concat('%', #{firePointName}, '%')</if>
-            <if test="deptId != null "> and dept_id = #{deptId}</if>
+            <if test="deptId != null "> and f.dept_id = #{deptId}</if>
             <if test="pointType != null  and pointType != ''"> and point_type = #{pointType}</if>
             <if test="location != null  and location != ''"> and location = #{location}</if>
             <if test="floor != null  and floor != ''"> and floor = #{floor}</if>

@@ -48,6 +48,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectSysDeptApiConfigVo"/>
         <where>
             <if test="deptId != null "> and c.dept_id = #{deptId}</if>
+            <if test="deptIds != null and deptIds.size() > 0">
+                and c.dept_id in
+                <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
             <if test="contractNo != null  and contractNo != ''"> and c.contract_no like concat('%', #{contractNo}, '%')</if>
             <if test="status != null  and status != ''"> and c.status = #{status}</if>
             <if test="expireDate != null "> and c.expire_date = #{expireDate}</if>

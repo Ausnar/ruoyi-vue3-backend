@@ -44,7 +44,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="specification != null  and specification != ''"> and specification = #{specification}</if>
             <if test="sensorId != null "> and sensor_id = #{sensorId}</if>
             <if test="sensorCode != null  and sensorCode != ''"> and sensor_code = #{sensorCode}</if>
-            <if test="deptId != null "> and dept_id = #{deptId}</if>
+            <if test="deptId != null "> and e.dept_id = #{deptId}</if>
             <if test="productName != null  and productName != ''"> and product_name like concat('%', #{productName}, '%')</if>
             <if test="manufacturer != null  and manufacturer != ''"> and manufacturer = #{manufacturer}</if>
             <if test="serviceProvider != null  and serviceProvider != ''"> and service_provider = #{serviceProvider}</if>
