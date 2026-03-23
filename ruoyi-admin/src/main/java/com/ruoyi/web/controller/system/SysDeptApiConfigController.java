@@ -102,4 +102,44 @@ public class SysDeptApiConfigController extends BaseController
     {
         return toAjax(sysDeptApiConfigService.deleteSysDeptApiConfigByConfigIds(configIds));
     }
+
+    /**
+     * 合同状态分布统计
+     */
+    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @GetMapping("/statistics/status")
+    public AjaxResult getStatusStatistics()
+    {
+        return success(sysDeptApiConfigService.getStatusStatistics());
+    }
+
+    /**
+     * 合同过期状态分布统计
+     */
+    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @GetMapping("/statistics/expireStatus")
+    public AjaxResult getExpireStatusStatistics()
+    {
+        return success(sysDeptApiConfigService.getExpireStatusStatistics());
+    }
+
+    /**
+     * 合同数量TOP部门统计
+     */
+    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @GetMapping("/statistics/topDept")
+    public AjaxResult getTopDeptStatistics(Integer limit)
+    {
+        return success(sysDeptApiConfigService.getTopDeptStatistics(limit == null ? 10 : limit));
+    }
+
+    /**
+     * 合同到期趋势统计
+     */
+    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @GetMapping("/statistics/expiryTrend")
+    public AjaxResult getExpiryTrendStatistics(Integer months)
+    {
+        return success(sysDeptApiConfigService.getExpiryTrendStatistics(months == null ? 6 : months));
+    }
 }

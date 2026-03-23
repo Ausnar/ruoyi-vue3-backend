@@ -1,6 +1,8 @@
 package com.ruoyi.system.service.impl;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.exception.ServiceException;
@@ -121,7 +123,7 @@ public class SysDeptApiConfigServiceImpl implements ISysDeptApiConfigService
 
     /**
      * 删除部门API配置信息
-     * 
+     *
      * @param configId 配置主键
      * @return 结果
      */
@@ -129,5 +131,62 @@ public class SysDeptApiConfigServiceImpl implements ISysDeptApiConfigService
     public int deleteSysDeptApiConfigByConfigId(Long configId)
     {
         return sysDeptApiConfigMapper.deleteSysDeptApiConfigByConfigId(configId);
+    }
+
+    /**
+     * 获取有权限的部门ID列表
+     */
+    private List<Long> getPermittedDeptIds()
+    {
+        if (SecurityUtils.isAdmin())
+        {
+            return null;
+        }
+        Long deptId = SecurityUtils.getDeptId();
+        if (deptId != null)
+        {
+            return deptService.selectDeptAndChildrenIds(deptId);
+        }
+        return null;
+    }
+
+    /**
+     * 合同状态分布统计
+     */
+    @Override
+    public List<Map<String, Object>> getStatusStatistics()
+    {
+        List<Long> deptIds = getPermittedDeptIds();
+        return sysDeptApiConfigMapper.getStatusStatistics(deptIds);
+    }
+
+    /**
+     * 合同过期状态分布统计
+     */
+    @Override
+    public List<Map<String, Object>> getExpireStatusStatistics()
+    {
+        List<Long> deptIds = getPermittedDeptIds();
+        return sysDeptApiConfigMapper.getExpireStatusStatistics(deptIds);
+    }
+
+    /**
+     * 合同数量TOP部门统计
+     */
+    @Override
+    public List<Map<String, Object>> getTopDeptStatistics(int limit)
+    {
+        List<Long> deptIds = getPermittedDeptIds();
+        return sysDeptApiConfigMapper.getTopDeptStatistics(deptIds, limit);
+    }
+
+    /**
+     * 合同到期趋势统计
+     */
+    @Override
+    public List<Map<String, Object>> getExpiryTrendStatistics(int months)
+    {
+        List<Long> deptIds = getPermittedDeptIds();
+        return sysDeptApiConfigMapper.getExpiryTrendStatistics(deptIds, months);
     }
 }

@@ -125,9 +125,96 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </delete>
 
     <delete id="deleteSysDeptApiConfigByConfigIds" parameterType="String">
-        delete from sys_dept_api_config where config_id in 
+        delete from sys_dept_api_config where config_id in
         <foreach item="configId" collection="array" open="(" separator="," close=")">
             #{configId}
         </foreach>
     </delete>
+
+    <!-- 合同状态分布统计 -->
+    <select id="getStatusStatistics" resultType="map">
+        select
+            c.status as name,
+            count(*) as value
+        from sys_dept_api_config c
+        <where>
+            <if test="deptIds != null and deptIds.size() > 0">
+                and c.dept_id in
+                <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        group by c.status
+    </select>
+
+    <!-- 合同过期状态分布统计 -->
+    <select id="getExpireStatusStatistics" resultType="map">
+        select
+            CASE
+                WHEN c.expire_date IS NULL THEN '未设置'
+                WHEN c.expire_date &lt; CURDATE() THEN '已过期'
+                WHEN c.expire_date &lt;= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN '即将过期'
+                ELSE '正常'
+            END as name,
+            count(*) as value
+        from sys_dept_api_config c
+        <where>
+            <if test="deptIds != null and deptIds.size() > 0">
+                and c.dept_id in
+                <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        group by
+            CASE
+                WHEN c.expire_date IS NULL THEN '未设置'
+                WHEN c.expire_date &lt; CURDATE() THEN '已过期'
+                WHEN c.expire_date &lt;= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN '即将过期'
+                ELSE '正常'
+            END
+    </select>
+
+    <!-- 合同数量TOP部门统计 -->
+    <select id="getTopDeptStatistics" resultType="map">
+        select
+            d.dept_name as name,
+            count(c.config_id) as value
+        from sys_dept d
+        left join sys_dept_api_config c on d.dept_id = c.dept_id
+        <where>
+            d.del_flag = '0'
+            <if test="deptIds != null and deptIds.size() > 0">
+                and d.dept_id in
+                <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        group by d.dept_id, d.dept_name
+        order by value desc
+        limit #{limit}
+    </select>
+
+    <!-- 合同到期趋势统计 -->
+    <select id="getExpiryTrendStatistics" resultType="map">
+        select
+            DATE_FORMAT(c.expire_date, '%Y-%m') as name,
+            count(*) as value
+        from sys_dept_api_config c
+        <where>
+            c.expire_date is not null
+            and c.expire_date &gt;= CURDATE()
+            and c.expire_date &lt;= DATE_ADD(CURDATE(), INTERVAL #{months} MONTH)
+            <if test="deptIds != null and deptIds.size() > 0">
+                and c.dept_id in
+                <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        group by DATE_FORMAT(c.expire_date, '%Y-%m')
+        order by name
+    </select>
 </mapper>

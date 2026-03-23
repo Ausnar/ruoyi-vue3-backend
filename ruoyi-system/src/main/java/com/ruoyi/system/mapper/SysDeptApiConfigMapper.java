@@ -1,20 +1,21 @@
 package com.ruoyi.system.mapper;
 
 import java.util.List;
+import java.util.Map;
 import com.ruoyi.system.domain.SysDeptApiConfig;
 import org.apache.ibatis.annotations.Param;
 
 /**
  * 部门API配置Mapper接口
- * 
+ *
  * @author ruoyi
  * @date 2026-02-25
  */
-public interface SysDeptApiConfigMapper 
+public interface SysDeptApiConfigMapper
 {
     /**
      * 查询部门API配置
-     * 
+     *
      * @param configId 配置主键
      * @return 部门API配置
      */
@@ -22,7 +23,7 @@ public interface SysDeptApiConfigMapper
 
     /**
      * 查询部门API配置列表
-     * 
+     *
      * @param sysDeptApiConfig 部门API配置
      * @return 部门API配置集合
      */
@@ -30,7 +31,7 @@ public interface SysDeptApiConfigMapper
 
     /**
      * 新增部门API配置
-     * 
+     *
      * @param sysDeptApiConfig 部门API配置
      * @return 结果
      */
@@ -38,7 +39,7 @@ public interface SysDeptApiConfigMapper
 
     /**
      * 修改部门API配置
-     * 
+     *
      * @param sysDeptApiConfig 部门API配置
      * @return 结果
      */
@@ -46,7 +47,7 @@ public interface SysDeptApiConfigMapper
 
     /**
      * 删除部门API配置
-     * 
+     *
      * @param configId 配置主键
      * @return 结果
      */
@@ -54,7 +55,7 @@ public interface SysDeptApiConfigMapper
 
     /**
      * 批量删除部门API配置
-     * 
+     *
      * @param configIds 需要删除的数据主键集合
      * @return 结果
      */
@@ -62,10 +63,40 @@ public interface SysDeptApiConfigMapper
 
     /**
      * 检查部门是否已存在配置
-     * 
+     *
      * @param deptId 部门ID
      * @param configId 配置ID（修改时传入，用于排除自己）
      * @return 结果 >0 表示已存在
      */
     public int checkDeptUnique(@Param("deptId") Long deptId, @Param("configId") Long configId);
+
+    /**
+     * 合同状态分布统计
+     * @param deptIds 部门ID列表（用于权限过滤）
+     * @return 状态统计数据
+     */
+    public List<Map<String, Object>> getStatusStatistics(@Param("deptIds") List<Long> deptIds);
+
+    /**
+     * 合同过期状态分布统计
+     * @param deptIds 部门ID列表（用于权限过滤）
+     * @return 过期状态统计数据
+     */
+    public List<Map<String, Object>> getExpireStatusStatistics(@Param("deptIds") List<Long> deptIds);
+
+    /**
+     * 合同数量TOP部门统计
+     * @param deptIds 部门ID列表（用于权限过滤）
+     * @param limit 前N个部门
+     * @return TOP部门数据
+     */
+    public List<Map<String, Object>> getTopDeptStatistics(@Param("deptIds") List<Long> deptIds, @Param("limit") int limit);
+
+    /**
+     * 合同到期趋势统计
+     * @param deptIds 部门ID列表（用于权限过滤）
+     * @param months 统计月数
+     * @return 到期趋势数据
+     */
+    public List<Map<String, Object>> getExpiryTrendStatistics(@Param("deptIds") List<Long> deptIds, @Param("months") int months);
 }
