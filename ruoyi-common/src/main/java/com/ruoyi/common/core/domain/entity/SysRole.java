@@ -4,6 +4,7 @@ import java.util.Set;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import com.ruoyi.common.annotation.Excel;
@@ -84,6 +85,7 @@ public class SysRole extends BaseEntity
         this.roleId = roleId;
     }
 
+    @JsonIgnore
     public boolean isAdmin()
     {
         return isAdmin(this.roleId);
