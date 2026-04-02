@@ -1,0 +1,41 @@
+CREATE TABLE IF NOT EXISTS fe_ai_conversation (
+  conversation_id varchar(64) NOT NULL,
+  user_id bigint(20) NOT NULL,
+  title varchar(200) DEFAULT '',
+  last_message_preview varchar(500) DEFAULT '',
+  message_count int(11) DEFAULT 0,
+  last_chat_id varchar(64) DEFAULT '',
+  status char(1) DEFAULT '0',
+  create_by varchar(64) DEFAULT '',
+  create_time datetime DEFAULT NULL,
+  update_by varchar(64) DEFAULT '',
+  update_time datetime DEFAULT NULL,
+  remark varchar(500) DEFAULT NULL,
+  del_flag char(1) DEFAULT '0',
+  PRIMARY KEY (conversation_id),
+  KEY idx_ai_conversation_user_update (user_id, update_time),
+  KEY idx_ai_conversation_user_del (user_id, del_flag)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS fe_ai_message (
+  message_id bigint(20) NOT NULL AUTO_INCREMENT,
+  conversation_id varchar(64) NOT NULL,
+  user_id bigint(20) NOT NULL,
+  role varchar(20) NOT NULL,
+  content longtext,
+  answer_type varchar(30) DEFAULT '',
+  response_type varchar(30) DEFAULT '',
+  status varchar(20) DEFAULT 'completed',
+  elapsed_ms bigint(20) DEFAULT 0,
+  sort_no int(11) DEFAULT 0,
+  create_by varchar(64) DEFAULT '',
+  create_time datetime DEFAULT NULL,
+  update_by varchar(64) DEFAULT '',
+  update_time datetime DEFAULT NULL,
+  remark varchar(500) DEFAULT NULL,
+  del_flag char(1) DEFAULT '0',
+  PRIMARY KEY (message_id),
+  KEY idx_ai_message_conversation_sort (conversation_id, sort_no),
+  KEY idx_ai_message_user_del (user_id, del_flag),
+  KEY idx_ai_message_conversation_del (conversation_id, del_flag)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

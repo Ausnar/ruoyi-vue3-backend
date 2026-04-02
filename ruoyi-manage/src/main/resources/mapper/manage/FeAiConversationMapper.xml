@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeAiConversationMapper">
+
+    <resultMap type="FeAiConversation" id="FeAiConversationResult">
+        <result property="conversationId" column="conversation_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="lastMessagePreview" column="last_message_preview"/>
+        <result property="messageCount" column="message_count"/>
+        <result property="lastChatId" column="last_chat_id"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectFeAiConversationVo">
+        select conversation_id, user_id, title, last_message_preview, message_count, last_chat_id, status,
+               create_by, create_time, update_by, update_time, remark, del_flag
+        from fe_ai_conversation
+    </sql>
+
+    <select id="selectFeAiConversationByConversationId" resultMap="FeAiConversationResult">
+        <include refid="selectFeAiConversationVo"/>
+        where conversation_id = #{conversationId}
+          and user_id = #{userId}
+          and del_flag = '0'
+    </select>
+
+    <select id="selectFeAiConversationListByUserId" resultMap="FeAiConversationResult">
+        <include refid="selectFeAiConversationVo"/>
+        where user_id = #{userId}
+          and del_flag = '0'
+        order by update_time desc, create_time desc
+    </select>
+
+    <insert id="insertFeAiConversation" parameterType="FeAiConversation">
+        insert into fe_ai_conversation (
+            conversation_id, user_id, title, last_message_preview, message_count, last_chat_id, status,
+            create_by, create_time, update_by, update_time, remark, del_flag
+        ) values (
+            #{conversationId}, #{userId}, #{title}, #{lastMessagePreview}, #{messageCount}, #{lastChatId}, #{status},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, #{remark}, #{delFlag}
+        )
+    </insert>
+
+    <update id="updateFeAiConversation" parameterType="FeAiConversation">
+        update fe_ai_conversation
+        <trim prefix="set" suffixOverrides=",">
+            <if test="title != null">title = #{title},</if>
+            <if test="lastMessagePreview != null">last_message_preview = #{lastMessagePreview},</if>
+            <if test="messageCount != null">message_count = #{messageCount},</if>
+            <if test="lastChatId != null">last_chat_id = #{lastChatId},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where conversation_id = #{conversationId}
+          and user_id = #{userId}
+    </update>
+
+    <update id="deleteFeAiConversationByConversationId">
+        update fe_ai_conversation
+        set del_flag = '2',
+            status = '2',
+            update_by = #{updateBy},
+            update_time = now()
+        where conversation_id = #{conversationId}
+          and user_id = #{userId}
+          and del_flag = '0'
+    </update>
+</mapper>

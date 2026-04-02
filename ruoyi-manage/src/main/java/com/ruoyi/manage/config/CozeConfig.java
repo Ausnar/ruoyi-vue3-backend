@@ -41,7 +41,7 @@ public class CozeConfig
     @PostConstruct
     public void printConfig() {
         log.info("========== Coze 配置加载结果 ==========");
-        log.info("apiKey: [{}]", apiKey);
+        log.info("apiKey已配置: {}", apiKey != null && !apiKey.trim().isEmpty());
         log.info("apiKey长度: {}", apiKey != null ? apiKey.length() : 0);
         log.info("botId: [{}]", botId);
         log.info("apiUrl: [{}]", apiUrl);
