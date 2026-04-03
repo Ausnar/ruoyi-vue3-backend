@@ -1,6 +1,7 @@
 package com.ruoyi.manage.service.impl;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import com.ruoyi.common.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,7 +54,12 @@ public class RobotConversationServiceImpl implements IRobotConversationService
         {
             return Collections.emptyList();
         }
-        return messageMapper.selectFeAiMessageListByConversationId(conversationId, userId);
+        List<FeAiMessage> messages = messageMapper.selectFeAiMessageListByConversationId(conversationId, userId);
+        messages.sort(Comparator
+            .comparingInt((FeAiMessage item) -> item.getSortNo() == null ? Integer.MAX_VALUE : item.getSortNo())
+            .thenComparing(FeAiMessage::getCreateTime, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparingLong(item -> item.getMessageId() == null ? Long.MAX_VALUE : item.getMessageId()));
+        return messages;
     }
 
     @Override
