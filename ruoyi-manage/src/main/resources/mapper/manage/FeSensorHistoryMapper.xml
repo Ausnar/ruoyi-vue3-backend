@@ -1,52 +1,61 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+﻿<?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.manage.mapper.FeSensorHistoryMapper">
 
     <resultMap type="FeSensorHistory" id="FeSensorHistoryResult">
-        <result property="historyId"    column="history_id"    />
-        <result property="sensorId"    column="sensor_id"    />
-        <result property="sensorCode"    column="sensor_code"    />
-        <result property="pressure"    column="pressure"    />
-        <result property="temperature"    column="temperature"    />
-        <result property="batteryLevel"    column="battery_level"    />
-        <result property="signalStrength"    column="signal_strength"    />
-        <result property="status"    column="status"    />
-        <result property="createTime"    column="create_time"    />
+        <result property="historyId" column="history_id" />
+        <result property="sensorId" column="sensor_id" />
+        <result property="sensorCode" column="sensor_code" />
+        <result property="pressure" column="pressure" />
+        <result property="temperature" column="temperature" />
+        <result property="batteryLevel" column="battery_level" />
+        <result property="signalStrength" column="signal_strength" />
+        <result property="status" column="status" />
+        <result property="createTime" column="create_time" />
     </resultMap>
 
     <sql id="selectFeSensorHistoryVo">
-        select history_id, sensor_id, sensor_code, pressure, temperature, battery_level, signal_strength, status, create_time
-        from fe_sensor_history
+        select h.history_id, h.sensor_id, h.sensor_code, h.pressure, h.temperature, h.battery_level, h.signal_strength, h.status, h.create_time
+        from fe_sensor_history h
+        left join fe_sensor s on h.sensor_id = s.sensor_id
     </sql>
 
     <select id="selectFeSensorHistoryList" parameterType="FeSensorHistory" resultMap="FeSensorHistoryResult">
         <include refid="selectFeSensorHistoryVo"/>
         <where>
-            <if test="sensorId != null "> and sensor_id = #{sensorId}</if>
-            <if test="sensorCode != null  and sensorCode != ''"> and sensor_code = #{sensorCode}</if>
-            <if test="startTime != null and startTime != ''"> and create_time &gt;= #{startTime}</if>
-            <if test="endTime != null and endTime != ''"> and create_time &lt;= #{endTime}</if>
+            <if test="sensorId != null"> and h.sensor_id = #{sensorId}</if>
+            <if test="sensorCode != null and sensorCode != ''"> and h.sensor_code = #{sensorCode}</if>
+            <if test="startTime != null and startTime != ''"> and h.create_time &gt;= #{startTime}</if>
+            <if test="endTime != null and endTime != ''"> and h.create_time &lt;= #{endTime}</if>
+            ${params.dataScope}
         </where>
-        order by create_time desc
+        order by h.create_time desc
     </select>
 
     <select id="selectFeSensorHistoryByHistoryId" parameterType="Long" resultMap="FeSensorHistoryResult">
         <include refid="selectFeSensorHistoryVo"/>
-        where history_id = #{historyId}
+        where h.history_id = #{historyId}
     </select>
 
     <select id="selectFeSensorHistoryBySensorId" resultMap="FeSensorHistoryResult">
         <include refid="selectFeSensorHistoryVo"/>
-        where sensor_id = #{sensorId}
+        where h.sensor_id = #{sensorId}
         <if test="startTime != null and startTime != ''">
-            and create_time &gt;= #{startTime}
+            and h.create_time &gt;= #{startTime}
         </if>
         <if test="endTime != null and endTime != ''">
-            and create_time &lt;= #{endTime}
+            and h.create_time &lt;= #{endTime}
         </if>
-        order by create_time asc
+        order by h.create_time asc
+    </select>
+
+    <select id="countBySensorIdAndCreateTime" resultType="int">
+        select count(*)
+        from fe_sensor_history
+        where sensor_id = #{sensorId}
+          and create_time = #{createTime}
     </select>
 
     <insert id="insertFeSensorHistory" parameterType="FeSensorHistory" useGeneratedKeys="true" keyProperty="historyId">

@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeApiConfigCompanyScopeMapper">
+
+    <resultMap id="FeApiConfigCompanyScopeResult" type="FeApiConfigCompanyScope">
+        <result property="scopeId" column="scope_id" />
+        <result property="configId" column="config_id" />
+        <result property="sourceDeptId" column="source_dept_id" />
+        <result property="sourceDeptName" column="source_dept_name" />
+        <result property="externalCompanyId" column="external_company_id" />
+        <result property="externalCompanyName" column="external_company_name" />
+        <result property="firstSeenTime" column="first_seen_time" />
+        <result property="lastSeenTime" column="last_seen_time" />
+        <result property="syncStatus" column="sync_status" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectFeApiConfigCompanyScopeVo">
+        select s.scope_id, s.config_id, s.source_dept_id, d.dept_name as source_dept_name,
+               s.external_company_id, s.external_company_name,
+               s.first_seen_time, s.last_seen_time, s.sync_status,
+               s.remark, s.create_by, s.create_time, s.update_by, s.update_time
+        from fe_api_config_company_scope s
+        left join sys_dept d on s.source_dept_id = d.dept_id
+    </sql>
+
+    <select id="selectByConfigIdAndExternalCompanyId" resultMap="FeApiConfigCompanyScopeResult">
+        <include refid="selectFeApiConfigCompanyScopeVo"/>
+        where s.config_id = #{param1}
+          and s.external_company_id = #{param2}
+        limit 1
+    </select>
+
+    <select id="selectFeApiConfigCompanyScopeList" parameterType="FeApiConfigCompanyScope" resultMap="FeApiConfigCompanyScopeResult">
+        <include refid="selectFeApiConfigCompanyScopeVo"/>
+        <where>
+            <if test="configId != null"> and s.config_id = #{configId}</if>
+            <if test="sourceDeptId != null"> and s.source_dept_id = #{sourceDeptId}</if>
+            <if test="externalCompanyId != null"> and s.external_company_id = #{externalCompanyId}</if>
+            <if test="syncStatus != null and syncStatus != ''"> and s.sync_status = #{syncStatus}</if>
+        </where>
+        order by s.scope_id desc
+    </select>
+
+    <insert id="insertFeApiConfigCompanyScope" parameterType="FeApiConfigCompanyScope" useGeneratedKeys="true" keyProperty="scopeId">
+        insert into fe_api_config_company_scope (
+            config_id, source_dept_id, external_company_id, external_company_name,
+            first_seen_time, last_seen_time, sync_status,
+            remark, create_by, create_time, update_by, update_time
+        ) values (
+            #{configId}, #{sourceDeptId}, #{externalCompanyId}, #{externalCompanyName},
+            #{firstSeenTime}, #{lastSeenTime}, #{syncStatus},
+            #{remark}, #{createBy}, #{createTime}, #{updateBy}, #{updateTime}
+        )
+    </insert>
+
+    <update id="updateFeApiConfigCompanyScope" parameterType="FeApiConfigCompanyScope">
+        update fe_api_config_company_scope
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="sourceDeptId != null">source_dept_id = #{sourceDeptId},</if>
+            <if test="externalCompanyName != null">external_company_name = #{externalCompanyName},</if>
+            <if test="firstSeenTime != null">first_seen_time = #{firstSeenTime},</if>
+            <if test="lastSeenTime != null">last_seen_time = #{lastSeenTime},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where scope_id = #{scopeId}
+    </update>
+</mapper>

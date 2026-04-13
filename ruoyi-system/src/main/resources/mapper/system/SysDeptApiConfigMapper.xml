@@ -1,45 +1,43 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+﻿<?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.system.mapper.SysDeptApiConfigMapper">
-    
+
     <resultMap type="SysDeptApiConfig" id="SysDeptApiConfigResult">
-        <result property="configId"    column="config_id"    />
-        <result property="deptId"    column="dept_id"    />
-        <result property="contractNo"    column="contract_no"    />
-        <result property="apiId"    column="api_id"    />
-        <result property="apiKey"    column="api_key"    />
-        <result property="status"    column="status"    />
-        <result property="expireDate"    column="expire_date"    />
-        <result property="remark"    column="remark"    />
-        <result property="createBy"    column="create_by"    />
-        <result property="createTime"    column="create_time"    />
-        <result property="updateBy"    column="update_by"    />
-        <result property="updateTime"    column="update_time"    />
-        <!-- 关联查询字段 -->
-        <result property="deptName"    column="dept_name"    />
-        <result property="deptLeader"    column="dept_leader"    />
-        <result property="deptPhone"    column="dept_phone"    />
-        <result property="expireStatus"    column="expire_status"    />
-        <result property="daysRemaining"    column="days_remaining"    />
+        <result property="configId" column="config_id" />
+        <result property="deptId" column="dept_id" />
+        <result property="contractNo" column="contract_no" />
+        <result property="apiId" column="api_id" />
+        <result property="apiKey" column="api_key" />
+        <result property="status" column="status" />
+        <result property="expireDate" column="expire_date" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="deptName" column="dept_name" />
+        <result property="deptLeader" column="dept_leader" />
+        <result property="deptPhone" column="dept_phone" />
+        <result property="expireStatus" column="expire_status" />
+        <result property="daysRemaining" column="days_remaining" />
     </resultMap>
 
     <sql id="selectSysDeptApiConfigVo">
-        select 
-            c.config_id, c.dept_id, c.contract_no, c.api_id, c.api_key, 
-            c.status, c.expire_date, c.remark, 
-            c.create_by, c.create_time, c.update_by, c.update_time,
-            d.dept_name,
-            d.leader as dept_leader,
-            d.phone as dept_phone,
-            CASE 
-                WHEN c.expire_date IS NULL THEN NULL
-                WHEN c.expire_date &lt; CURDATE() THEN '已过期'
-                WHEN c.expire_date &lt;= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN '即将过期'
-                ELSE '正常'
-            END as expire_status,
-            DATEDIFF(c.expire_date, CURDATE()) as days_remaining
+        select c.config_id, c.dept_id, c.contract_no, c.api_id, c.api_key,
+               c.status, c.expire_date, c.remark,
+               c.create_by, c.create_time, c.update_by, c.update_time,
+               d.dept_name,
+               d.leader as dept_leader,
+               d.phone as dept_phone,
+               case
+                   when c.expire_date is null then null
+                   when c.expire_date &lt; curdate() then '已过期'
+                   when c.expire_date &lt;= date_add(curdate(), interval 30 day) then '即将过期'
+                   else '正常'
+               end as expire_status,
+               datediff(c.expire_date, curdate()) as days_remaining
         from sys_dept_api_config c
         left join sys_dept d on c.dept_id = d.dept_id
     </sql>
@@ -47,27 +45,37 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="selectSysDeptApiConfigList" parameterType="SysDeptApiConfig" resultMap="SysDeptApiConfigResult">
         <include refid="selectSysDeptApiConfigVo"/>
         <where>
-            <if test="deptId != null "> and c.dept_id = #{deptId}</if>
+            <if test="deptId != null"> and c.dept_id = #{deptId}</if>
             <if test="deptIds != null and deptIds.size() > 0">
                 and c.dept_id in
                 <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
                     #{deptId}
                 </foreach>
             </if>
-            <if test="contractNo != null  and contractNo != ''"> and c.contract_no like concat('%', #{contractNo}, '%')</if>
-            <if test="status != null  and status != ''"> and c.status = #{status}</if>
-            <if test="expireDate != null "> and c.expire_date = #{expireDate}</if>
+            <if test="contractNo != null and contractNo != ''"> and c.contract_no like concat('%', #{contractNo}, '%')</if>
+            <if test="status != null and status != ''"> and c.status = #{status}</if>
+            <if test="expireDate != null"> and c.expire_date = #{expireDate}</if>
         </where>
         order by c.dept_id
     </select>
-    
+
+    <select id="selectActiveSysDeptApiConfigs" resultMap="SysDeptApiConfigResult">
+        <include refid="selectSysDeptApiConfigVo"/>
+        where c.status = '1'
+          and c.api_id is not null and c.api_id != ''
+          and c.api_key is not null and c.api_key != ''
+          and (c.expire_date is null or c.expire_date &gt;= curdate())
+        order by c.dept_id, c.config_id
+    </select>
+
     <select id="selectSysDeptApiConfigByConfigId" parameterType="Long" resultMap="SysDeptApiConfigResult">
         <include refid="selectSysDeptApiConfigVo"/>
         where c.config_id = #{configId}
     </select>
-    
+
     <select id="checkDeptUnique" resultType="int">
-        select count(*) from sys_dept_api_config
+        select count(*)
+        from sys_dept_api_config
         where dept_id = #{deptId}
         <if test="configId != null">
             and config_id != #{configId}
@@ -131,11 +139,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </foreach>
     </delete>
 
-    <!-- 合同状态分布统计 -->
     <select id="getStatusStatistics" resultType="map">
-        select
-            c.status as name,
-            count(*) as value
+        select c.status as name, count(*) as value
         from sys_dept_api_config c
         <where>
             <if test="deptIds != null and deptIds.size() > 0">
@@ -148,15 +153,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         group by c.status
     </select>
 
-    <!-- 合同过期状态分布统计 -->
     <select id="getExpireStatusStatistics" resultType="map">
         select
-            CASE
-                WHEN c.expire_date IS NULL THEN '未设置'
-                WHEN c.expire_date &lt; CURDATE() THEN '已过期'
-                WHEN c.expire_date &lt;= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN '即将过期'
-                ELSE '正常'
-            END as name,
+            case
+                when c.expire_date is null then '未设置'
+                when c.expire_date &lt; curdate() then '已过期'
+                when c.expire_date &lt;= date_add(curdate(), interval 30 day) then '即将过期'
+                else '正常'
+            end as name,
             count(*) as value
         from sys_dept_api_config c
         <where>
@@ -168,19 +172,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             </if>
         </where>
         group by
-            CASE
-                WHEN c.expire_date IS NULL THEN '未设置'
-                WHEN c.expire_date &lt; CURDATE() THEN '已过期'
-                WHEN c.expire_date &lt;= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN '即将过期'
-                ELSE '正常'
-            END
+            case
+                when c.expire_date is null then '未设置'
+                when c.expire_date &lt; curdate() then '已过期'
+                when c.expire_date &lt;= date_add(curdate(), interval 30 day) then '即将过期'
+                else '正常'
+            end
     </select>
 
-    <!-- 合同数量TOP部门统计 -->
     <select id="getTopDeptStatistics" resultType="map">
-        select
-            d.dept_name as name,
-            count(c.config_id) as value
+        select d.dept_name as name, count(c.config_id) as value
         from sys_dept d
         left join sys_dept_api_config c on d.dept_id = c.dept_id
         <where>
@@ -197,16 +198,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         limit #{limit}
     </select>
 
-    <!-- 合同到期趋势统计 -->
     <select id="getExpiryTrendStatistics" resultType="map">
-        select
-            DATE_FORMAT(c.expire_date, '%Y-%m') as name,
-            count(*) as value
+        select date_format(c.expire_date, '%Y-%m') as name, count(*) as value
         from sys_dept_api_config c
         <where>
             c.expire_date is not null
-            and c.expire_date &gt;= CURDATE()
-            and c.expire_date &lt;= DATE_ADD(CURDATE(), INTERVAL #{months} MONTH)
+            and c.expire_date &gt;= curdate()
+            and c.expire_date &lt;= date_add(curdate(), interval #{months} month)
             <if test="deptIds != null and deptIds.size() > 0">
                 and c.dept_id in
                 <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
@@ -214,7 +212,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                 </foreach>
             </if>
         </where>
-        group by DATE_FORMAT(c.expire_date, '%Y-%m')
+        group by date_format(c.expire_date, '%Y-%m')
         order by name
     </select>
 </mapper>

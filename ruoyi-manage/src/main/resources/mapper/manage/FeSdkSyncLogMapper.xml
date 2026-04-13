@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeSdkSyncLogMapper">
+
+    <resultMap id="FeSdkSyncLogResult" type="FeSdkSyncLog">
+        <result property="syncLogId" column="sync_log_id" />
+        <result property="deptId" column="dept_id" />
+        <result property="externalCompanyId" column="external_company_id" />
+        <result property="syncScope" column="sync_scope" />
+        <result property="syncStatus" column="sync_status" />
+        <result property="startTime" column="start_time" />
+        <result property="endTime" column="end_time" />
+        <result property="successCount" column="success_count" />
+        <result property="failCount" column="fail_count" />
+        <result property="message" column="message" />
+        <result property="tokenExpireTime" column="token_expire_time" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <insert id="insertFeSdkSyncLog" parameterType="FeSdkSyncLog" useGeneratedKeys="true" keyProperty="syncLogId">
+        insert into fe_sdk_sync_log (
+            dept_id, external_company_id, sync_scope, sync_status, start_time, end_time,
+            success_count, fail_count, message, token_expire_time, remark,
+            create_by, create_time, update_by, update_time
+        ) values (
+            #{deptId}, #{externalCompanyId}, #{syncScope}, #{syncStatus}, #{startTime}, #{endTime},
+            #{successCount}, #{failCount}, #{message}, #{tokenExpireTime}, #{remark},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}
+        )
+    </insert>
+
+    <update id="updateFeSdkSyncLog" parameterType="FeSdkSyncLog">
+        update fe_sdk_sync_log
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="externalCompanyId != null">external_company_id = #{externalCompanyId},</if>
+            <if test="syncScope != null">sync_scope = #{syncScope},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="successCount != null">success_count = #{successCount},</if>
+            <if test="failCount != null">fail_count = #{failCount},</if>
+            <if test="message != null">message = #{message},</if>
+            <if test="tokenExpireTime != null">token_expire_time = #{tokenExpireTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where sync_log_id = #{syncLogId}
+    </update>
+</mapper>

@@ -1,61 +1,30 @@
 package com.ruoyi.manage.mapper;
 
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 import com.ruoyi.manage.domain.FeFirePoint;
 
-/**
- * 消防点信息Mapper接口
- * 
- * @author ruoyi
- * @date 2026-02-03
- */
-public interface FeFirePointMapper 
+public interface FeFirePointMapper
 {
-    /**
-     * 查询消防点信息
-     * 
-     * @param firePointId 消防点信息主键
-     * @return 消防点信息
-     */
-    public FeFirePoint selectFeFirePointByFirePointId(Long firePointId);
+    FeFirePoint selectFeFirePointByFirePointId(Long firePointId);
 
-    /**
-     * 查询消防点信息列表
-     * 
-     * @param feFirePoint 消防点信息
-     * @return 消防点信息集合
-     */
-    public List<FeFirePoint> selectFeFirePointList(FeFirePoint feFirePoint);
+    List<FeFirePoint> selectFeFirePointList(FeFirePoint feFirePoint);
 
-    /**
-     * 新增消防点信息
-     * 
-     * @param feFirePoint 消防点信息
-     * @return 结果
-     */
-    public int insertFeFirePoint(FeFirePoint feFirePoint);
+    FeFirePoint selectByExternalStationId(Long externalStationId);
 
-    /**
-     * 修改消防点信息
-     * 
-     * @param feFirePoint 消防点信息
-     * @return 结果
-     */
-    public int updateFeFirePoint(FeFirePoint feFirePoint);
+    FeFirePoint selectByStationNumber(String stationNumber);
 
-    /**
-     * 删除消防点信息
-     * 
-     * @param firePointId 消防点信息主键
-     * @return 结果
-     */
-    public int deleteFeFirePointByFirePointId(Long firePointId);
+    List<FeFirePoint> selectByExternalCompanyId(Long externalCompanyId);
 
-    /**
-     * 批量删除消防点信息
-     * 
-     * @param firePointIds 需要删除的数据主键集合
-     * @return 结果
-     */
-    public int deleteFeFirePointByFirePointIds(Long[] firePointIds);
+    List<FeFirePoint> selectBySourceDeptIdAndExternalCompanyId(Long sourceDeptId, Long externalCompanyId);
+
+    int insertFeFirePoint(FeFirePoint feFirePoint);
+
+    int updateFeFirePoint(FeFirePoint feFirePoint);
+
+    int updateDeptIdByExternalCompanyId(@Param("externalCompanyId") Long externalCompanyId, @Param("deptId") Long deptId);
+
+    int deleteFeFirePointByFirePointId(Long firePointId);
+
+    int deleteFeFirePointByFirePointIds(Long[] firePointIds);
 }

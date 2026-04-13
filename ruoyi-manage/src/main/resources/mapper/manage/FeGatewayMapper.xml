@@ -1,0 +1,153 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeGatewayMapper">
+
+    <resultMap id="FeGatewayResult" type="FeGateway">
+        <result property="gatewayId" column="gateway_id" />
+        <result property="externalTboxId" column="external_tbox_id" />
+        <result property="imei" column="imei" />
+        <result property="sim" column="sim" />
+        <result property="firePointId" column="fire_point_id" />
+        <result property="firePointName" column="fire_point_name" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="sourceDeptId" column="source_dept_id" />
+        <result property="sourceDeptName" column="source_dept_name" />
+        <result property="externalCompanyId" column="external_company_id" />
+        <result property="externalCompanyName" column="external_company_name" />
+        <result property="gpsLongitude" column="gps_longitude" />
+        <result property="gpsLatitude" column="gps_latitude" />
+        <result property="lastOnlineTime" column="last_online_time" />
+        <result property="syncStatus" column="sync_status" />
+        <result property="lastSyncTime" column="last_sync_time" />
+        <result property="status" column="status" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="delFlag" column="del_flag" />
+    </resultMap>
+
+    <sql id="selectFeGatewayVo">
+        select g.gateway_id, g.external_tbox_id, g.imei, g.sim, g.fire_point_id,
+               fp.fire_point_name, g.dept_id, d.dept_name, g.source_dept_id, sd.dept_name as source_dept_name,
+               g.external_company_id, ec.external_company_name, g.gps_longitude, g.gps_latitude, g.last_online_time,
+               g.sync_status, g.last_sync_time, g.status,
+               g.remark, g.create_by, g.create_time, g.update_by, g.update_time, g.del_flag
+        from fe_gateway g
+        left join fe_fire_point fp on g.fire_point_id = fp.fire_point_id
+        left join fe_external_company ec on g.external_company_id = ec.external_company_id
+        left join sys_dept d on g.dept_id = d.dept_id
+        left join sys_dept sd on g.source_dept_id = sd.dept_id
+    </sql>
+
+    <select id="selectFeGatewayByGatewayId" parameterType="Long" resultMap="FeGatewayResult">
+        <include refid="selectFeGatewayVo"/>
+        where g.gateway_id = #{gatewayId}
+    </select>
+
+    <select id="selectByExternalTboxId" parameterType="Long" resultMap="FeGatewayResult">
+        <include refid="selectFeGatewayVo"/>
+        where g.external_tbox_id = #{externalTboxId}
+        limit 1
+    </select>
+
+    <select id="selectByImei" parameterType="String" resultMap="FeGatewayResult">
+        <include refid="selectFeGatewayVo"/>
+        where g.imei = #{imei}
+        limit 1
+    </select>
+
+    <select id="selectFeGatewayList" parameterType="FeGateway" resultMap="FeGatewayResult">
+        <include refid="selectFeGatewayVo"/>
+        <where>
+            <if test="externalTboxId != null"> and g.external_tbox_id = #{externalTboxId}</if>
+            <if test="imei != null and imei != ''"> and g.imei = #{imei}</if>
+            <if test="firePointId != null"> and g.fire_point_id = #{firePointId}</if>
+            <if test="deptId != null"> and g.dept_id = #{deptId}</if>
+            <if test="sourceDeptId != null"> and g.source_dept_id = #{sourceDeptId}</if>
+            <if test="externalCompanyId != null"> and g.external_company_id = #{externalCompanyId}</if>
+            <if test="syncStatus != null and syncStatus != ''"> and g.sync_status = #{syncStatus}</if>
+            <if test="status != null and status != ''"> and g.status = #{status}</if>
+            ${params.dataScope}
+        </where>
+        order by g.gateway_id desc
+    </select>
+
+    <insert id="insertFeGateway" parameterType="FeGateway" useGeneratedKeys="true" keyProperty="gatewayId">
+        insert into fe_gateway
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="externalTboxId != null">external_tbox_id,</if>
+            <if test="imei != null and imei != ''">imei,</if>
+            <if test="sim != null and sim != ''">sim,</if>
+            <if test="firePointId != null">fire_point_id,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="sourceDeptId != null">source_dept_id,</if>
+            <if test="externalCompanyId != null">external_company_id,</if>
+            <if test="gpsLongitude != null">gps_longitude,</if>
+            <if test="gpsLatitude != null">gps_latitude,</if>
+            <if test="lastOnlineTime != null">last_online_time,</if>
+            <if test="syncStatus != null">sync_status,</if>
+            <if test="lastSyncTime != null">last_sync_time,</if>
+            <if test="status != null">status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="externalTboxId != null">#{externalTboxId},</if>
+            <if test="imei != null and imei != ''">#{imei},</if>
+            <if test="sim != null and sim != ''">#{sim},</if>
+            <if test="firePointId != null">#{firePointId},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="sourceDeptId != null">#{sourceDeptId},</if>
+            <if test="externalCompanyId != null">#{externalCompanyId},</if>
+            <if test="gpsLongitude != null">#{gpsLongitude},</if>
+            <if test="gpsLatitude != null">#{gpsLatitude},</if>
+            <if test="lastOnlineTime != null">#{lastOnlineTime},</if>
+            <if test="syncStatus != null">#{syncStatus},</if>
+            <if test="lastSyncTime != null">#{lastSyncTime},</if>
+            <if test="status != null">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+        </trim>
+    </insert>
+
+    <update id="updateFeGateway" parameterType="FeGateway">
+        update fe_gateway
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="externalTboxId != null">external_tbox_id = #{externalTboxId},</if>
+            <if test="imei != null and imei != ''">imei = #{imei},</if>
+            <if test="sim != null">sim = #{sim},</if>
+            <if test="firePointId != null">fire_point_id = #{firePointId},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="sourceDeptId != null">source_dept_id = #{sourceDeptId},</if>
+            <if test="externalCompanyId != null">external_company_id = #{externalCompanyId},</if>
+            <if test="gpsLongitude != null">gps_longitude = #{gpsLongitude},</if>
+            <if test="gpsLatitude != null">gps_latitude = #{gpsLatitude},</if>
+            <if test="lastOnlineTime != null">last_online_time = #{lastOnlineTime},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="lastSyncTime != null">last_sync_time = #{lastSyncTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where gateway_id = #{gatewayId}
+    </update>
+
+    <update id="updateDeptIdByExternalCompanyId">
+        update fe_gateway
+        set dept_id = #{deptId,jdbcType=BIGINT}
+        where external_company_id = #{externalCompanyId}
+    </update>
+</mapper>

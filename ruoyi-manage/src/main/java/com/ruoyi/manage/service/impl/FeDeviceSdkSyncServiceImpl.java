@@ -1,0 +1,1120 @@
+package com.ruoyi.manage.service.impl;
+
+import java.math.BigDecimal;
+import java.net.URI;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ruoyi.common.utils.DateUtils;
+import com.ruoyi.manage.config.AzdapsProperties;
+import com.ruoyi.manage.domain.FeApiConfigCompanyScope;
+import com.ruoyi.manage.domain.FeCompanyDeptMapping;
+import com.ruoyi.manage.domain.FeExternalCompany;
+import com.ruoyi.manage.domain.FeExtinguisher;
+import com.ruoyi.manage.domain.FeExtinguisherSensorBinding;
+import com.ruoyi.manage.domain.FeFirePoint;
+import com.ruoyi.manage.domain.FeGateway;
+import com.ruoyi.manage.domain.FeSdkSyncLog;
+import com.ruoyi.manage.domain.FeSensor;
+import com.ruoyi.manage.domain.FeSensorHistory;
+import com.ruoyi.manage.mapper.FeApiConfigCompanyScopeMapper;
+import com.ruoyi.manage.mapper.FeCompanyDeptMappingMapper;
+import com.ruoyi.manage.mapper.FeExternalCompanyMapper;
+import com.ruoyi.manage.mapper.FeExtinguisherMapper;
+import com.ruoyi.manage.mapper.FeExtinguisherSensorBindingMapper;
+import com.ruoyi.manage.mapper.FeFirePointMapper;
+import com.ruoyi.manage.mapper.FeGatewayMapper;
+import com.ruoyi.manage.mapper.FeSdkSyncLogMapper;
+import com.ruoyi.manage.mapper.FeSensorHistoryMapper;
+import com.ruoyi.manage.mapper.FeSensorMapper;
+import com.ruoyi.manage.service.IFeDeviceSdkSyncService;
+import com.ruoyi.system.domain.SysDeptApiConfig;
+import com.ruoyi.system.service.ISysDeptApiConfigService;
+
+@Service
+public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
+{
+    private static final Logger log = LoggerFactory.getLogger(FeDeviceSdkSyncServiceImpl.class);
+    private static final String STATUS_RUNNING = "running";
+    private static final String STATUS_SUCCESS = "success";
+    private static final String STATUS_FAILED = "failed";
+    private static final String STATUS_SYNCED = "synced";
+    private static final String STATUS_OBSERVED = "observed";
+    private static final String STATUS_PENDING_GATEWAY = "pending_gateway";
+    private static final String STATUS_UNBOUND = "unbound";
+    private static final String ACTIVE_YES = "1";
+    private static final String ACTIVE_NO = "0";
+    private static final String SENSOR_STATUS_NORMAL = "0";
+    private static final String SENSOR_STATUS_OFFLINE = "2";
+    private static final String EXTINGUISHER_STATUS_NORMAL = "0";
+    private static final String FIRE_POINT_STATUS_NORMAL = "0";
+    private static final String GATEWAY_STATUS_ONLINE = "online";
+    private static final String GATEWAY_STATUS_OFFLINE = "offline";
+    private static final String SCOPE_FULL = "full";
+    private static final String PATH_STATION = "/api/station/";
+    private static final String PATH_TBOX = "/api/tbox/";
+    private static final String PATH_GPS = "/api/gps/";
+    private static final String PATH_SENSOR = "/api/sensor/";
+    private static final String PATH_EXTINGUISHER = "/api/extinguisher/";
+    private static final String PATH_SENSOR_VALUES = "/api/values/{sensor_id}";
+    private static final String MESSAGE_SYNC_RUNNING = "Device sync is already running";
+
+    @Autowired private AzdapsProperties azdapsProperties;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private ISysDeptApiConfigService sysDeptApiConfigService;
+    @Autowired private FeFirePointMapper feFirePointMapper;
+    @Autowired private FeGatewayMapper feGatewayMapper;
+    @Autowired private FeSensorMapper feSensorMapper;
+    @Autowired private FeExtinguisherMapper feExtinguisherMapper;
+    @Autowired private FeExtinguisherSensorBindingMapper feExtinguisherSensorBindingMapper;
+    @Autowired private FeExternalCompanyMapper feExternalCompanyMapper;
+    @Autowired private FeApiConfigCompanyScopeMapper feApiConfigCompanyScopeMapper;
+    @Autowired private FeCompanyDeptMappingMapper feCompanyDeptMappingMapper;
+    @Autowired private FeSdkSyncLogMapper feSdkSyncLogMapper;
+    @Autowired private FeSensorHistoryMapper feSensorHistoryMapper;
+
+    private volatile RestTemplate restTemplate;
+    private final AtomicBoolean syncRunning = new AtomicBoolean(false);
+
+    @Override
+    public Map<String, Object> syncAllActiveConfigs(String operator)
+    {
+        if (!syncRunning.compareAndSet(false, true))
+        {
+            return buildBusyResult(null);
+        }
+
+        List<SysDeptApiConfig> configs = sysDeptApiConfigService.selectActiveSysDeptApiConfigs();
+        try
+        {
+            List<Map<String, Object>> details = new ArrayList<>();
+            int successCount = 0;
+            int failCount = 0;
+            for (SysDeptApiConfig config : configs)
+            {
+                try
+                {
+                    Map<String, Object> detail = syncConfig(config, operator);
+                    details.add(detail);
+                    if (Boolean.TRUE.equals(detail.get("success"))) successCount++;
+                    else failCount++;
+                }
+                catch (Exception e)
+                {
+                    Map<String, Object> detail = new LinkedHashMap<>();
+                    detail.put("configId", config.getConfigId());
+                    detail.put("deptId", config.getDeptId());
+                    detail.put("success", false);
+                    detail.put("message", e.getMessage());
+                    details.add(detail);
+                    failCount++;
+                }
+            }
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("success", failCount == 0);
+            result.put("message", failCount == 0 ? "Device sync completed" : "Device sync completed with failures");
+            result.put("total", configs.size());
+            result.put("successCount", successCount);
+            result.put("failCount", failCount);
+            result.put("details", details);
+            return result;
+        }
+        finally
+        {
+            syncRunning.set(false);
+        }
+    }
+
+    @Override
+    public Map<String, Object> syncByConfigId(Long configId, String operator)
+    {
+        if (!syncRunning.compareAndSet(false, true))
+        {
+            return buildBusyResult(configId);
+        }
+
+        try
+        {
+            SysDeptApiConfig config = sysDeptApiConfigService.selectSysDeptApiConfigByConfigId(configId);
+            if (config == null)
+            {
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("configId", configId);
+                result.put("success", false);
+                result.put("message", "Dept API config does not exist");
+                return result;
+            }
+            return syncConfig(config, operator);
+        }
+        finally
+        {
+            syncRunning.set(false);
+        }
+    }
+
+    private Map<String, Object> buildBusyResult(Long configId)
+    {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (configId != null)
+        {
+            result.put("configId", configId);
+        }
+        result.put("success", false);
+        result.put("message", MESSAGE_SYNC_RUNNING);
+        result.put("busy", true);
+        if (configId == null)
+        {
+            result.put("total", 0);
+            result.put("successCount", 0);
+            result.put("failCount", 1);
+            result.put("details", Collections.emptyList());
+        }
+        return result;
+    }
+
+    private Map<String, Object> syncConfig(SysDeptApiConfig config, String operator)
+    {
+        validateConfig(config);
+        Date now = DateUtils.getNowDate();
+        FeSdkSyncLog syncLog = buildRunningLog(config, operator, now);
+        feSdkSyncLogMapper.insertFeSdkSyncLog(syncLog);
+        SyncStats stats = new SyncStats();
+        try
+        {
+            TokenContext tokenContext = login(config);
+            syncLog.setTokenExpireTime(tokenContext.getTokenExpireTime());
+
+            List<JsonNode> stationNodes = fetchPagedItems(PATH_STATION, tokenContext, config);
+            List<JsonNode> tboxNodes = fetchPagedItems(PATH_TBOX, tokenContext, config);
+            Map<Long, JsonNode> gpsNodeMap = buildGpsNodeMap(fetchPagedItems(PATH_GPS, tokenContext, config));
+            List<JsonNode> sensorNodes = fetchPagedItems(PATH_SENSOR, tokenContext, config);
+            List<JsonNode> extinguisherNodes = fetchPagedItems(PATH_EXTINGUISHER, tokenContext, config);
+
+            Set<Long> syncedCompanyIds = new TreeSet<>();
+            List<FeSensor> syncedSensors = new ArrayList<>();
+            for (JsonNode stationNode : stationNodes)
+            {
+                FeFirePoint firePoint = upsertFirePoint(stationNode, config, operator);
+                if (firePoint.getExternalCompanyId() != null) syncedCompanyIds.add(firePoint.getExternalCompanyId());
+                stats.incrementSuccess("station");
+            }
+            for (JsonNode tboxNode : tboxNodes)
+            {
+                Long externalTboxId = readLong(tboxNode, "id");
+                FeGateway gateway = upsertGateway(tboxNode, gpsNodeMap.get(externalTboxId), config, operator);
+                if (gateway.getExternalCompanyId() != null) syncedCompanyIds.add(gateway.getExternalCompanyId());
+                stats.incrementSuccess("tbox");
+            }
+            for (JsonNode sensorNode : sensorNodes)
+            {
+                FeSensor sensor = upsertSensor(sensorNode, config, operator);
+                syncedSensors.add(sensor);
+                FeGateway gateway = sensor.getGatewayId() == null ? null : feGatewayMapper.selectFeGatewayByGatewayId(sensor.getGatewayId());
+                if (gateway != null && gateway.getExternalCompanyId() != null) syncedCompanyIds.add(gateway.getExternalCompanyId());
+                stats.incrementSuccess("sensor");
+            }
+            for (JsonNode extinguisherNode : extinguisherNodes)
+            {
+                FeExtinguisher extinguisher = upsertExtinguisher(extinguisherNode, config, operator);
+                Long externalCompanyId = readNestedLong(extinguisherNode, "company", "id");
+                if (externalCompanyId != null) syncedCompanyIds.add(externalCompanyId);
+                if (STATUS_UNBOUND.equals(extinguisher.getSyncStatus())) stats.incrementFail("binding");
+                stats.incrementSuccess("extinguisher");
+            }
+            syncSensorValues(syncedSensors, tokenContext, config, stats);
+
+            syncLog.setExternalCompanyId(syncedCompanyIds.size() == 1 ? syncedCompanyIds.iterator().next() : null);
+            syncLog.setSyncStatus(STATUS_SUCCESS);
+            syncLog.setEndTime(DateUtils.getNowDate());
+            syncLog.setSuccessCount(stats.getSuccessCount());
+            syncLog.setFailCount(stats.getFailCount());
+            syncLog.setMessage(stats.buildMessage());
+            syncLog.setUpdateBy(operator);
+            syncLog.setUpdateTime(DateUtils.getNowDate());
+            feSdkSyncLogMapper.updateFeSdkSyncLog(syncLog);
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("configId", config.getConfigId());
+            result.put("deptId", config.getDeptId());
+            result.put("success", true);
+            result.put("message", "Device sync completed");
+            result.put("stats", stats.toMap());
+            return result;
+        }
+        catch (Exception e)
+        {
+            syncLog.setSyncStatus(STATUS_FAILED);
+            syncLog.setEndTime(DateUtils.getNowDate());
+            syncLog.setSuccessCount(stats.getSuccessCount());
+            syncLog.setFailCount(stats.getFailCount() + 1);
+            syncLog.setMessage(StringUtils.left(e.getMessage(), 1900));
+            syncLog.setUpdateBy(operator);
+            syncLog.setUpdateTime(DateUtils.getNowDate());
+            feSdkSyncLogMapper.updateFeSdkSyncLog(syncLog);
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("configId", config.getConfigId());
+            result.put("deptId", config.getDeptId());
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            result.put("stats", stats.toMap());
+            return result;
+        }
+    }
+
+    private FeSdkSyncLog buildRunningLog(SysDeptApiConfig config, String operator, Date now)
+    {
+        FeSdkSyncLog syncLog = new FeSdkSyncLog();
+        syncLog.setDeptId(config.getDeptId());
+        syncLog.setSyncScope(SCOPE_FULL);
+        syncLog.setSyncStatus(STATUS_RUNNING);
+        syncLog.setStartTime(now);
+        syncLog.setSuccessCount(0);
+        syncLog.setFailCount(0);
+        syncLog.setCreateBy(operator);
+        syncLog.setCreateTime(now);
+        syncLog.setUpdateBy(operator);
+        syncLog.setUpdateTime(now);
+        return syncLog;
+    }
+
+    private void validateConfig(SysDeptApiConfig config)
+    {
+        if (config == null) throw new IllegalArgumentException("Dept API config does not exist");
+        if (!StringUtils.equals(config.getStatus(), "1")) throw new IllegalArgumentException("Dept API config is disabled");
+        if (StringUtils.isBlank(config.getApiId()) || StringUtils.isBlank(config.getApiKey())) throw new IllegalArgumentException("Dept API credentials are incomplete");
+        if (config.getExpireDate() != null && config.getExpireDate().before(DateUtils.getNowDate())) throw new IllegalArgumentException("Dept API credentials have expired");
+    }
+
+    private TokenContext login(SysDeptApiConfig config)
+    {
+        Map<String, Object> queryParams = new LinkedHashMap<>();
+        queryParams.put("secret_id", config.getApiId());
+        queryParams.put("secret_key", config.getApiKey());
+        JsonNode root = requestJson(HttpMethod.POST, azdapsProperties.getLoginPath(), queryParams, null, config, false);
+        String accessToken = readText(root, "access_token");
+        if (StringUtils.isBlank(accessToken)) throw new IllegalStateException("SDK login response missing access_token");
+        TokenContext tokenContext = new TokenContext();
+        tokenContext.setAccessToken(accessToken);
+        tokenContext.setRefreshToken(readText(root, "refresh_token"));
+        return tokenContext;
+    }
+
+    private List<JsonNode> fetchPagedItems(String path, TokenContext tokenContext, SysDeptApiConfig config)
+    {
+        int limit = Math.max(1, azdapsProperties.getPageLimit());
+        int offset = 0;
+        List<JsonNode> items = new ArrayList<>();
+        while (true)
+        {
+            Map<String, Object> queryParams = new LinkedHashMap<>();
+            queryParams.put("limit", limit);
+            queryParams.put("offset", offset);
+            JsonNode root = requestJson(HttpMethod.GET, path, queryParams, tokenContext, config, true);
+            if (root == null || root.isMissingNode() || root.isNull()) break;
+            if (root.isArray())
+            {
+                root.forEach(items::add);
+                break;
+            }
+            JsonNode itemArray = extractItemArray(root);
+            if (itemArray == null) break;
+            int batchSize = 0;
+            for (JsonNode item : itemArray)
+            {
+                items.add(item);
+                batchSize++;
+            }
+            Integer totalCount = readInteger(root, "count");
+            if (totalCount != null && offset + batchSize >= totalCount) break;
+            if (batchSize < limit) break;
+            offset += batchSize;
+        }
+        return items;
+    }
+
+    private JsonNode extractItemArray(JsonNode root)
+    {
+        for (String field : new String[] { "items", "results", "data" })
+        {
+            JsonNode candidate = root.get(field);
+            if (candidate != null && candidate.isArray()) return candidate;
+        }
+        return null;
+    }
+
+    private JsonNode requestJson(HttpMethod method, String path, Map<String, Object> queryParams,
+                                 TokenContext tokenContext, SysDeptApiConfig config, boolean allowRelogin)
+    {
+        try
+        {
+            return doRequestJson(method, path, queryParams, tokenContext);
+        }
+        catch (HttpStatusCodeException e)
+        {
+            if (allowRelogin && e.getStatusCode().value() == 401 && tokenContext != null)
+            {
+                TokenContext renewed = login(config);
+                tokenContext.setAccessToken(renewed.getAccessToken());
+                tokenContext.setRefreshToken(renewed.getRefreshToken());
+                return doRequestJson(method, path, queryParams, tokenContext);
+            }
+            throw new IllegalStateException("SDK request failed: " + StringUtils.defaultIfBlank(e.getResponseBodyAsString(), e.getMessage()), e);
+        }
+    }
+    private JsonNode doRequestJson(HttpMethod method, String path, Map<String, Object> queryParams, TokenContext tokenContext)
+    {
+        URI uri = buildUri(path, queryParams);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        if (tokenContext != null && StringUtils.isNotBlank(tokenContext.getAccessToken())) headers.setBearerAuth(tokenContext.getAccessToken());
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        ResponseEntity<String> response = getRestTemplate().exchange(uri, method, entity, String.class);
+        String body = response.getBody();
+        if (StringUtils.isBlank(body)) return objectMapper.createObjectNode();
+        try
+        {
+            return objectMapper.readTree(body);
+        }
+        catch (Exception e)
+        {
+            throw new IllegalStateException("SDK response body is not valid JSON", e);
+        }
+    }
+
+    private URI buildUri(String path, Map<String, Object> queryParams)
+    {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(azdapsProperties.getBaseUrl() + path);
+        if (queryParams != null)
+        {
+            queryParams.forEach((key, value) -> {
+                if (value != null && StringUtils.isNotBlank(String.valueOf(value))) builder.queryParam(key, value);
+            });
+        }
+        return builder.build(true).toUri();
+    }
+
+    private RestTemplate getRestTemplate()
+    {
+        if (restTemplate == null)
+        {
+            synchronized (this)
+            {
+                if (restTemplate == null)
+                {
+                    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+                    factory.setConnectTimeout(azdapsProperties.getConnectTimeoutMs());
+                    factory.setReadTimeout(azdapsProperties.getReadTimeoutMs());
+                    restTemplate = new RestTemplate(factory);
+                }
+            }
+        }
+        return restTemplate;
+    }
+
+    private FeFirePoint upsertFirePoint(JsonNode stationNode, SysDeptApiConfig config, String operator)
+    {
+        Long externalStationId = readLong(stationNode, "id");
+        String stationNumber = readText(stationNode, "number");
+        FeFirePoint firePoint = externalStationId == null ? null : feFirePointMapper.selectByExternalStationId(externalStationId);
+        if (firePoint == null && StringUtils.isNotBlank(stationNumber)) firePoint = feFirePointMapper.selectByStationNumber(stationNumber);
+        boolean isNew = firePoint == null;
+        if (isNew)
+        {
+            firePoint = new FeFirePoint();
+            firePoint.setCreateBy(operator);
+            firePoint.setCreateTime(DateUtils.getNowDate());
+            firePoint.setDelFlag("0");
+        }
+
+        Long externalCompanyId = readLong(stationNode, "company");
+        captureObservedCompany(config, externalCompanyId, null, null, null, null, operator);
+        Long deptId = resolveDeptId(externalCompanyId);
+        firePoint.setExternalStationId(externalStationId);
+        if (StringUtils.isBlank(firePoint.getFirePointCode())) firePoint.setFirePointCode(stationNumber);
+        if (StringUtils.isBlank(firePoint.getFirePointName())) firePoint.setFirePointName(stationNumber);
+        firePoint.setStationNumber(stationNumber);
+        firePoint.setStationType(readText(stationNode, "type"));
+        firePoint.setExternalCompanyId(externalCompanyId);
+        firePoint.setSourceDeptId(config.getDeptId());
+        firePoint.setDeptId(deptId);
+        if (StringUtils.isBlank(firePoint.getPointType())) firePoint.setPointType(readText(stationNode, "type"));
+        if (StringUtils.isBlank(firePoint.getRemark())) firePoint.setRemark(readText(stationNode, "remark"));
+        firePoint.setStatus(StringUtils.defaultIfBlank(firePoint.getStatus(), FIRE_POINT_STATUS_NORMAL));
+        firePoint.setSyncStatus(deptId == null ? STATUS_OBSERVED : STATUS_SYNCED);
+        firePoint.setLastSyncTime(DateUtils.getNowDate());
+        firePoint.setUpdateBy(operator);
+        firePoint.setUpdateTime(DateUtils.getNowDate());
+
+        if (isNew) feFirePointMapper.insertFeFirePoint(firePoint);
+        else feFirePointMapper.updateFeFirePoint(firePoint);
+        return firePoint;
+    }
+
+    private FeGateway upsertGateway(JsonNode tboxNode, JsonNode gpsNode, SysDeptApiConfig config, String operator)
+    {
+        Long externalTboxId = readLong(tboxNode, "id");
+        String imei = readText(tboxNode, "imei");
+        FeGateway gateway = externalTboxId == null ? null : feGatewayMapper.selectByExternalTboxId(externalTboxId);
+        if (gateway == null && StringUtils.isNotBlank(imei)) gateway = feGatewayMapper.selectByImei(imei);
+        boolean isNew = gateway == null;
+        if (isNew)
+        {
+            gateway = new FeGateway();
+            gateway.setCreateBy(operator);
+            gateway.setCreateTime(DateUtils.getNowDate());
+            gateway.setDelFlag("0");
+        }
+
+        Long externalCompanyId = readNestedLong(tboxNode, "company", "id");
+        String externalCompanyName = readNestedText(tboxNode, "company", "name");
+        captureObservedCompany(config, externalCompanyId, externalCompanyName, null, null, null, operator);
+        Long deptId = resolveDeptId(externalCompanyId);
+        Long firePointId = resolveFirePointIdForGateway(tboxNode, config.getDeptId(), externalCompanyId);
+        gateway.setExternalTboxId(externalTboxId);
+        gateway.setImei(imei);
+        gateway.setSim(readText(tboxNode, "sim"));
+        gateway.setExternalCompanyId(externalCompanyId);
+        gateway.setSourceDeptId(config.getDeptId());
+        gateway.setDeptId(deptId);
+        gateway.setFirePointId(firePointId);
+        BigDecimal gpsLongitude = readGpsCoordinate(gpsNode, "longitude");
+        BigDecimal gpsLatitude = readGpsCoordinate(gpsNode, "latitude");
+        if (gpsLongitude == null) gpsLongitude = readNestedBigDecimal(tboxNode, "gps", "longitude");
+        if (gpsLatitude == null) gpsLatitude = readNestedBigDecimal(tboxNode, "gps", "latitude");
+        gateway.setGpsLongitude(gpsLongitude);
+        gateway.setGpsLatitude(gpsLatitude);
+        gateway.setLastOnlineTime(DateUtils.getNowDate());
+        gateway.setStatus(StringUtils.isNotBlank(imei) ? GATEWAY_STATUS_ONLINE : GATEWAY_STATUS_OFFLINE);
+        gateway.setSyncStatus(deptId == null ? STATUS_OBSERVED : STATUS_SYNCED);
+        gateway.setLastSyncTime(DateUtils.getNowDate());
+        if (externalCompanyId != null && firePointId == null) gateway.setRemark("External company has no unique fire point under current credential scope");
+        gateway.setUpdateBy(operator);
+        gateway.setUpdateTime(DateUtils.getNowDate());
+
+        if (isNew) feGatewayMapper.insertFeGateway(gateway);
+        else feGatewayMapper.updateFeGateway(gateway);
+        syncFirePointGpsFromGateway(gateway, operator);
+        return gateway;
+    }
+    private FeSensor upsertSensor(JsonNode sensorNode, SysDeptApiConfig config, String operator)
+    {
+        Long externalSensorId = readLong(sensorNode, "id");
+        String mac = readText(sensorNode, "mac");
+        FeSensor sensor = externalSensorId == null ? null : feSensorMapper.selectByExternalSensorId(externalSensorId);
+        if (sensor == null && StringUtils.isNotBlank(mac)) sensor = feSensorMapper.selectByMac(mac);
+        if (sensor == null && StringUtils.isNotBlank(mac)) sensor = feSensorMapper.selectBySensorCode(mac);
+        boolean isNew = sensor == null;
+        if (isNew)
+        {
+            sensor = new FeSensor();
+            sensor.setCreateBy(operator);
+            sensor.setCreateTime(DateUtils.getNowDate());
+            sensor.setDelFlag("0");
+        }
+
+        Long externalTboxId = readLong(sensorNode, "tbox_id");
+        FeGateway gateway = externalTboxId == null ? null : feGatewayMapper.selectByExternalTboxId(externalTboxId);
+        JsonNode latestValue = extractLatestSensorValue(sensorNode.get("values"));
+        sensor.setExternalSensorId(externalSensorId);
+        sensor.setSensorCode(StringUtils.defaultIfBlank(sensor.getSensorCode(), mac));
+        sensor.setMac(mac);
+        sensor.setGatewayId(gateway == null ? null : gateway.getGatewayId());
+        sensor.setGatewayCode(gateway == null ? null : gateway.getImei());
+        sensor.setSourceDeptId(config.getDeptId());
+        sensor.setDeptId(gateway == null ? null : gateway.getDeptId());
+        sensor.setPressure(readBigDecimal(latestValue, "pressure"));
+        sensor.setTemperature(readBigDecimal(latestValue, "temp"));
+        sensor.setBatteryLevel(readInteger(latestValue, "battery"));
+        sensor.setSignalStrength(null);
+        sensor.setLastOnlineTime(parseDate(readText(latestValue, "created_time")));
+        sensor.setStatus(latestValue == null ? SENSOR_STATUS_OFFLINE : SENSOR_STATUS_NORMAL);
+        sensor.setSyncStatus(gateway == null ? STATUS_PENDING_GATEWAY : (gateway.getDeptId() == null ? STATUS_OBSERVED : STATUS_SYNCED));
+        sensor.setLastSyncTime(DateUtils.getNowDate());
+        sensor.setUpdateBy(operator);
+        sensor.setUpdateTime(DateUtils.getNowDate());
+
+        if (isNew) feSensorMapper.insertFeSensor(sensor);
+        else feSensorMapper.updateFeSensor(sensor);
+        return sensor;
+    }
+    private FeExtinguisher upsertExtinguisher(JsonNode extinguisherNode, SysDeptApiConfig config, String operator)
+    {
+        Long externalExtinguisherId = readLong(extinguisherNode, "id");
+        String labelCode = readText(extinguisherNode, "gb_number");
+        FeExtinguisher extinguisher = externalExtinguisherId == null ? null : feExtinguisherMapper.selectByExternalExtinguisherId(externalExtinguisherId);
+        if (extinguisher == null && StringUtils.isNotBlank(labelCode)) extinguisher = feExtinguisherMapper.selectByLabelCode(labelCode);
+        boolean isNew = extinguisher == null;
+        if (isNew)
+        {
+            extinguisher = new FeExtinguisher();
+            extinguisher.setCreateBy(operator);
+            extinguisher.setCreateTime(DateUtils.getNowDate());
+            extinguisher.setDelFlag("0");
+        }
+
+        Long externalCompanyId = readNestedLong(extinguisherNode, "company", "id");
+        String externalCompanyName = readNestedText(extinguisherNode, "company", "name");
+        captureObservedCompany(config, externalCompanyId, externalCompanyName, null, null, null, operator);
+        extinguisher.setExternalExtinguisherId(externalExtinguisherId);
+        extinguisher.setExternalCompanyId(externalCompanyId);
+        extinguisher.setLabelCode(labelCode);
+        extinguisher.setSourceDeptId(config.getDeptId());
+        extinguisher.setDeptId(resolveDeptId(externalCompanyId));
+        extinguisher.setSpecification(StringUtils.defaultIfBlank(readText(extinguisherNode, "model_display"), readText(extinguisherNode, "model")));
+        extinguisher.setProductName(readText(extinguisherNode, "model"));
+        extinguisher.setManufacturer(readNestedText(extinguisherNode, "factory", "name"));
+        extinguisher.setServiceProvider(readNestedText(extinguisherNode, "serve", "name"));
+        extinguisher.setProductionDate(parseDate(readText(extinguisherNode, "made_time")));
+        extinguisher.setStatus(StringUtils.defaultIfBlank(extinguisher.getStatus(), EXTINGUISHER_STATUS_NORMAL));
+        extinguisher.setLastSyncTime(DateUtils.getNowDate());
+        extinguisher.setUpdateBy(operator);
+        extinguisher.setUpdateTime(DateUtils.getNowDate());
+
+        if (isNew) feExtinguisherMapper.insertFeExtinguisher(extinguisher);
+        else feExtinguisherMapper.updateFeExtinguisher(extinguisher);
+
+        syncBindings(extinguisher, extinguisherNode, config, operator);
+        refreshExtinguisherBindingCache(extinguisher, config, operator);
+        return feExtinguisherMapper.selectFeExtinguisherByExtinguisherId(extinguisher.getExtinguisherId());
+    }
+    private void syncBindings(FeExtinguisher extinguisher, JsonNode extinguisherNode, SysDeptApiConfig config, String operator)
+    {
+        JsonNode bindingsNode = extinguisherNode.get("bindings");
+        boolean hasBindingNode = bindingsNode != null && bindingsNode.isArray() && bindingsNode.size() > 0;
+        Long desiredSensorId = null;
+        Long desiredExternalSensorId = null;
+        Date desiredBindTime = null;
+        boolean desiredActive = false;
+
+        if (hasBindingNode)
+        {
+            for (JsonNode bindingNode : bindingsNode)
+            {
+                Long externalSensorId = resolveExternalSensorIdFromBindingNode(bindingNode);
+                if (externalSensorId == null)
+                {
+                    log.warn("[DeviceSync] binding payload missing external sensor id, extinguisherExternalId={}, payload={}",
+                        extinguisher.getExternalExtinguisherId(), safeJson(bindingNode));
+                    continue;
+                }
+                FeSensor sensor = feSensorMapper.selectByExternalSensorId(externalSensorId);
+                if (sensor == null)
+                {
+                    log.warn("[DeviceSync] binding sensor not found locally, extinguisherExternalId={}, externalSensorId={}, payload={}",
+                        extinguisher.getExternalExtinguisherId(), externalSensorId, safeJson(bindingNode));
+                    continue;
+                }
+                Date bindTime = parseDate(readText(bindingNode, "created_time"));
+                if (bindTime == null) bindTime = DateUtils.getNowDate();
+                Date disableTime = parseDate(readText(bindingNode, "disable_time"));
+                FeExtinguisherSensorBinding existed = feExtinguisherSensorBindingMapper.selectByExtinguisherSensorAndBindTime(extinguisher.getExtinguisherId(), sensor.getSensorId(), bindTime);
+                if (existed == null)
+                {
+                    FeExtinguisherSensorBinding binding = new FeExtinguisherSensorBinding();
+                    binding.setExtinguisherId(extinguisher.getExtinguisherId());
+                    binding.setSensorId(sensor.getSensorId());
+                    binding.setExternalExtinguisherId(extinguisher.getExternalExtinguisherId());
+                    binding.setExternalSensorId(externalSensorId);
+                    binding.setBindTime(bindTime);
+                    binding.setUnbindTime(disableTime);
+                    binding.setIsActive(disableTime == null ? ACTIVE_YES : ACTIVE_NO);
+                    binding.setSourceType("sdk_sync");
+                    binding.setCreateBy(operator);
+                    binding.setCreateTime(DateUtils.getNowDate());
+                    feExtinguisherSensorBindingMapper.insertFeExtinguisherSensorBinding(binding);
+                }
+                if (disableTime == null)
+                {
+                    desiredSensorId = sensor.getSensorId();
+                    desiredExternalSensorId = externalSensorId;
+                    desiredBindTime = bindTime;
+                    desiredActive = true;
+                }
+            }
+        }
+
+        if (!desiredActive)
+        {
+            JsonNode sensorsNode = extinguisherNode.get("sensors");
+            if (sensorsNode != null && sensorsNode.isArray() && sensorsNode.size() > 0)
+            {
+                for (JsonNode sensorNode : sensorsNode)
+                {
+                    Long externalSensorId = resolveExternalSensorIdFromSensorNode(sensorNode);
+                    if (externalSensorId == null)
+                    {
+                        continue;
+                    }
+                    FeSensor sensor = feSensorMapper.selectByExternalSensorId(externalSensorId);
+                    if (sensor == null)
+                    {
+                        log.warn("[DeviceSync] extinguisher sensors[] reference not found locally, extinguisherExternalId={}, externalSensorId={}, payload={}",
+                            extinguisher.getExternalExtinguisherId(), externalSensorId, safeJson(sensorNode));
+                        continue;
+                    }
+                    Date bindTime = parseDate(readText(extinguisherNode, "created_time"));
+                    if (bindTime == null) bindTime = DateUtils.getNowDate();
+                    FeExtinguisherSensorBinding existed = feExtinguisherSensorBindingMapper.selectByExtinguisherSensorAndBindTime(extinguisher.getExtinguisherId(), sensor.getSensorId(), bindTime);
+                    if (existed == null)
+                    {
+                        FeExtinguisherSensorBinding binding = new FeExtinguisherSensorBinding();
+                        binding.setExtinguisherId(extinguisher.getExtinguisherId());
+                        binding.setSensorId(sensor.getSensorId());
+                        binding.setExternalExtinguisherId(extinguisher.getExternalExtinguisherId());
+                        binding.setExternalSensorId(externalSensorId);
+                        binding.setBindTime(bindTime);
+                        binding.setIsActive(ACTIVE_YES);
+                        binding.setSourceType("sdk_sync");
+                        binding.setCreateBy(operator);
+                        binding.setCreateTime(DateUtils.getNowDate());
+                        feExtinguisherSensorBindingMapper.insertFeExtinguisherSensorBinding(binding);
+                    }
+                    desiredSensorId = sensor.getSensorId();
+                    desiredExternalSensorId = externalSensorId;
+                    desiredBindTime = bindTime;
+                    desiredActive = true;
+                    break;
+                }
+                if (!desiredActive)
+                {
+                    log.warn("[DeviceSync] extinguisher sensors[] did not match any local sensor, extinguisherExternalId={}, payload={}",
+                        extinguisher.getExternalExtinguisherId(), safeJson(sensorsNode));
+                }
+            }
+        }
+
+        if (!desiredActive)
+        {
+            log.warn("[DeviceSync] no active binding resolved for extinguisher, extinguisherExternalId={}, sourceDeptId={}, externalCompanyId={}, bindingsPayload={}, sensorsPayload={}, fullPayload={}",
+                extinguisher.getExternalExtinguisherId(),
+                config == null ? null : config.getDeptId(),
+                extinguisher.getExternalCompanyId(),
+                safeJson(bindingsNode),
+                safeJson(extinguisherNode.get("sensors")),
+                safeJson(extinguisherNode));
+        }
+
+        if (desiredActive)
+        {
+            FeExtinguisherSensorBinding activeBinding = feExtinguisherSensorBindingMapper.selectActiveBindingByExtinguisherId(extinguisher.getExtinguisherId());
+            if (activeBinding != null && (!Objects.equals(activeBinding.getSensorId(), desiredSensorId) || !Objects.equals(activeBinding.getBindTime(), desiredBindTime)))
+            {
+                feExtinguisherSensorBindingMapper.deactivateActiveBinding(extinguisher.getExtinguisherId(), DateUtils.getNowDate(), operator);
+            }
+            if (activeBinding == null || !Objects.equals(activeBinding.getSensorId(), desiredSensorId) || !Objects.equals(activeBinding.getBindTime(), desiredBindTime))
+            {
+                FeExtinguisherSensorBinding binding = feExtinguisherSensorBindingMapper.selectByExtinguisherSensorAndBindTime(extinguisher.getExtinguisherId(), desiredSensorId, desiredBindTime);
+                if (binding == null)
+                {
+                    binding = new FeExtinguisherSensorBinding();
+                    binding.setExtinguisherId(extinguisher.getExtinguisherId());
+                    binding.setSensorId(desiredSensorId);
+                    binding.setExternalExtinguisherId(extinguisher.getExternalExtinguisherId());
+                    binding.setExternalSensorId(desiredExternalSensorId);
+                    binding.setBindTime(desiredBindTime);
+                    binding.setIsActive(ACTIVE_YES);
+                    binding.setSourceType("sdk_sync");
+                    binding.setCreateBy(operator);
+                    binding.setCreateTime(DateUtils.getNowDate());
+                    feExtinguisherSensorBindingMapper.insertFeExtinguisherSensorBinding(binding);
+                }
+            }
+        }
+    }
+
+    private void refreshExtinguisherBindingCache(FeExtinguisher extinguisher, SysDeptApiConfig config, String operator)
+    {
+        FeExtinguisher latest = feExtinguisherMapper.selectFeExtinguisherByExtinguisherId(extinguisher.getExtinguisherId());
+        FeExtinguisherSensorBinding activeBinding = feExtinguisherSensorBindingMapper.selectActiveBindingByExtinguisherId(extinguisher.getExtinguisherId());
+        if (activeBinding == null)
+        {
+            latest.setSensorId(null);
+            latest.setSensorCode(null);
+            latest.setFirePointId(null);
+            latest.setSourceDeptId(config.getDeptId());
+            latest.setDeptId(resolveDeptId(latest.getExternalCompanyId()));
+            latest.setSyncStatus(STATUS_UNBOUND);
+            latest.setUpdateBy(operator);
+            latest.setUpdateTime(DateUtils.getNowDate());
+            feExtinguisherMapper.updateFeExtinguisher(latest);
+            return;
+        }
+
+        FeSensor sensor = feSensorMapper.selectFeSensorBySensorId(activeBinding.getSensorId());
+        latest.setSensorId(sensor == null ? null : sensor.getSensorId());
+        latest.setSensorCode(sensor == null ? null : sensor.getSensorCode());
+        latest.setSourceDeptId(sensor == null ? config.getDeptId() : sensor.getSourceDeptId());
+        latest.setDeptId(sensor == null ? resolveDeptId(latest.getExternalCompanyId()) : sensor.getDeptId());
+        Long firePointId = null;
+        if (sensor != null && sensor.getGatewayId() != null)
+        {
+            FeGateway gateway = feGatewayMapper.selectFeGatewayByGatewayId(sensor.getGatewayId());
+            if (gateway != null)
+            {
+                firePointId = gateway.getFirePointId();
+                if (latest.getDeptId() == null) latest.setDeptId(gateway.getDeptId());
+                if (latest.getSourceDeptId() == null) latest.setSourceDeptId(gateway.getSourceDeptId());
+            }
+        }
+        latest.setFirePointId(firePointId);
+        latest.setSyncStatus(latest.getDeptId() == null ? STATUS_OBSERVED : STATUS_SYNCED);
+        latest.setUpdateBy(operator);
+        latest.setUpdateTime(DateUtils.getNowDate());
+        feExtinguisherMapper.updateFeExtinguisher(latest);
+    }
+    private void syncSensorValues(List<FeSensor> sensors, TokenContext tokenContext, SysDeptApiConfig config, SyncStats stats)
+    {
+        for (FeSensor sensor : sensors)
+        {
+            if (sensor.getExternalSensorId() == null || sensor.getSensorId() == null) continue;
+            JsonNode root = requestJson(HttpMethod.GET,
+                PATH_SENSOR_VALUES.replace("{sensor_id}", String.valueOf(sensor.getExternalSensorId())),
+                Collections.singletonMap("unit", azdapsProperties.getHistoryUnit()), tokenContext, config, true);
+            if (root == null || !root.isArray()) continue;
+            for (JsonNode item : root)
+            {
+                Date createTime = parseDate(readText(item, "created_time"));
+                if (createTime == null) continue;
+                if (feSensorHistoryMapper.countBySensorIdAndCreateTime(sensor.getSensorId(), createTime) > 0) continue;
+                FeSensorHistory history = new FeSensorHistory();
+                history.setSensorId(sensor.getSensorId());
+                history.setSensorCode(sensor.getSensorCode());
+                history.setPressure(readBigDecimal(item, "pressure"));
+                history.setTemperature(readBigDecimal(item, "temp"));
+                history.setBatteryLevel(readInteger(item, "battery"));
+                history.setSignalStrength(sensor.getSignalStrength());
+                history.setStatus(sensor.getStatus());
+                history.setCreateTime(createTime);
+                feSensorHistoryMapper.insertFeSensorHistory(history);
+                stats.incrementSuccess("values");
+            }
+        }
+    }
+    private void captureObservedCompany(SysDeptApiConfig config, Long externalCompanyId, String companyName,
+                                        String numberPrefix, String orgPath, Long parentExternalCompanyId,
+                                        String operator)
+    {
+        if (externalCompanyId == null)
+        {
+            return;
+        }
+        Date now = DateUtils.getNowDate();
+
+        FeExternalCompany company = feExternalCompanyMapper.selectByExternalCompanyId(externalCompanyId);
+        if (company == null)
+        {
+            company = new FeExternalCompany();
+            company.setExternalCompanyId(externalCompanyId);
+            company.setFirstSeenTime(now);
+            company.setCreateBy(operator);
+            company.setCreateTime(now);
+        }
+        company.setExternalCompanyName(StringUtils.defaultIfBlank(companyName, company.getExternalCompanyName()));
+        company.setNumberPrefix(StringUtils.defaultIfBlank(numberPrefix, company.getNumberPrefix()));
+        company.setOrgPath(StringUtils.defaultIfBlank(orgPath, company.getOrgPath()));
+        if (parentExternalCompanyId != null) company.setParentExternalCompanyId(parentExternalCompanyId);
+        company.setLastSourceDeptId(config.getDeptId());
+        company.setLastSeenTime(now);
+        company.setSyncStatus(STATUS_OBSERVED);
+        company.setUpdateBy(operator);
+        company.setUpdateTime(now);
+        if (company.getCompanyRecordId() == null) feExternalCompanyMapper.insertFeExternalCompany(company);
+        else feExternalCompanyMapper.updateFeExternalCompany(company);
+
+        FeApiConfigCompanyScope scope = feApiConfigCompanyScopeMapper.selectByConfigIdAndExternalCompanyId(config.getConfigId(), externalCompanyId);
+        if (scope == null)
+        {
+            scope = new FeApiConfigCompanyScope();
+            scope.setConfigId(config.getConfigId());
+            scope.setSourceDeptId(config.getDeptId());
+            scope.setExternalCompanyId(externalCompanyId);
+            scope.setFirstSeenTime(now);
+            scope.setCreateBy(operator);
+            scope.setCreateTime(now);
+        }
+        scope.setExternalCompanyName(StringUtils.defaultIfBlank(companyName, scope.getExternalCompanyName()));
+        scope.setLastSeenTime(now);
+        scope.setSyncStatus(STATUS_OBSERVED);
+        scope.setUpdateBy(operator);
+        scope.setUpdateTime(now);
+        if (scope.getScopeId() == null) feApiConfigCompanyScopeMapper.insertFeApiConfigCompanyScope(scope);
+        else feApiConfigCompanyScopeMapper.updateFeApiConfigCompanyScope(scope);
+    }
+
+    private Long resolveDeptId(Long externalCompanyId)
+    {
+        if (externalCompanyId == null) return null;
+        FeCompanyDeptMapping mapping = feCompanyDeptMappingMapper.selectByExternalCompanyId(externalCompanyId);
+        return mapping == null ? null : mapping.getDeptId();
+    }
+    private Long resolveUniqueFirePointId(Long sourceDeptId, Long externalCompanyId)
+    {
+        if (sourceDeptId == null || externalCompanyId == null) return null;
+        List<FeFirePoint> firePoints = feFirePointMapper.selectBySourceDeptIdAndExternalCompanyId(sourceDeptId, externalCompanyId);
+        if (firePoints == null || firePoints.size() != 1) return null;
+        return firePoints.get(0).getFirePointId();
+    }
+
+    private Long resolveFirePointIdForGateway(JsonNode tboxNode, Long sourceDeptId, Long externalCompanyId)
+    {
+        Long externalStationId = readLong(tboxNode, "train");
+        if (externalStationId != null)
+        {
+            FeFirePoint firePoint = feFirePointMapper.selectByExternalStationId(externalStationId);
+            if (firePoint != null) return firePoint.getFirePointId();
+        }
+        return resolveUniqueFirePointId(sourceDeptId, externalCompanyId);
+    }
+
+    private Map<Long, JsonNode> buildGpsNodeMap(List<JsonNode> gpsNodes)
+    {
+        Map<Long, JsonNode> gpsNodeMap = new LinkedHashMap<>();
+        if (gpsNodes == null) return gpsNodeMap;
+        for (JsonNode gpsNode : gpsNodes)
+        {
+            Long tboxId = readLong(gpsNode, "tbox_id");
+            if (tboxId != null) gpsNodeMap.put(tboxId, gpsNode);
+        }
+        return gpsNodeMap;
+    }
+
+    private void syncFirePointGpsFromGateway(FeGateway gateway, String operator)
+    {
+        if (gateway == null || gateway.getFirePointId() == null) return;
+        if (!hasValidGps(gateway.getGpsLongitude(), gateway.getGpsLatitude())) return;
+
+        FeFirePoint firePoint = feFirePointMapper.selectFeFirePointByFirePointId(gateway.getFirePointId());
+        if (firePoint == null) return;
+        if (Objects.equals(firePoint.getLongitude(), gateway.getGpsLongitude())
+            && Objects.equals(firePoint.getLatitude(), gateway.getGpsLatitude()))
+        {
+            return;
+        }
+
+        firePoint.setLongitude(gateway.getGpsLongitude());
+        firePoint.setLatitude(gateway.getGpsLatitude());
+        firePoint.setUpdateBy(operator);
+        firePoint.setUpdateTime(DateUtils.getNowDate());
+        feFirePointMapper.updateFeFirePoint(firePoint);
+    }
+
+    private JsonNode selectLatestValueNode(JsonNode valuesNode)
+    {
+        if (valuesNode == null || !valuesNode.isArray() || valuesNode.size() == 0) return null;
+        JsonNode latest = null;
+        Date latestTime = null;
+        for (JsonNode valueNode : valuesNode)
+        {
+            Date currentTime = parseDate(readText(valueNode, "created_time"));
+            if (latest == null || (currentTime != null && (latestTime == null || currentTime.after(latestTime))))
+            {
+                latest = valueNode;
+                latestTime = currentTime;
+            }
+        }
+        return latest == null ? valuesNode.get(valuesNode.size() - 1) : latest;
+    }
+
+    private String readText(JsonNode node, String fieldName)
+    {
+        if (node == null || node.isMissingNode() || node.isNull()) return null;
+        return asText(node.get(fieldName));
+    }
+
+    private String readNestedText(JsonNode node, String parentField, String childField)
+    {
+        if (node == null) return null;
+        return readText(node.get(parentField), childField);
+    }
+
+    private Long readLong(JsonNode node, String fieldName)
+    {
+        if (node == null || node.isMissingNode() || node.isNull()) return null;
+        return asLong(node.get(fieldName));
+    }
+
+    private JsonNode extractLatestSensorValue(JsonNode valuesNode)
+    {
+        return selectLatestValueNode(valuesNode);
+    }
+
+    private Long readNestedLong(JsonNode node, String parentField, String childField)
+    {
+        if (node == null) return null;
+        JsonNode parent = node.get(parentField);
+        if (parent == null || parent.isNull() || parent.isMissingNode()) return null;
+        return asLong(parent.get(childField));
+    }
+
+    private Integer readInteger(JsonNode node, String fieldName)
+    {
+        if (node == null || node.isMissingNode() || node.isNull()) return null;
+        JsonNode value = node.get(fieldName);
+        if (value == null || value.isNull() || value.isMissingNode()) return null;
+        if (value.isInt() || value.isLong()) return value.intValue();
+        if (value.isTextual() && StringUtils.isNotBlank(value.asText()))
+        {
+            try { return Integer.parseInt(value.asText()); } catch (NumberFormatException e) { return null; }
+        }
+        return null;
+    }
+
+    private BigDecimal readBigDecimal(JsonNode node, String fieldName)
+    {
+        if (node == null || node.isMissingNode() || node.isNull()) return null;
+        return asBigDecimal(node.get(fieldName));
+    }
+
+    private BigDecimal readNestedBigDecimal(JsonNode node, String parentField, String childField)
+    {
+        if (node == null) return null;
+        JsonNode parent = node.get(parentField);
+        if (parent == null || parent.isNull() || parent.isMissingNode()) return null;
+        return asBigDecimal(parent.get(childField));
+    }
+
+    private BigDecimal readGpsCoordinate(JsonNode node, String fieldName)
+    {
+        BigDecimal value = readBigDecimal(node, fieldName);
+        if (value == null) return null;
+        return value.compareTo(BigDecimal.ZERO) == 0 ? null : value;
+    }
+
+    private boolean hasValidGps(BigDecimal longitude, BigDecimal latitude)
+    {
+        return longitude != null && latitude != null;
+    }
+
+    private Long asLong(JsonNode node)
+    {
+        if (node == null || node.isNull() || node.isMissingNode()) return null;
+        if (node.isIntegralNumber()) return node.longValue();
+        if (node.isTextual() && StringUtils.isNotBlank(node.asText()))
+        {
+            try { return Long.parseLong(node.asText()); } catch (NumberFormatException e) { return null; }
+        }
+        return null;
+    }
+
+    private String asText(JsonNode node)
+    {
+        if (node == null || node.isNull() || node.isMissingNode()) return null;
+        String text = node.asText();
+        return StringUtils.isBlank(text) ? null : text;
+    }
+
+    private BigDecimal asBigDecimal(JsonNode node)
+    {
+        if (node == null || node.isNull() || node.isMissingNode()) return null;
+        if (node.isNumber()) return node.decimalValue();
+        if (node.isTextual() && StringUtils.isNotBlank(node.asText()))
+        {
+            try { return new BigDecimal(node.asText()); } catch (NumberFormatException e) { return null; }
+        }
+        return null;
+    }
+
+    private Long resolveExternalSensorIdFromBindingNode(JsonNode bindingNode)
+    {
+        Long externalSensorId = readNestedLong(bindingNode, "sensor", "id");
+        if (externalSensorId != null) return externalSensorId;
+        externalSensorId = readLong(bindingNode, "sensor_id");
+        if (externalSensorId != null) return externalSensorId;
+        return readLong(bindingNode, "sensorId");
+    }
+
+    private Long resolveExternalSensorIdFromSensorNode(JsonNode sensorNode)
+    {
+        Long externalSensorId = asLong(sensorNode);
+        if (externalSensorId != null) return externalSensorId;
+        externalSensorId = readLong(sensorNode, "id");
+        if (externalSensorId != null) return externalSensorId;
+        externalSensorId = readLong(sensorNode, "sensor_id");
+        if (externalSensorId != null) return externalSensorId;
+        externalSensorId = readLong(sensorNode, "sensorId");
+        if (externalSensorId != null) return externalSensorId;
+        return readNestedLong(sensorNode, "sensor", "id");
+    }
+
+    private String safeJson(JsonNode node)
+    {
+        return node == null ? "null" : node.toString();
+    }
+
+    private Date parseDate(String value)
+    {
+        if (StringUtils.isBlank(value)) return null;
+        try { return Date.from(Instant.parse(value)); } catch (DateTimeParseException e) { }
+        try { return Date.from(OffsetDateTime.parse(value).toInstant()); } catch (DateTimeParseException e) { }
+        try { return Date.from(LocalDateTime.parse(value).atZone(ZoneId.systemDefault()).toInstant()); } catch (DateTimeParseException e) { }
+        try { return Date.from(LocalDate.parse(value).atStartOfDay(ZoneId.systemDefault()).toInstant()); } catch (DateTimeParseException e) { }
+        return null;
+    }
+
+    private static class TokenContext
+    {
+        private String accessToken;
+        private String refreshToken;
+        private Date tokenExpireTime;
+
+        public String getAccessToken() { return accessToken; }
+        public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
+        public String getRefreshToken() { return refreshToken; }
+        public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+        public Date getTokenExpireTime() { return tokenExpireTime; }
+        public void setTokenExpireTime(Date tokenExpireTime) { this.tokenExpireTime = tokenExpireTime; }
+    }
+
+    private static class SyncStats
+    {
+        private final Map<String, Integer> detailSuccess = new LinkedHashMap<>();
+        private final Map<String, Integer> detailFail = new LinkedHashMap<>();
+
+        void incrementSuccess(String scope) { detailSuccess.merge(scope, 1, Integer::sum); }
+        void incrementFail(String scope) { detailFail.merge(scope, 1, Integer::sum); }
+        int getSuccessCount() { return detailSuccess.values().stream().mapToInt(Integer::intValue).sum(); }
+        int getFailCount() { return detailFail.values().stream().mapToInt(Integer::intValue).sum(); }
+        String buildMessage() { return "success=" + detailSuccess + ", fail=" + detailFail; }
+        Map<String, Object> toMap()
+        {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("success", detailSuccess);
+            map.put("fail", detailFail);
+            map.put("successCount", getSuccessCount());
+            map.put("failCount", getFailCount());
+            return map;
+        }
+    }
+}

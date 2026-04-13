@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeExternalCompanyMapper">
+
+    <resultMap id="FeExternalCompanyResult" type="FeExternalCompany">
+        <result property="companyRecordId" column="company_record_id" />
+        <result property="externalCompanyId" column="external_company_id" />
+        <result property="externalCompanyName" column="external_company_name" />
+        <result property="numberPrefix" column="number_prefix" />
+        <result property="orgPath" column="org_path" />
+        <result property="parentExternalCompanyId" column="parent_external_company_id" />
+        <result property="syncStatus" column="sync_status" />
+        <result property="firstSeenTime" column="first_seen_time" />
+        <result property="lastSeenTime" column="last_seen_time" />
+        <result property="lastSourceDeptId" column="last_source_dept_id" />
+        <result property="lastSourceDeptName" column="last_source_dept_name" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectFeExternalCompanyVo">
+        select c.company_record_id, c.external_company_id, c.external_company_name, c.number_prefix,
+               c.org_path, c.parent_external_company_id, c.sync_status, c.first_seen_time, c.last_seen_time,
+               c.last_source_dept_id, d.dept_name as last_source_dept_name,
+               c.remark, c.create_by, c.create_time, c.update_by, c.update_time
+        from fe_external_company c
+        left join sys_dept d on c.last_source_dept_id = d.dept_id
+    </sql>
+
+    <select id="selectByExternalCompanyId" parameterType="Long" resultMap="FeExternalCompanyResult">
+        <include refid="selectFeExternalCompanyVo"/>
+        where c.external_company_id = #{externalCompanyId}
+        limit 1
+    </select>
+
+    <select id="selectFeExternalCompanyList" parameterType="FeExternalCompany" resultMap="FeExternalCompanyResult">
+        <include refid="selectFeExternalCompanyVo"/>
+        <where>
+            <if test="externalCompanyId != null"> and c.external_company_id = #{externalCompanyId}</if>
+            <if test="externalCompanyName != null and externalCompanyName != ''"> and c.external_company_name like concat('%', #{externalCompanyName}, '%')</if>
+            <if test="lastSourceDeptId != null"> and c.last_source_dept_id = #{lastSourceDeptId}</if>
+            <if test="syncStatus != null and syncStatus != ''"> and c.sync_status = #{syncStatus}</if>
+        </where>
+        order by c.company_record_id desc
+    </select>
+
+    <insert id="insertFeExternalCompany" parameterType="FeExternalCompany" useGeneratedKeys="true" keyProperty="companyRecordId">
+        insert into fe_external_company (
+            external_company_id, external_company_name, number_prefix, org_path, parent_external_company_id,
+            sync_status, first_seen_time, last_seen_time, last_source_dept_id, remark,
+            create_by, create_time, update_by, update_time
+        ) values (
+            #{externalCompanyId}, #{externalCompanyName}, #{numberPrefix}, #{orgPath}, #{parentExternalCompanyId},
+            #{syncStatus}, #{firstSeenTime}, #{lastSeenTime}, #{lastSourceDeptId}, #{remark},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}
+        )
+    </insert>
+
+    <update id="updateFeExternalCompany" parameterType="FeExternalCompany">
+        update fe_external_company
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="externalCompanyName != null">external_company_name = #{externalCompanyName},</if>
+            <if test="numberPrefix != null">number_prefix = #{numberPrefix},</if>
+            <if test="orgPath != null">org_path = #{orgPath},</if>
+            <if test="parentExternalCompanyId != null">parent_external_company_id = #{parentExternalCompanyId},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="firstSeenTime != null">first_seen_time = #{firstSeenTime},</if>
+            <if test="lastSeenTime != null">last_seen_time = #{lastSeenTime},</if>
+            <if test="lastSourceDeptId != null">last_source_dept_id = #{lastSourceDeptId},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where company_record_id = #{companyRecordId}
+    </update>
+</mapper>

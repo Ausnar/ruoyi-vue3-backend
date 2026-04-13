@@ -1,70 +1,111 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.manage.mapper.FeFirePointMapper">
-    
-    <resultMap type="FeFirePoint" id="FeFirePointResult">
-        <result property="firePointId"    column="fire_point_id"    />
-        <result property="firePointCode"    column="fire_point_code"    />
-        <result property="firePointName"    column="fire_point_name"    />
-        <result property="deptId"    column="dept_id"    />
-        <result property="deptName"    column="dept_name"    />
-        <result property="pointType"    column="point_type"    />
-        <result property="location"    column="location"    />
-        <result property="floor"    column="floor"    />
-        <result property="building"    column="building"    />
-        <result property="longitude"    column="longitude"    />
-        <result property="latitude"    column="latitude"    />
-        <result property="contactPerson"    column="contact_person"    />
-        <result property="contactPhone"    column="contact_phone"    />
-        <result property="qrCode"    column="qr_code"    />
-        <result property="sortOrder"    column="sort_order"    />
-        <result property="status"    column="status"    />
-        <result property="createBy"    column="create_by"    />
-        <result property="createTime"    column="create_time"    />
-        <result property="updateBy"    column="update_by"    />
-        <result property="updateTime"    column="update_time"    />
-        <result property="remark"    column="remark"    />
-        <result property="delFlag"    column="del_flag"    />
+
+    <resultMap id="FeFirePointResult" type="FeFirePoint">
+        <result property="firePointId" column="fire_point_id" />
+        <result property="externalStationId" column="external_station_id" />
+        <result property="firePointCode" column="fire_point_code" />
+        <result property="firePointName" column="fire_point_name" />
+        <result property="stationNumber" column="station_number" />
+        <result property="stationType" column="station_type" />
+        <result property="externalCompanyId" column="external_company_id" />
+        <result property="externalCompanyName" column="external_company_name" />
+        <result property="sourceDeptId" column="source_dept_id" />
+        <result property="sourceDeptName" column="source_dept_name" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="pointType" column="point_type" />
+        <result property="location" column="location" />
+        <result property="floor" column="floor" />
+        <result property="building" column="building" />
+        <result property="longitude" column="longitude" />
+        <result property="latitude" column="latitude" />
+        <result property="contactPerson" column="contact_person" />
+        <result property="contactPhone" column="contact_phone" />
+        <result property="qrCode" column="qr_code" />
+        <result property="sortOrder" column="sort_order" />
+        <result property="status" column="status" />
+        <result property="syncStatus" column="sync_status" />
+        <result property="lastSyncTime" column="last_sync_time" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+        <result property="delFlag" column="del_flag" />
     </resultMap>
 
     <sql id="selectFeFirePointVo">
-        select f.fire_point_id, f.fire_point_code, f.fire_point_name, f.dept_id, d.dept_name, f.point_type, f.location, f.floor, f.building, f.longitude, f.latitude, f.contact_person, f.contact_phone, f.qr_code, f.sort_order, f.status, f.create_by, f.create_time, f.update_by, f.update_time, f.remark, f.del_flag
+        select f.fire_point_id, f.external_station_id, f.fire_point_code, f.fire_point_name, f.station_number,
+               f.station_type, f.external_company_id, ec.external_company_name, f.source_dept_id, sd.dept_name as source_dept_name,
+               f.dept_id, d.dept_name, f.point_type, f.location,
+               f.floor, f.building, f.longitude, f.latitude, f.contact_person, f.contact_phone,
+               f.qr_code, f.sort_order, f.status, f.sync_status, f.last_sync_time,
+               f.create_by, f.create_time, f.update_by, f.update_time, f.remark, f.del_flag
         from fe_fire_point f
+        left join fe_external_company ec on f.external_company_id = ec.external_company_id
         left join sys_dept d on f.dept_id = d.dept_id
+        left join sys_dept sd on f.source_dept_id = sd.dept_id
     </sql>
 
     <select id="selectFeFirePointList" parameterType="FeFirePoint" resultMap="FeFirePointResult">
         <include refid="selectFeFirePointVo"/>
-        <where>  
-            <if test="firePointCode != null  and firePointCode != ''"> and fire_point_code = #{firePointCode}</if>
-            <if test="firePointName != null  and firePointName != ''"> and fire_point_name like concat('%', #{firePointName}, '%')</if>
-            <if test="deptId != null "> and f.dept_id = #{deptId}</if>
-            <if test="pointType != null  and pointType != ''"> and point_type = #{pointType}</if>
-            <if test="location != null  and location != ''"> and location = #{location}</if>
-            <if test="floor != null  and floor != ''"> and floor = #{floor}</if>
-            <if test="building != null  and building != ''"> and building = #{building}</if>
-            <if test="longitude != null "> and longitude = #{longitude}</if>
-            <if test="latitude != null "> and latitude = #{latitude}</if>
-            <if test="contactPerson != null  and contactPerson != ''"> and contact_person = #{contactPerson}</if>
-            <if test="contactPhone != null  and contactPhone != ''"> and contact_phone = #{contactPhone}</if>
-            <if test="qrCode != null  and qrCode != ''"> and qr_code = #{qrCode}</if>
-            <if test="sortOrder != null "> and sort_order = #{sortOrder}</if>
-            <if test="status != null  and status != ''"> and status = #{status}</if>
+        <where>
+            <if test="firePointCode != null and firePointCode != ''"> and f.fire_point_code = #{firePointCode}</if>
+            <if test="firePointName != null and firePointName != ''"> and f.fire_point_name like concat('%', #{firePointName}, '%')</if>
+            <if test="externalStationId != null"> and f.external_station_id = #{externalStationId}</if>
+            <if test="stationNumber != null and stationNumber != ''"> and f.station_number = #{stationNumber}</if>
+            <if test="externalCompanyId != null"> and f.external_company_id = #{externalCompanyId}</if>
+            <if test="sourceDeptId != null"> and f.source_dept_id = #{sourceDeptId}</if>
+            <if test="deptId != null"> and f.dept_id = #{deptId}</if>
+            <if test="pointType != null and pointType != ''"> and f.point_type = #{pointType}</if>
+            <if test="status != null and status != ''"> and f.status = #{status}</if>
+            <if test="syncStatus != null and syncStatus != ''"> and f.sync_status = #{syncStatus}</if>
+            ${params.dataScope}
         </where>
     </select>
-    
+
     <select id="selectFeFirePointByFirePointId" parameterType="Long" resultMap="FeFirePointResult">
         <include refid="selectFeFirePointVo"/>
-        where fire_point_id = #{firePointId}
+        where f.fire_point_id = #{firePointId}
+    </select>
+
+    <select id="selectByExternalStationId" parameterType="Long" resultMap="FeFirePointResult">
+        <include refid="selectFeFirePointVo"/>
+        where f.external_station_id = #{externalStationId}
+        limit 1
+    </select>
+
+    <select id="selectByStationNumber" parameterType="String" resultMap="FeFirePointResult">
+        <include refid="selectFeFirePointVo"/>
+        where f.station_number = #{stationNumber}
+        limit 1
+    </select>
+
+    <select id="selectByExternalCompanyId" parameterType="Long" resultMap="FeFirePointResult">
+        <include refid="selectFeFirePointVo"/>
+        where f.external_company_id = #{externalCompanyId}
+        order by f.fire_point_id asc
+    </select>
+
+    <select id="selectBySourceDeptIdAndExternalCompanyId" resultMap="FeFirePointResult">
+        <include refid="selectFeFirePointVo"/>
+        where f.source_dept_id = #{param1}
+          and f.external_company_id = #{param2}
+        order by f.fire_point_id asc
     </select>
 
     <insert id="insertFeFirePoint" parameterType="FeFirePoint" useGeneratedKeys="true" keyProperty="firePointId">
         insert into fe_fire_point
         <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="externalStationId != null">external_station_id,</if>
             <if test="firePointCode != null and firePointCode != ''">fire_point_code,</if>
             <if test="firePointName != null">fire_point_name,</if>
+            <if test="stationNumber != null">station_number,</if>
+            <if test="stationType != null">station_type,</if>
+            <if test="externalCompanyId != null">external_company_id,</if>
+            <if test="sourceDeptId != null">source_dept_id,</if>
             <if test="deptId != null">dept_id,</if>
             <if test="pointType != null">point_type,</if>
             <if test="location != null">location,</if>
@@ -77,16 +118,23 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="qrCode != null">qr_code,</if>
             <if test="sortOrder != null">sort_order,</if>
             <if test="status != null">status,</if>
+            <if test="syncStatus != null">sync_status,</if>
+            <if test="lastSyncTime != null">last_sync_time,</if>
             <if test="createBy != null">create_by,</if>
             <if test="createTime != null">create_time,</if>
             <if test="updateBy != null">update_by,</if>
             <if test="updateTime != null">update_time,</if>
             <if test="remark != null">remark,</if>
             <if test="delFlag != null">del_flag,</if>
-         </trim>
+        </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="externalStationId != null">#{externalStationId},</if>
             <if test="firePointCode != null and firePointCode != ''">#{firePointCode},</if>
             <if test="firePointName != null">#{firePointName},</if>
+            <if test="stationNumber != null">#{stationNumber},</if>
+            <if test="stationType != null">#{stationType},</if>
+            <if test="externalCompanyId != null">#{externalCompanyId},</if>
+            <if test="sourceDeptId != null">#{sourceDeptId},</if>
             <if test="deptId != null">#{deptId},</if>
             <if test="pointType != null">#{pointType},</if>
             <if test="location != null">#{location},</if>
@@ -99,20 +147,27 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="qrCode != null">#{qrCode},</if>
             <if test="sortOrder != null">#{sortOrder},</if>
             <if test="status != null">#{status},</if>
+            <if test="syncStatus != null">#{syncStatus},</if>
+            <if test="lastSyncTime != null">#{lastSyncTime},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="updateBy != null">#{updateBy},</if>
             <if test="updateTime != null">#{updateTime},</if>
             <if test="remark != null">#{remark},</if>
             <if test="delFlag != null">#{delFlag},</if>
-         </trim>
+        </trim>
     </insert>
 
     <update id="updateFeFirePoint" parameterType="FeFirePoint">
         update fe_fire_point
         <trim prefix="SET" suffixOverrides=",">
+            <if test="externalStationId != null">external_station_id = #{externalStationId},</if>
             <if test="firePointCode != null and firePointCode != ''">fire_point_code = #{firePointCode},</if>
             <if test="firePointName != null">fire_point_name = #{firePointName},</if>
+            <if test="stationNumber != null">station_number = #{stationNumber},</if>
+            <if test="stationType != null">station_type = #{stationType},</if>
+            <if test="externalCompanyId != null">external_company_id = #{externalCompanyId},</if>
+            <if test="sourceDeptId != null">source_dept_id = #{sourceDeptId},</if>
             <if test="deptId != null">dept_id = #{deptId},</if>
             <if test="pointType != null">point_type = #{pointType},</if>
             <if test="location != null">location = #{location},</if>
@@ -125,8 +180,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="qrCode != null">qr_code = #{qrCode},</if>
             <if test="sortOrder != null">sort_order = #{sortOrder},</if>
             <if test="status != null">status = #{status},</if>
-            <if test="createBy != null">create_by = #{createBy},</if>
-            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="lastSyncTime != null">last_sync_time = #{lastSyncTime},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             <if test="remark != null">remark = #{remark},</if>
@@ -135,12 +190,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where fire_point_id = #{firePointId}
     </update>
 
+    <update id="updateDeptIdByExternalCompanyId">
+        update fe_fire_point
+        set dept_id = #{deptId,jdbcType=BIGINT}
+        where external_company_id = #{externalCompanyId}
+    </update>
+
     <delete id="deleteFeFirePointByFirePointId" parameterType="Long">
         delete from fe_fire_point where fire_point_id = #{firePointId}
     </delete>
 
     <delete id="deleteFeFirePointByFirePointIds" parameterType="String">
-        delete from fe_fire_point where fire_point_id in 
+        delete from fe_fire_point where fire_point_id in
         <foreach item="firePointId" collection="array" open="(" separator="," close=")">
             #{firePointId}
         </foreach>

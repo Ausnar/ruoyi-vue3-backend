@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeCompanyDeptMappingMapper">
+
+    <resultMap id="FeCompanyDeptMappingResult" type="FeCompanyDeptMapping">
+        <result property="mappingId" column="mapping_id" />
+        <result property="externalCompanyId" column="external_company_id" />
+        <result property="externalCompanyName" column="external_company_name" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="syncStatus" column="sync_status" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectFeCompanyDeptMappingVo">
+        select m.mapping_id, m.external_company_id, m.external_company_name, m.dept_id,
+               d.dept_name, m.sync_status, m.remark, m.create_by, m.create_time, m.update_by, m.update_time
+        from fe_company_dept_mapping m
+        left join sys_dept d on m.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectFeCompanyDeptMappingByMappingId" parameterType="Long" resultMap="FeCompanyDeptMappingResult">
+        <include refid="selectFeCompanyDeptMappingVo"/>
+        where m.mapping_id = #{mappingId}
+        limit 1
+    </select>
+
+    <select id="selectByExternalCompanyId" parameterType="Long" resultMap="FeCompanyDeptMappingResult">
+        <include refid="selectFeCompanyDeptMappingVo"/>
+        where m.external_company_id = #{externalCompanyId}
+        limit 1
+    </select>
+
+    <select id="selectFeCompanyDeptMappingList" parameterType="FeCompanyDeptMapping" resultMap="FeCompanyDeptMappingResult">
+        <include refid="selectFeCompanyDeptMappingVo"/>
+        <where>
+            <if test="externalCompanyId != null"> and m.external_company_id = #{externalCompanyId}</if>
+            <if test="externalCompanyName != null and externalCompanyName != ''"> and m.external_company_name like concat('%', #{externalCompanyName}, '%')</if>
+            <if test="deptId != null"> and m.dept_id = #{deptId}</if>
+            <if test="syncStatus != null and syncStatus != ''"> and m.sync_status = #{syncStatus}</if>
+        </where>
+        order by m.mapping_id desc
+    </select>
+
+    <insert id="insertFeCompanyDeptMapping" parameterType="FeCompanyDeptMapping" useGeneratedKeys="true" keyProperty="mappingId">
+        insert into fe_company_dept_mapping
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="externalCompanyId != null">external_company_id,</if>
+            <if test="externalCompanyName != null">external_company_name,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="syncStatus != null">sync_status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="externalCompanyId != null">#{externalCompanyId},</if>
+            <if test="externalCompanyName != null">#{externalCompanyName},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="syncStatus != null">#{syncStatus},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateFeCompanyDeptMapping" parameterType="FeCompanyDeptMapping">
+        update fe_company_dept_mapping
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="externalCompanyId != null">external_company_id = #{externalCompanyId},</if>
+            <if test="externalCompanyName != null">external_company_name = #{externalCompanyName},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where mapping_id = #{mappingId}
+    </update>
+
+    <delete id="deleteFeCompanyDeptMappingByMappingIds" parameterType="Long">
+        delete from fe_company_dept_mapping
+        where mapping_id in
+        <foreach item="mappingId" collection="array" open="(" separator="," close=")">
+            #{mappingId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteFeCompanyDeptMappingByMappingId" parameterType="Long">
+        delete from fe_company_dept_mapping where mapping_id = #{mappingId}
+    </delete>
+</mapper>

@@ -1,64 +1,105 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.manage.mapper.FeSensorMapper">
-    
-    <resultMap type="FeSensor" id="FeSensorResult">
-        <result property="sensorId"    column="sensor_id"    />
-        <result property="sensorCode"    column="sensor_code"    />
-        <result property="deptId"    column="dept_id"    />
-        <result property="deptName"    column="dept_name"    />
-        <result property="gatewayCode"    column="gateway_code"    />
-        <result property="pressure"    column="pressure"    />
-        <result property="temperature"    column="temperature"    />
-        <result property="batteryLevel"    column="battery_level"    />
-        <result property="lastOnlineTime"    column="last_online_time"    />
-        <result property="status"    column="status"    />
-        <result property="createBy"    column="create_by"    />
-        <result property="createTime"    column="create_time"    />
-        <result property="updateBy"    column="update_by"    />
-        <result property="updateTime"    column="update_time"    />
-        <result property="remark"    column="remark"    />
-        <result property="delFlag"    column="del_flag"    />
+
+    <resultMap id="FeSensorResult" type="FeSensor">
+        <result property="sensorId" column="sensor_id" />
+        <result property="externalSensorId" column="external_sensor_id" />
+        <result property="sensorCode" column="sensor_code" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="sourceDeptId" column="source_dept_id" />
+        <result property="sourceDeptName" column="source_dept_name" />
+        <result property="externalCompanyName" column="external_company_name" />
+        <result property="gatewayId" column="gateway_id" />
+        <result property="gatewayCode" column="gateway_code" />
+        <result property="mac" column="mac" />
+        <result property="pressure" column="pressure" />
+        <result property="temperature" column="temperature" />
+        <result property="batteryLevel" column="battery_level" />
+        <result property="signalStrength" column="signal_strength" />
+        <result property="lastOnlineTime" column="last_online_time" />
+        <result property="status" column="status" />
+        <result property="syncStatus" column="sync_status" />
+        <result property="lastSyncTime" column="last_sync_time" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+        <result property="delFlag" column="del_flag" />
     </resultMap>
 
     <sql id="selectFeSensorVo">
-        select s.sensor_id, s.sensor_code, s.dept_id, d.dept_name, s.gateway_code, s.pressure, s.temperature, s.battery_level, s.last_online_time, s.status, s.create_by, s.create_time, s.update_by, s.update_time, s.remark, s.del_flag
+        select s.sensor_id, s.external_sensor_id, s.sensor_code, s.dept_id, d.dept_name,
+               s.source_dept_id, sd.dept_name as source_dept_name, s.gateway_id,
+               s.gateway_code, ec.external_company_name, s.mac, s.pressure, s.temperature, s.battery_level, s.signal_strength,
+               s.last_online_time, s.status, s.sync_status, s.last_sync_time,
+               s.create_by, s.create_time, s.update_by, s.update_time, s.remark, s.del_flag
         from fe_sensor s
+        left join fe_gateway g on s.gateway_id = g.gateway_id
+        left join fe_external_company ec on g.external_company_id = ec.external_company_id
         left join sys_dept d on s.dept_id = d.dept_id
+        left join sys_dept sd on s.source_dept_id = sd.dept_id
     </sql>
 
     <select id="selectFeSensorList" parameterType="FeSensor" resultMap="FeSensorResult">
         <include refid="selectFeSensorVo"/>
-        <where>  
-            <if test="sensorCode != null  and sensorCode != ''"> and sensor_code = #{sensorCode}</if>
-            <if test="deptId != null "> and s.dept_id = #{deptId}</if>
-            <if test="gatewayCode != null  and gatewayCode != ''"> and gateway_code = #{gatewayCode}</if>
-            <if test="pressure != null "> and pressure = #{pressure}</if>
-            <if test="temperature != null "> and temperature = #{temperature}</if>
-            <if test="batteryLevel != null "> and battery_level = #{batteryLevel}</if>
-            <if test="lastOnlineTime != null "> and last_online_time = #{lastOnlineTime}</if>
-            <if test="status != null  and status != ''"> and status = #{status}</if>
+        <where>
+            <if test="sensorCode != null and sensorCode != ''"> and s.sensor_code = #{sensorCode}</if>
+            <if test="externalSensorId != null"> and s.external_sensor_id = #{externalSensorId}</if>
+            <if test="deptId != null"> and s.dept_id = #{deptId}</if>
+            <if test="sourceDeptId != null"> and s.source_dept_id = #{sourceDeptId}</if>
+            <if test="gatewayId != null"> and s.gateway_id = #{gatewayId}</if>
+            <if test="gatewayCode != null and gatewayCode != ''"> and s.gateway_code = #{gatewayCode}</if>
+            <if test="mac != null and mac != ''"> and s.mac = #{mac}</if>
+            <if test="status != null and status != ''"> and s.status = #{status}</if>
+            <if test="syncStatus != null and syncStatus != ''"> and s.sync_status = #{syncStatus}</if>
+            ${params.dataScope}
         </where>
     </select>
-    
+
     <select id="selectFeSensorBySensorId" parameterType="Long" resultMap="FeSensorResult">
         <include refid="selectFeSensorVo"/>
-        where sensor_id = #{sensorId}
+        where s.sensor_id = #{sensorId}
+    </select>
+
+    <select id="selectByExternalSensorId" parameterType="Long" resultMap="FeSensorResult">
+        <include refid="selectFeSensorVo"/>
+        where s.external_sensor_id = #{externalSensorId}
+        limit 1
+    </select>
+
+    <select id="selectBySensorCode" parameterType="String" resultMap="FeSensorResult">
+        <include refid="selectFeSensorVo"/>
+        where s.sensor_code = #{sensorCode}
+        limit 1
+    </select>
+
+    <select id="selectByMac" parameterType="String" resultMap="FeSensorResult">
+        <include refid="selectFeSensorVo"/>
+        where s.mac = #{mac}
+        limit 1
     </select>
 
     <insert id="insertFeSensor" parameterType="FeSensor" useGeneratedKeys="true" keyProperty="sensorId">
         insert into fe_sensor
         <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="externalSensorId != null">external_sensor_id,</if>
             <if test="sensorCode != null and sensorCode != ''">sensor_code,</if>
             <if test="deptId != null">dept_id,</if>
+            <if test="sourceDeptId != null">source_dept_id,</if>
+            <if test="gatewayId != null">gateway_id,</if>
             <if test="gatewayCode != null">gateway_code,</if>
+            <if test="mac != null">mac,</if>
             <if test="pressure != null">pressure,</if>
             <if test="temperature != null">temperature,</if>
             <if test="batteryLevel != null">battery_level,</if>
+            <if test="signalStrength != null">signal_strength,</if>
             <if test="lastOnlineTime != null">last_online_time,</if>
             <if test="status != null">status,</if>
+            <if test="syncStatus != null">sync_status,</if>
+            <if test="lastSyncTime != null">last_sync_time,</if>
             <if test="createBy != null">create_by,</if>
             <if test="createTime != null">create_time,</if>
             <if test="updateBy != null">update_by,</if>
@@ -67,14 +108,21 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="delFlag != null">del_flag,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="externalSensorId != null">#{externalSensorId},</if>
             <if test="sensorCode != null and sensorCode != ''">#{sensorCode},</if>
             <if test="deptId != null">#{deptId},</if>
+            <if test="sourceDeptId != null">#{sourceDeptId},</if>
+            <if test="gatewayId != null">#{gatewayId},</if>
             <if test="gatewayCode != null">#{gatewayCode},</if>
+            <if test="mac != null">#{mac},</if>
             <if test="pressure != null">#{pressure},</if>
             <if test="temperature != null">#{temperature},</if>
             <if test="batteryLevel != null">#{batteryLevel},</if>
+            <if test="signalStrength != null">#{signalStrength},</if>
             <if test="lastOnlineTime != null">#{lastOnlineTime},</if>
             <if test="status != null">#{status},</if>
+            <if test="syncStatus != null">#{syncStatus},</if>
+            <if test="lastSyncTime != null">#{lastSyncTime},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="updateBy != null">#{updateBy},</if>
@@ -87,16 +135,21 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <update id="updateFeSensor" parameterType="FeSensor">
         update fe_sensor
         <trim prefix="SET" suffixOverrides=",">
+            <if test="externalSensorId != null">external_sensor_id = #{externalSensorId},</if>
             <if test="sensorCode != null and sensorCode != ''">sensor_code = #{sensorCode},</if>
             <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="sourceDeptId != null">source_dept_id = #{sourceDeptId},</if>
+            <if test="gatewayId != null">gateway_id = #{gatewayId},</if>
             <if test="gatewayCode != null">gateway_code = #{gatewayCode},</if>
+            <if test="mac != null">mac = #{mac},</if>
             <if test="pressure != null">pressure = #{pressure},</if>
             <if test="temperature != null">temperature = #{temperature},</if>
             <if test="batteryLevel != null">battery_level = #{batteryLevel},</if>
+            <if test="signalStrength != null">signal_strength = #{signalStrength},</if>
             <if test="lastOnlineTime != null">last_online_time = #{lastOnlineTime},</if>
             <if test="status != null">status = #{status},</if>
-            <if test="createBy != null">create_by = #{createBy},</if>
-            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="lastSyncTime != null">last_sync_time = #{lastSyncTime},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             <if test="remark != null">remark = #{remark},</if>
@@ -116,16 +169,27 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </foreach>
     </delete>
 
-    <!-- 根据传感器编号更新传感器最新数据 -->
     <update id="updateFeSensorByCode" parameterType="FeSensor">
         update fe_sensor
         <trim prefix="SET" suffixOverrides=",">
             <if test="pressure != null">pressure = #{pressure},</if>
             <if test="temperature != null">temperature = #{temperature},</if>
             <if test="batteryLevel != null">battery_level = #{batteryLevel},</if>
+            <if test="signalStrength != null">signal_strength = #{signalStrength},</if>
             <if test="status != null">status = #{status},</if>
             <if test="lastOnlineTime != null">last_online_time = #{lastOnlineTime},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="lastSyncTime != null">last_sync_time = #{lastSyncTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
         </trim>
         where sensor_code = #{sensorCode}
+    </update>
+
+    <update id="updateDeptIdByGatewayExternalCompanyId">
+        update fe_sensor s
+        left join fe_gateway g on s.gateway_id = g.gateway_id
+        set s.dept_id = #{deptId,jdbcType=BIGINT}
+        where g.external_company_id = #{externalCompanyId}
     </update>
 </mapper>
