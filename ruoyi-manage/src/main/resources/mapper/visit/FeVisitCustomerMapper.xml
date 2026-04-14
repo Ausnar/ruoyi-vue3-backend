@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.visit.mapper.FeVisitCustomerMapper">
+
+    <resultMap id="FeVisitCustomerResult" type="com.ruoyi.visit.domain.FeVisitCustomer">
+        <result property="customerId" column="customer_id"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="contactPerson" column="contact_person"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="address" column="address"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectFeVisitCustomerVo">
+        select c.customer_id, c.customer_name, c.contact_person, c.contact_phone, c.address,
+               c.dept_id, d.dept_name, c.status, c.create_by, c.create_time, c.update_by, c.update_time,
+               c.remark, c.del_flag
+        from fe_visit_customer c
+        left join sys_dept d on c.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectFeVisitCustomerByCustomerId" parameterType="Long" resultMap="FeVisitCustomerResult">
+        <include refid="selectFeVisitCustomerVo"/>
+        where c.customer_id = #{customerId} and c.del_flag = '0'
+        limit 1
+    </select>
+
+    <select id="selectFeVisitCustomerList" parameterType="com.ruoyi.visit.domain.FeVisitCustomer" resultMap="FeVisitCustomerResult">
+        <include refid="selectFeVisitCustomerVo"/>
+        <where>
+            c.del_flag = '0'
+            <if test="customerName != null and customerName != ''">and c.customer_name like concat('%', #{customerName}, '%')</if>
+            <if test="contactPerson != null and contactPerson != ''">and c.contact_person like concat('%', #{contactPerson}, '%')</if>
+            <if test="contactPhone != null and contactPhone != ''">and c.contact_phone like concat('%', #{contactPhone}, '%')</if>
+            <if test="deptId != null">and c.dept_id = #{deptId}</if>
+            <if test="status != null and status != ''">and c.status = #{status}</if>
+            <if test="scopeDeptIds != null and scopeDeptIds.size() > 0">
+                and c.dept_id in
+                <foreach collection="scopeDeptIds" item="deptId" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        order by c.customer_id desc
+    </select>
+
+    <insert id="insertFeVisitCustomer" parameterType="com.ruoyi.visit.domain.FeVisitCustomer" useGeneratedKeys="true" keyProperty="customerId">
+        insert into fe_visit_customer (
+            customer_name, contact_person, contact_phone, address, dept_id, status,
+            create_by, create_time, update_by, update_time, remark, del_flag
+        ) values (
+            #{customerName}, #{contactPerson}, #{contactPhone}, #{address}, #{deptId}, #{status},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, #{remark}, #{delFlag}
+        )
+    </insert>
+
+    <update id="updateFeVisitCustomer" parameterType="com.ruoyi.visit.domain.FeVisitCustomer">
+        update fe_visit_customer
+        set customer_name = #{customerName},
+            contact_person = #{contactPerson},
+            contact_phone = #{contactPhone},
+            address = #{address},
+            status = #{status},
+            update_by = #{updateBy},
+            update_time = #{updateTime},
+            remark = #{remark}
+        where customer_id = #{customerId}
+    </update>
+
+    <update id="deleteFeVisitCustomerByCustomerIds" parameterType="Long">
+        update fe_visit_customer
+        set del_flag = '2'
+        where customer_id in
+        <foreach collection="array" item="customerId" open="(" separator="," close=")">
+            #{customerId}
+        </foreach>
+    </update>
+</mapper>

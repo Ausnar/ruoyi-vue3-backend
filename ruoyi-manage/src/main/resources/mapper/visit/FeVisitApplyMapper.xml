@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.visit.mapper.FeVisitApplyMapper">
+
+    <resultMap id="FeVisitApplyResult" type="com.ruoyi.visit.domain.FeVisitApply">
+        <result property="visitId" column="visit_id"/>
+        <result property="visitNo" column="visit_no"/>
+        <result property="applicantUserId" column="applicant_user_id"/>
+        <result property="applicantUserName" column="applicant_user_name"/>
+        <result property="applicantDeptId" column="applicant_dept_id"/>
+        <result property="applicantDeptName" column="applicant_dept_name"/>
+        <result property="customerType" column="customer_type"/>
+        <result property="contractDeptId" column="contract_dept_id"/>
+        <result property="contractConfigId" column="contract_config_id"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="customerNameSnapshot" column="customer_name_snapshot"/>
+        <result property="contactPersonSnapshot" column="contact_person_snapshot"/>
+        <result property="contactPhoneSnapshot" column="contact_phone_snapshot"/>
+        <result property="visitAddress" column="visit_address"/>
+        <result property="plannedStartTime" column="planned_start_time"/>
+        <result property="plannedEndTime" column="planned_end_time"/>
+        <result property="visitReason" column="visit_reason"/>
+        <result property="visitTarget" column="visit_target"/>
+        <result property="companionMembers" column="companion_members"/>
+        <result property="status" column="status"/>
+        <result property="approveRoleIdSnapshot" column="approve_role_id_snapshot"/>
+        <result property="approveUserId" column="approve_user_id"/>
+        <result property="approveUserName" column="approve_user_name"/>
+        <result property="approveTime" column="approve_time"/>
+        <result property="approveComment" column="approve_comment"/>
+        <result property="actualStartTime" column="actual_start_time"/>
+        <result property="actualEndTime" column="actual_end_time"/>
+        <result property="resultDesc" column="result_desc"/>
+        <result property="visitConclusion" column="visit_conclusion"/>
+        <result property="intentionLevel" column="intention_level"/>
+        <result property="nextFollowTime" column="next_follow_time"/>
+        <result property="resultAttachments" column="result_attachments"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <resultMap id="FeVisitContractOptionResult" type="com.ruoyi.visit.domain.FeVisitContractOption">
+        <result property="configId" column="config_id"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="contractNo" column="contract_no"/>
+        <result property="contactPerson" column="contact_person"/>
+        <result property="contactPhone" column="contact_phone"/>
+    </resultMap>
+
+    <sql id="selectFeVisitApplyVo">
+        select a.visit_id, a.visit_no, a.applicant_user_id, au.user_name as applicant_user_name,
+               a.applicant_dept_id, ad.dept_name as applicant_dept_name, a.customer_type,
+               a.contract_dept_id, a.contract_config_id, a.customer_id, a.customer_name_snapshot,
+               a.contact_person_snapshot, a.contact_phone_snapshot, a.visit_address,
+               a.planned_start_time, a.planned_end_time, a.visit_reason, a.visit_target,
+               a.companion_members, a.status, a.approve_role_id_snapshot, a.approve_user_id,
+               pu.user_name as approve_user_name, a.approve_time, a.approve_comment,
+               a.actual_start_time, a.actual_end_time, a.result_desc, a.visit_conclusion,
+               a.intention_level, a.next_follow_time, a.result_attachments, a.create_by,
+               a.create_time, a.update_by, a.update_time, a.remark, a.del_flag
+        from fe_visit_apply a
+        left join sys_user au on a.applicant_user_id = au.user_id
+        left join sys_dept ad on a.applicant_dept_id = ad.dept_id
+        left join sys_user pu on a.approve_user_id = pu.user_id
+    </sql>
+
+    <select id="selectFeVisitApplyByVisitId" parameterType="Long" resultMap="FeVisitApplyResult">
+        <include refid="selectFeVisitApplyVo"/>
+        where a.visit_id = #{visitId} and a.del_flag = '0'
+        limit 1
+    </select>
+
+    <select id="selectMyVisitApplyList" parameterType="com.ruoyi.visit.domain.FeVisitApply" resultMap="FeVisitApplyResult">
+        <include refid="selectFeVisitApplyVo"/>
+        <where>
+            a.del_flag = '0'
+            and a.applicant_user_id = #{applicantUserId}
+            <if test="visitNo != null and visitNo != ''">and a.visit_no like concat('%', #{visitNo}, '%')</if>
+            <if test="customerType != null and customerType != ''">and a.customer_type = #{customerType}</if>
+            <if test="customerNameSnapshot != null and customerNameSnapshot != ''">and a.customer_name_snapshot like concat('%', #{customerNameSnapshot}, '%')</if>
+            <if test="status != null and status != ''">and a.status = #{status}</if>
+            <if test="excludeStatus != null and excludeStatus != ''">and a.status != #{excludeStatus}</if>
+        </where>
+        order by a.create_time desc, a.visit_id desc
+    </select>
+
+    <select id="selectApproveVisitApplyList" parameterType="com.ruoyi.visit.domain.FeVisitApply" resultMap="FeVisitApplyResult">
+        <include refid="selectFeVisitApplyVo"/>
+        <where>
+            a.del_flag = '0'
+            <if test="scopeDeptIds != null and scopeDeptIds.size() > 0">
+                and a.applicant_dept_id in
+                <foreach collection="scopeDeptIds" item="deptId" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+            <if test="visitNo != null and visitNo != ''">and a.visit_no like concat('%', #{visitNo}, '%')</if>
+            <if test="customerType != null and customerType != ''">and a.customer_type = #{customerType}</if>
+            <if test="customerNameSnapshot != null and customerNameSnapshot != ''">and a.customer_name_snapshot like concat('%', #{customerNameSnapshot}, '%')</if>
+            <if test="status != null and status != ''">and a.status = #{status}</if>
+            <if test="excludeStatus != null and excludeStatus != ''">and a.status != #{excludeStatus}</if>
+            <if test="applicantDeptId != null">and a.applicant_dept_id = #{applicantDeptId}</if>
+        </where>
+        order by a.create_time desc, a.visit_id desc
+    </select>
+
+    <select id="selectContractOptions" resultMap="FeVisitContractOptionResult">
+        select c.config_id, c.dept_id, d.dept_name, c.contract_no,
+               d.leader as contact_person, d.phone as contact_phone
+        from sys_dept_api_config c
+        left join sys_dept d on c.dept_id = d.dept_id
+        <where>
+            c.status = '1'
+            and d.del_flag = '0'
+            <if test="scopeDeptIds != null and scopeDeptIds.size() > 0">
+                and c.dept_id in
+                <foreach collection="scopeDeptIds" item="deptId" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        order by d.dept_name asc, c.config_id asc
+    </select>
+
+    <select id="selectContractOptionByConfigId" parameterType="Long" resultMap="FeVisitContractOptionResult">
+        select c.config_id, c.dept_id, d.dept_name, c.contract_no,
+               d.leader as contact_person, d.phone as contact_phone
+        from sys_dept_api_config c
+        left join sys_dept d on c.dept_id = d.dept_id
+        where c.config_id = #{configId}
+        limit 1
+    </select>
+
+    <select id="selectLatestVisitNo" resultType="String">
+        select visit_no
+        from fe_visit_apply
+        where visit_no like concat(#{prefix}, '%')
+        order by visit_no desc
+        limit 1
+    </select>
+
+    <insert id="insertFeVisitApply" parameterType="com.ruoyi.visit.domain.FeVisitApply" useGeneratedKeys="true" keyProperty="visitId">
+        insert into fe_visit_apply (
+            visit_no, applicant_user_id, applicant_dept_id, customer_type, contract_dept_id, contract_config_id, customer_id,
+            customer_name_snapshot, contact_person_snapshot, contact_phone_snapshot, visit_address,
+            planned_start_time, planned_end_time, visit_reason, visit_target, companion_members,
+            status, approve_role_id_snapshot, approve_user_id, approve_time, approve_comment,
+            actual_start_time, actual_end_time, result_desc, visit_conclusion, intention_level,
+            next_follow_time, result_attachments, create_by, create_time, update_by, update_time, remark, del_flag
+        ) values (
+            #{visitNo}, #{applicantUserId}, #{applicantDeptId}, #{customerType}, #{contractDeptId}, #{contractConfigId}, #{customerId},
+            #{customerNameSnapshot}, #{contactPersonSnapshot}, #{contactPhoneSnapshot}, #{visitAddress},
+            #{plannedStartTime}, #{plannedEndTime}, #{visitReason}, #{visitTarget}, #{companionMembers},
+            #{status}, #{approveRoleIdSnapshot}, #{approveUserId}, #{approveTime}, #{approveComment},
+            #{actualStartTime}, #{actualEndTime}, #{resultDesc}, #{visitConclusion}, #{intentionLevel},
+            #{nextFollowTime}, #{resultAttachments}, #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, #{remark}, #{delFlag}
+        )
+    </insert>
+
+    <update id="updateFeVisitApply" parameterType="com.ruoyi.visit.domain.FeVisitApply">
+        update fe_visit_apply
+        set applicant_user_id = #{applicantUserId},
+            applicant_dept_id = #{applicantDeptId},
+            customer_type = #{customerType},
+            contract_dept_id = #{contractDeptId},
+            contract_config_id = #{contractConfigId},
+            customer_id = #{customerId},
+            customer_name_snapshot = #{customerNameSnapshot},
+            contact_person_snapshot = #{contactPersonSnapshot},
+            contact_phone_snapshot = #{contactPhoneSnapshot},
+            visit_address = #{visitAddress},
+            planned_start_time = #{plannedStartTime},
+            planned_end_time = #{plannedEndTime},
+            visit_reason = #{visitReason},
+            visit_target = #{visitTarget},
+            companion_members = #{companionMembers},
+            status = #{status},
+            approve_role_id_snapshot = #{approveRoleIdSnapshot},
+            approve_user_id = #{approveUserId},
+            approve_time = #{approveTime},
+            approve_comment = #{approveComment},
+            actual_start_time = #{actualStartTime},
+            actual_end_time = #{actualEndTime},
+            result_desc = #{resultDesc},
+            visit_conclusion = #{visitConclusion},
+            intention_level = #{intentionLevel},
+            next_follow_time = #{nextFollowTime},
+            result_attachments = #{resultAttachments},
+            update_by = #{updateBy},
+            update_time = #{updateTime},
+            remark = #{remark},
+            del_flag = #{delFlag}
+        where visit_id = #{visitId}
+    </update>
+</mapper>
