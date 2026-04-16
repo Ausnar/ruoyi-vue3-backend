@@ -1,5 +1,6 @@
 package com.ruoyi.visit.domain;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -15,6 +16,9 @@ public class FeVisitApply extends BaseEntity
     private String applicantUserName;
     private Long applicantDeptId;
     private String applicantDeptName;
+    private String visitMode;
+    private String sourceType;
+    private Long sourceEventId;
     private String customerType;
     private Long contractDeptId;
     private Long contractConfigId;
@@ -34,6 +38,15 @@ public class FeVisitApply extends BaseEntity
     private String visitTarget;
     private String companionMembers;
     private String status;
+    private Long triggerGatewayId;
+    private Long triggerFirePointId;
+    private Long triggerExternalCompanyId;
+    private String triggerExternalCompanyNameSnapshot;
+    private BigDecimal triggerFromLongitude;
+    private BigDecimal triggerFromLatitude;
+    private BigDecimal triggerToLongitude;
+    private BigDecimal triggerToLatitude;
+    private BigDecimal triggerDistanceM;
     private Long approveRoleIdSnapshot;
     private Long approveUserId;
     private String approveUserName;
@@ -120,6 +133,36 @@ public class FeVisitApply extends BaseEntity
     public void setApplicantDeptName(String applicantDeptName)
     {
         this.applicantDeptName = applicantDeptName;
+    }
+
+    public String getVisitMode()
+    {
+        return visitMode;
+    }
+
+    public void setVisitMode(String visitMode)
+    {
+        this.visitMode = visitMode;
+    }
+
+    public String getSourceType()
+    {
+        return sourceType;
+    }
+
+    public void setSourceType(String sourceType)
+    {
+        this.sourceType = sourceType;
+    }
+
+    public Long getSourceEventId()
+    {
+        return sourceEventId;
+    }
+
+    public void setSourceEventId(Long sourceEventId)
+    {
+        this.sourceEventId = sourceEventId;
     }
 
     public String getCustomerType()
@@ -260,6 +303,96 @@ public class FeVisitApply extends BaseEntity
     public void setStatus(String status)
     {
         this.status = status;
+    }
+
+    public Long getTriggerGatewayId()
+    {
+        return triggerGatewayId;
+    }
+
+    public void setTriggerGatewayId(Long triggerGatewayId)
+    {
+        this.triggerGatewayId = triggerGatewayId;
+    }
+
+    public Long getTriggerFirePointId()
+    {
+        return triggerFirePointId;
+    }
+
+    public void setTriggerFirePointId(Long triggerFirePointId)
+    {
+        this.triggerFirePointId = triggerFirePointId;
+    }
+
+    public Long getTriggerExternalCompanyId()
+    {
+        return triggerExternalCompanyId;
+    }
+
+    public void setTriggerExternalCompanyId(Long triggerExternalCompanyId)
+    {
+        this.triggerExternalCompanyId = triggerExternalCompanyId;
+    }
+
+    public String getTriggerExternalCompanyNameSnapshot()
+    {
+        return triggerExternalCompanyNameSnapshot;
+    }
+
+    public void setTriggerExternalCompanyNameSnapshot(String triggerExternalCompanyNameSnapshot)
+    {
+        this.triggerExternalCompanyNameSnapshot = triggerExternalCompanyNameSnapshot;
+    }
+
+    public BigDecimal getTriggerFromLongitude()
+    {
+        return triggerFromLongitude;
+    }
+
+    public void setTriggerFromLongitude(BigDecimal triggerFromLongitude)
+    {
+        this.triggerFromLongitude = triggerFromLongitude;
+    }
+
+    public BigDecimal getTriggerFromLatitude()
+    {
+        return triggerFromLatitude;
+    }
+
+    public void setTriggerFromLatitude(BigDecimal triggerFromLatitude)
+    {
+        this.triggerFromLatitude = triggerFromLatitude;
+    }
+
+    public BigDecimal getTriggerToLongitude()
+    {
+        return triggerToLongitude;
+    }
+
+    public void setTriggerToLongitude(BigDecimal triggerToLongitude)
+    {
+        this.triggerToLongitude = triggerToLongitude;
+    }
+
+    public BigDecimal getTriggerToLatitude()
+    {
+        return triggerToLatitude;
+    }
+
+    public void setTriggerToLatitude(BigDecimal triggerToLatitude)
+    {
+        this.triggerToLatitude = triggerToLatitude;
+    }
+
+    public BigDecimal getTriggerDistanceM()
+    {
+        return triggerDistanceM;
+    }
+
+    public void setTriggerDistanceM(BigDecimal triggerDistanceM)
+    {
+        this.triggerDistanceM = triggerDistanceM;
     }
 
     public Long getApproveRoleIdSnapshot()

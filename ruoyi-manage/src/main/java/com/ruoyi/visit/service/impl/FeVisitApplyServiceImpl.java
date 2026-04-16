@@ -62,6 +62,10 @@ public class FeVisitApplyServiceImpl implements IFeVisitApplyService
     @Override
     public List<FeVisitApply> selectApproveVisitApplyList(FeVisitApply apply)
     {
+        if (StringUtils.isBlank(apply.getVisitMode()))
+        {
+            apply.setVisitMode(VisitConstants.VISIT_MODE_ACTIVE);
+        }
         if (!SecurityUtils.isAdmin())
         {
             apply.setScopeDeptIds(sysDeptService.selectDeptAndChildrenIds(SecurityUtils.getDeptId()));
@@ -102,6 +106,16 @@ public class FeVisitApplyServiceImpl implements IFeVisitApplyService
     }
 
     @Override
+    public List<FeVisitContractOption> selectContractOptionsByDeptIds(List<Long> deptIds)
+    {
+        if (CollectionUtils.isEmpty(deptIds))
+        {
+            return new ArrayList<FeVisitContractOption>();
+        }
+        return feVisitApplyMapper.selectContractOptionsByDeptIds(deptIds);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public int submitVisitApply(FeVisitApply apply)
     {
@@ -111,7 +125,11 @@ public class FeVisitApplyServiceImpl implements IFeVisitApplyService
         apply.setVisitNo(buildVisitNo());
         apply.setApplicantUserId(SecurityUtils.getUserId());
         apply.setApplicantDeptId(SecurityUtils.getDeptId());
+        apply.setVisitMode(VisitConstants.VISIT_MODE_ACTIVE);
+        apply.setSourceType(VisitConstants.SOURCE_TYPE_MANUAL);
+        apply.setSourceEventId(null);
         apply.setStatus(VisitConstants.STATUS_PENDING_APPROVE);
+        clearTriggerSnapshot(apply);
         apply.setApproveRoleIdSnapshot(approveConfig.getRoleId());
         apply.setApproveUserId(null);
         apply.setApproveTime(null);
@@ -147,7 +165,11 @@ public class FeVisitApplyServiceImpl implements IFeVisitApplyService
         String fromStatus = origin.getStatus();
         mergeSubjectFields(origin, apply);
         fillCustomerSnapshot(origin);
+        origin.setVisitMode(VisitConstants.VISIT_MODE_ACTIVE);
+        origin.setSourceType(VisitConstants.SOURCE_TYPE_MANUAL);
+        origin.setSourceEventId(null);
         origin.setStatus(VisitConstants.STATUS_PENDING_APPROVE);
+        clearTriggerSnapshot(origin);
         origin.setApproveRoleIdSnapshot(approveConfig.getRoleId());
         origin.setApproveUserId(null);
         origin.setApproveTime(null);
@@ -250,6 +272,45 @@ public class FeVisitApplyServiceImpl implements IFeVisitApplyService
         return rows;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int createPassiveVisitApply(FeVisitApply apply, Long operatorUserId, Long operatorDeptId, String operatorName)
+    {
+        if (apply == null)
+        {
+            throw new ServiceException("被动拜访数据不能为空");
+        }
+        if (apply.getApplicantUserId() == null || apply.getApplicantDeptId() == null)
+        {
+            throw new ServiceException("被动拜访缺少负责人信息");
+        }
+        apply.setVisitNo(buildVisitNo());
+        apply.setVisitMode(VisitConstants.VISIT_MODE_PASSIVE);
+        apply.setSourceType(VisitConstants.SOURCE_TYPE_GATEWAY_DISPLACEMENT);
+        apply.setStatus(VisitConstants.STATUS_APPROVED_PENDING_FEEDBACK);
+        apply.setApproveRoleIdSnapshot(null);
+        apply.setApproveUserId(null);
+        apply.setApproveTime(null);
+        apply.setApproveComment(null);
+        apply.setActualStartTime(null);
+        apply.setActualEndTime(null);
+        apply.setResultDesc(null);
+        apply.setVisitConclusion(null);
+        apply.setIntentionLevel(null);
+        apply.setNextFollowTime(null);
+        apply.setResultAttachments(null);
+        apply.setDelFlag("0");
+        apply.setCreateBy(operatorName);
+        apply.setCreateTime(DateUtils.getNowDate());
+        apply.setUpdateBy(operatorName);
+        apply.setUpdateTime(DateUtils.getNowDate());
+        int rows = feVisitApplyMapper.insertFeVisitApply(apply);
+        insertLog(apply.getVisitId(), VisitConstants.ACTION_PASSIVE_CONVERT, null,
+            VisitConstants.STATUS_APPROVED_PENDING_FEEDBACK, "被动事件确认转单",
+            operatorUserId, operatorDeptId, operatorName);
+        return rows;
+    }
+
     private FeVisitApply requireOwnerVisit(Long visitId)
     {
         FeVisitApply apply = feVisitApplyMapper.selectFeVisitApplyByVisitId(visitId);
@@ -335,6 +396,17 @@ public class FeVisitApplyServiceImpl implements IFeVisitApplyService
         target.setVisitTarget(source.getVisitTarget());
         target.setCompanionMembers(source.getCompanionMembers());
         target.setRemark(source.getRemark());
+    }
+
+    private void clearTriggerSnapshot(FeVisitApply apply)
+    {
+        apply.setTriggerGatewayId(null);
+        apply.setTriggerFirePointId(null);
+        apply.setTriggerFromLongitude(null);
+        apply.setTriggerFromLatitude(null);
+        apply.setTriggerToLongitude(null);
+        apply.setTriggerToLatitude(null);
+        apply.setTriggerDistanceM(null);
     }
 
     private FeVisitApproveConfig requireActiveApproveConfig(Long deptId)
@@ -482,16 +554,23 @@ public class FeVisitApplyServiceImpl implements IFeVisitApplyService
 
     private void insertLog(Long visitId, String actionType, String fromStatus, String toStatus, String actionComment)
     {
+        insertLog(visitId, actionType, fromStatus, toStatus, actionComment,
+            SecurityUtils.getUserId(), SecurityUtils.getDeptId(), SecurityUtils.getUsername());
+    }
+
+    private void insertLog(Long visitId, String actionType, String fromStatus, String toStatus, String actionComment,
+                           Long operatorUserId, Long operatorDeptId, String operatorName)
+    {
         FeVisitApplyLog log = new FeVisitApplyLog();
         log.setVisitId(visitId);
         log.setActionType(actionType);
         log.setFromStatus(fromStatus);
         log.setToStatus(toStatus);
-        log.setOperatorUserId(SecurityUtils.getUserId());
-        log.setOperatorDeptId(SecurityUtils.getDeptId());
+        log.setOperatorUserId(operatorUserId);
+        log.setOperatorDeptId(operatorDeptId);
         log.setActionTime(new Date());
         log.setActionComment(actionComment);
-        log.setCreateBy(SecurityUtils.getUsername());
+        log.setCreateBy(operatorName);
         log.setCreateTime(DateUtils.getNowDate());
         feVisitApplyLogMapper.insertFeVisitApplyLog(log);
     }

@@ -43,6 +43,14 @@ public class FeVisitCustomerServiceImpl implements IFeVisitCustomerService
     }
 
     @Override
+    public List<FeVisitCustomer> selectEnabledCustomersWithCoordinates(List<Long> deptIds)
+    {
+        FeVisitCustomer query = new FeVisitCustomer();
+        query.setScopeDeptIds(deptIds);
+        return feVisitCustomerMapper.selectEnabledCustomersWithCoordinates(query);
+    }
+
+    @Override
     public int insertFeVisitCustomer(FeVisitCustomer customer)
     {
         customer.setDeptId(SecurityUtils.getDeptId());

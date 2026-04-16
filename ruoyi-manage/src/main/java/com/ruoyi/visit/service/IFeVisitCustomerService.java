@@ -9,6 +9,8 @@ public interface IFeVisitCustomerService
 
     List<FeVisitCustomer> selectFeVisitCustomerList(FeVisitCustomer customer);
 
+    List<FeVisitCustomer> selectEnabledCustomersWithCoordinates(List<Long> deptIds);
+
     int insertFeVisitCustomer(FeVisitCustomer customer);
 
     int updateFeVisitCustomer(FeVisitCustomer customer);

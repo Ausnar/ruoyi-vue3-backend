@@ -9,6 +9,8 @@ public interface FeVisitCustomerMapper
 
     List<FeVisitCustomer> selectFeVisitCustomerList(FeVisitCustomer customer);
 
+    List<FeVisitCustomer> selectEnabledCustomersWithCoordinates(FeVisitCustomer customer);
+
     int insertFeVisitCustomer(FeVisitCustomer customer);
 
     int updateFeVisitCustomer(FeVisitCustomer customer);

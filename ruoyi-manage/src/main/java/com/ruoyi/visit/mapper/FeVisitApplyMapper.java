@@ -15,6 +15,8 @@ public interface FeVisitApplyMapper
 
     List<FeVisitContractOption> selectContractOptions(@Param("scopeDeptIds") List<Long> scopeDeptIds);
 
+    List<FeVisitContractOption> selectContractOptionsByDeptIds(@Param("deptIds") List<Long> deptIds);
+
     FeVisitContractOption selectContractOptionByConfigId(Long configId);
 
     String selectLatestVisitNo(@Param("prefix") String prefix);

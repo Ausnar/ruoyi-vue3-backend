@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.visit.mapper.FeVisitPassiveEventMapper">
+
+    <resultMap id="FeVisitPassiveEventResult" type="com.ruoyi.visit.domain.FeVisitPassiveEvent">
+        <result property="eventId" column="event_id"/>
+        <result property="gatewayId" column="gateway_id"/>
+        <result property="externalTboxId" column="external_tbox_id"/>
+        <result property="gatewayImei" column="gateway_imei"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="firePointId" column="fire_point_id"/>
+        <result property="firePointName" column="fire_point_name"/>
+        <result property="fromLongitude" column="from_longitude"/>
+        <result property="fromLatitude" column="from_latitude"/>
+        <result property="toLongitude" column="to_longitude"/>
+        <result property="toLatitude" column="to_latitude"/>
+        <result property="distanceM" column="distance_m"/>
+        <result property="triggerTime" column="trigger_time"/>
+        <result property="candidateSummary" column="candidate_summary"/>
+        <result property="selectedTargetType" column="selected_target_type"/>
+        <result property="selectedTargetId" column="selected_target_id"/>
+        <result property="selectedTargetName" column="selected_target_name"/>
+        <result property="selectedExternalCompanyId" column="selected_external_company_id"/>
+        <result property="selectedExternalCompanyName" column="selected_external_company_name"/>
+        <result property="status" column="status"/>
+        <result property="confirmUserId" column="confirm_user_id"/>
+        <result property="confirmUserName" column="confirm_user_name"/>
+        <result property="confirmTime" column="confirm_time"/>
+        <result property="visitId" column="visit_id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectFeVisitPassiveEventVo">
+        select e.event_id, e.gateway_id, g.external_tbox_id, g.imei as gateway_imei,
+               e.dept_id, d.dept_name, e.fire_point_id, fp.fire_point_name,
+               e.from_longitude, e.from_latitude, e.to_longitude, e.to_latitude,
+               e.distance_m, e.trigger_time, e.candidate_summary,
+               e.selected_target_type, e.selected_target_id,
+               e.selected_external_company_id, e.selected_external_company_name,
+               case
+                   when e.selected_target_type = 'contract_dept' then td.dept_name
+                   when e.selected_target_type = 'independent_customer' then c.customer_name
+               end as selected_target_name,
+               e.status, e.confirm_user_id, cu.user_name as confirm_user_name,
+               e.confirm_time, e.visit_id, e.create_by, e.create_time, e.update_by, e.update_time, e.remark
+        from fe_visit_passive_event e
+        left join fe_gateway g on e.gateway_id = g.gateway_id
+        left join sys_dept d on e.dept_id = d.dept_id
+        left join fe_fire_point fp on e.fire_point_id = fp.fire_point_id
+        left join sys_user cu on e.confirm_user_id = cu.user_id
+        left join sys_dept td on e.selected_target_type = 'contract_dept' and e.selected_target_id = td.dept_id
+        left join fe_visit_customer c on e.selected_target_type = 'independent_customer' and e.selected_target_id = c.customer_id
+    </sql>
+
+    <select id="selectFeVisitPassiveEventByEventId" parameterType="Long" resultMap="FeVisitPassiveEventResult">
+        <include refid="selectFeVisitPassiveEventVo"/>
+        where e.event_id = #{eventId}
+        limit 1
+    </select>
+
+    <select id="selectFeVisitPassiveEventList" parameterType="com.ruoyi.visit.domain.FeVisitPassiveEvent" resultMap="FeVisitPassiveEventResult">
+        <include refid="selectFeVisitPassiveEventVo"/>
+        <where>
+            <if test="gatewayId != null">and e.gateway_id = #{gatewayId}</if>
+            <if test="deptId != null">and e.dept_id = #{deptId}</if>
+            <if test="status != null and status != ''">and e.status = #{status}</if>
+            <if test="selectedTargetType != null and selectedTargetType != ''">and e.selected_target_type = #{selectedTargetType}</if>
+            <if test="selectedTargetId != null">and e.selected_target_id = #{selectedTargetId}</if>
+            <if test="scopeDeptIds != null and scopeDeptIds.size() > 0">
+                and e.dept_id in
+                <foreach collection="scopeDeptIds" item="deptId" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        order by e.trigger_time desc, e.event_id desc
+    </select>
+
+    <select id="countPendingByGatewayId" parameterType="Long" resultType="int">
+        select count(1)
+        from fe_visit_passive_event
+        where gateway_id = #{gatewayId}
+          and status = 'pending_confirm'
+    </select>
+
+    <select id="countByVisitId" parameterType="Long" resultType="int">
+        select count(1)
+        from fe_visit_passive_event
+        where visit_id = #{visitId}
+    </select>
+
+    <insert id="insertFeVisitPassiveEvent" parameterType="com.ruoyi.visit.domain.FeVisitPassiveEvent" useGeneratedKeys="true" keyProperty="eventId">
+        insert into fe_visit_passive_event (
+            gateway_id, dept_id, fire_point_id, from_longitude, from_latitude, to_longitude, to_latitude,
+            distance_m, trigger_time, candidate_summary, selected_target_type, selected_target_id,
+            selected_external_company_id, selected_external_company_name,
+            status, confirm_user_id, confirm_time, visit_id, create_by, create_time, update_by, update_time, remark
+        ) values (
+            #{gatewayId}, #{deptId}, #{firePointId}, #{fromLongitude}, #{fromLatitude}, #{toLongitude}, #{toLatitude},
+            #{distanceM}, #{triggerTime}, #{candidateSummary}, #{selectedTargetType}, #{selectedTargetId},
+            #{selectedExternalCompanyId}, #{selectedExternalCompanyName},
+            #{status}, #{confirmUserId}, #{confirmTime}, #{visitId}, #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, #{remark}
+        )
+    </insert>
+
+    <update id="updateFeVisitPassiveEvent" parameterType="com.ruoyi.visit.domain.FeVisitPassiveEvent">
+        update fe_visit_passive_event
+        set gateway_id = #{gatewayId},
+            dept_id = #{deptId},
+            fire_point_id = #{firePointId},
+            from_longitude = #{fromLongitude},
+            from_latitude = #{fromLatitude},
+            to_longitude = #{toLongitude},
+            to_latitude = #{toLatitude},
+            distance_m = #{distanceM},
+            trigger_time = #{triggerTime},
+            candidate_summary = #{candidateSummary},
+            selected_target_type = #{selectedTargetType},
+            selected_target_id = #{selectedTargetId},
+            selected_external_company_id = #{selectedExternalCompanyId},
+            selected_external_company_name = #{selectedExternalCompanyName},
+            status = #{status},
+            confirm_user_id = #{confirmUserId},
+            confirm_time = #{confirmTime},
+            visit_id = #{visitId},
+            update_by = #{updateBy},
+            update_time = #{updateTime},
+            remark = #{remark}
+        where event_id = #{eventId}
+    </update>
+</mapper>

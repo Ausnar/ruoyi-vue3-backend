@@ -1,5 +1,6 @@
 package com.ruoyi.visit.domain;
 
+import java.math.BigDecimal;
 import java.util.List;
 import com.ruoyi.common.core.domain.BaseEntity;
 
@@ -12,6 +13,8 @@ public class FeVisitCustomer extends BaseEntity
     private String contactPerson;
     private String contactPhone;
     private String address;
+    private BigDecimal longitude;
+    private BigDecimal latitude;
     private Long deptId;
     private String deptName;
     private String status;
@@ -66,6 +69,26 @@ public class FeVisitCustomer extends BaseEntity
     public void setAddress(String address)
     {
         this.address = address;
+    }
+
+    public BigDecimal getLongitude()
+    {
+        return longitude;
+    }
+
+    public void setLongitude(BigDecimal longitude)
+    {
+        this.longitude = longitude;
+    }
+
+    public BigDecimal getLatitude()
+    {
+        return latitude;
+    }
+
+    public void setLatitude(BigDecimal latitude)
+    {
+        this.latitude = latitude;
     }
 
     public Long getDeptId()

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.visit.mapper.FeGatewayGpsHistoryMapper">
+
+    <resultMap id="FeGatewayGpsHistoryResult" type="com.ruoyi.visit.domain.FeGatewayGpsHistory">
+        <result property="historyId" column="history_id"/>
+        <result property="gatewayId" column="gateway_id"/>
+        <result property="externalTboxId" column="external_tbox_id"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="gpsLongitude" column="gps_longitude"/>
+        <result property="gpsLatitude" column="gps_latitude"/>
+        <result property="gpsTime" column="gps_time"/>
+        <result property="syncTime" column="sync_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <select id="selectLatestGpsHistoryByGatewayId" parameterType="Long" resultMap="FeGatewayGpsHistoryResult">
+        select history_id, gateway_id, external_tbox_id, dept_id, gps_longitude, gps_latitude,
+               gps_time, sync_time, create_by, create_time
+        from fe_gateway_gps_history
+        where gateway_id = #{gatewayId}
+        order by gps_time desc, history_id desc
+        limit 1
+    </select>
+
+    <insert id="insertFeGatewayGpsHistory" parameterType="com.ruoyi.visit.domain.FeGatewayGpsHistory" useGeneratedKeys="true" keyProperty="historyId">
+        insert into fe_gateway_gps_history (
+            gateway_id, external_tbox_id, dept_id, gps_longitude, gps_latitude,
+            gps_time, sync_time, create_by, create_time
+        ) values (
+            #{gatewayId}, #{externalTboxId}, #{deptId}, #{gpsLongitude}, #{gpsLatitude},
+            #{gpsTime}, #{syncTime}, #{createBy}, #{createTime}
+        )
+    </insert>
+</mapper>

@@ -19,6 +19,8 @@ public interface IFeVisitApplyService
 
     List<FeVisitContractOption> selectContractOptions();
 
+    List<FeVisitContractOption> selectContractOptionsByDeptIds(List<Long> deptIds);
+
     int submitVisitApply(FeVisitApply apply);
 
     int resubmitVisitApply(FeVisitApply apply);
@@ -30,4 +32,6 @@ public interface IFeVisitApplyService
     int rejectVisitApply(Long visitId, VisitAuditRequest request);
 
     int feedbackVisitApply(VisitFeedbackRequest request);
+
+    int createPassiveVisitApply(FeVisitApply apply, Long operatorUserId, Long operatorDeptId, String operatorName);
 }

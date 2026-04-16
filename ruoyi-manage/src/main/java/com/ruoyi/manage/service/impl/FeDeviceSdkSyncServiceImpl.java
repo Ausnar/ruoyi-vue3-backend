@@ -61,6 +61,8 @@ import com.ruoyi.manage.mapper.FeSensorMapper;
 import com.ruoyi.manage.service.IFeDeviceSdkSyncService;
 import com.ruoyi.system.domain.SysDeptApiConfig;
 import com.ruoyi.system.service.ISysDeptApiConfigService;
+import com.ruoyi.visit.service.IFeVisitPassiveEventService;
+import com.ruoyi.visit.util.VisitGeoUtils;
 
 @Service
 public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
@@ -103,6 +105,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     @Autowired private FeCompanyDeptMappingMapper feCompanyDeptMappingMapper;
     @Autowired private FeSdkSyncLogMapper feSdkSyncLogMapper;
     @Autowired private FeSensorHistoryMapper feSensorHistoryMapper;
+    @Autowired private IFeVisitPassiveEventService feVisitPassiveEventService;
 
     private volatile RestTemplate restTemplate;
     private final AtomicBoolean syncRunning = new AtomicBoolean(false);
@@ -513,19 +516,27 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         BigDecimal gpsLatitude = readGpsCoordinate(gpsNode, "latitude");
         if (gpsLongitude == null) gpsLongitude = readNestedBigDecimal(tboxNode, "gps", "longitude");
         if (gpsLatitude == null) gpsLatitude = readNestedBigDecimal(tboxNode, "gps", "latitude");
+        if (!hasValidGps(gpsLongitude, gpsLatitude))
+        {
+            gpsLongitude = null;
+            gpsLatitude = null;
+        }
+        Date syncTime = DateUtils.getNowDate();
+        Date gpsTime = resolveGatewayGpsTime(gpsNode, tboxNode, syncTime);
         gateway.setGpsLongitude(gpsLongitude);
         gateway.setGpsLatitude(gpsLatitude);
-        gateway.setLastOnlineTime(DateUtils.getNowDate());
+        gateway.setLastOnlineTime(syncTime);
         gateway.setStatus(StringUtils.isNotBlank(imei) ? GATEWAY_STATUS_ONLINE : GATEWAY_STATUS_OFFLINE);
         gateway.setSyncStatus(deptId == null ? STATUS_OBSERVED : STATUS_SYNCED);
-        gateway.setLastSyncTime(DateUtils.getNowDate());
+        gateway.setLastSyncTime(syncTime);
         if (externalCompanyId != null && firePointId == null) gateway.setRemark("External company has no unique fire point under current credential scope");
         gateway.setUpdateBy(operator);
-        gateway.setUpdateTime(DateUtils.getNowDate());
+        gateway.setUpdateTime(syncTime);
 
         if (isNew) feGatewayMapper.insertFeGateway(gateway);
         else feGatewayMapper.updateFeGateway(gateway);
         syncFirePointGpsFromGateway(gateway, operator);
+        feVisitPassiveEventService.captureGatewayGpsAndDetectEvent(gateway, gpsLongitude, gpsLatitude, gpsTime, syncTime, config, operator);
         return gateway;
     }
     private FeSensor upsertSensor(JsonNode sensorNode, SysDeptApiConfig config, String operator)
@@ -1007,14 +1018,50 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
 
     private BigDecimal readGpsCoordinate(JsonNode node, String fieldName)
     {
-        BigDecimal value = readBigDecimal(node, fieldName);
-        if (value == null) return null;
-        return value.compareTo(BigDecimal.ZERO) == 0 ? null : value;
+        return readBigDecimal(node, fieldName);
     }
 
     private boolean hasValidGps(BigDecimal longitude, BigDecimal latitude)
     {
-        return longitude != null && latitude != null;
+        return VisitGeoUtils.isValidGps(longitude, latitude);
+    }
+
+    private Date resolveGatewayGpsTime(JsonNode gpsNode, JsonNode tboxNode, Date syncTime)
+    {
+        Date gpsTime = readFirstDate(gpsNode, "gps_time", "created_time", "updated_time", "time", "timestamp");
+        if (gpsTime != null)
+        {
+            return gpsTime;
+        }
+        gpsTime = readFirstNestedDate(tboxNode, "gps", "gps_time", "created_time", "updated_time", "time", "timestamp");
+        return gpsTime != null ? gpsTime : syncTime;
+    }
+
+    private Date readFirstDate(JsonNode node, String... fieldNames)
+    {
+        if (node == null || fieldNames == null)
+        {
+            return null;
+        }
+        for (String fieldName : fieldNames)
+        {
+            Date value = parseDate(readText(node, fieldName));
+            if (value != null)
+            {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private Date readFirstNestedDate(JsonNode node, String parentField, String... fieldNames)
+    {
+        if (node == null)
+        {
+            return null;
+        }
+        JsonNode parent = node.get(parentField);
+        return readFirstDate(parent, fieldNames);
     }
 
     private Long asLong(JsonNode node)

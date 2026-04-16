@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.visit.mapper.FeVisitOwnerAssignMapper">
+
+    <resultMap id="FeVisitOwnerAssignResult" type="com.ruoyi.visit.domain.FeVisitOwnerAssign">
+        <result property="assignId" column="assign_id"/>
+        <result property="targetType" column="target_type"/>
+        <result property="targetId" column="target_id"/>
+        <result property="targetName" column="target_name"/>
+        <result property="ownerUserId" column="owner_user_id"/>
+        <result property="ownerUserName" column="owner_user_name"/>
+        <result property="ownerDeptId" column="owner_dept_id"/>
+        <result property="ownerDeptName" column="owner_dept_name"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectFeVisitOwnerAssignVo">
+        select a.assign_id, a.target_type, a.target_id,
+               case
+                   when a.target_type = 'contract_dept' then d.dept_name
+                   when a.target_type = 'independent_customer' then c.customer_name
+               end as target_name,
+               a.owner_user_id, u.user_name as owner_user_name,
+               a.owner_dept_id, od.dept_name as owner_dept_name,
+               a.status, a.create_by, a.create_time, a.update_by, a.update_time, a.remark
+        from fe_visit_owner_assign a
+        left join sys_user u on a.owner_user_id = u.user_id
+        left join sys_dept od on a.owner_dept_id = od.dept_id
+        left join sys_dept d on a.target_type = 'contract_dept' and a.target_id = d.dept_id
+        left join fe_visit_customer c on a.target_type = 'independent_customer' and a.target_id = c.customer_id
+    </sql>
+
+    <select id="selectFeVisitOwnerAssignByAssignId" parameterType="Long" resultMap="FeVisitOwnerAssignResult">
+        <include refid="selectFeVisitOwnerAssignVo"/>
+        where a.assign_id = #{assignId}
+        limit 1
+    </select>
+
+    <select id="selectFeVisitOwnerAssignList" parameterType="com.ruoyi.visit.domain.FeVisitOwnerAssign" resultMap="FeVisitOwnerAssignResult">
+        <include refid="selectFeVisitOwnerAssignVo"/>
+        <where>
+            <if test="targetType != null and targetType != ''">and a.target_type = #{targetType}</if>
+            <if test="targetId != null">and a.target_id = #{targetId}</if>
+            <if test="ownerUserId != null">and a.owner_user_id = #{ownerUserId}</if>
+            <if test="ownerDeptId != null">and a.owner_dept_id = #{ownerDeptId}</if>
+            <if test="status != null and status != ''">and a.status = #{status}</if>
+            <if test="scopeDeptIds != null and scopeDeptIds.size() > 0">
+                and a.owner_dept_id in
+                <foreach collection="scopeDeptIds" item="deptId" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        order by a.assign_id desc
+    </select>
+
+    <select id="selectEnabledAssignsByTarget" resultMap="FeVisitOwnerAssignResult">
+        <include refid="selectFeVisitOwnerAssignVo"/>
+        where a.target_type = #{targetType}
+          and a.target_id = #{targetId}
+          and a.status = '0'
+        order by a.assign_id asc
+    </select>
+
+    <select id="countEnabledAssignByOwnerUserId" parameterType="Long" resultType="int">
+        select count(1)
+        from fe_visit_owner_assign
+        where owner_user_id = #{ownerUserId}
+          and status = '0'
+    </select>
+
+    <insert id="insertFeVisitOwnerAssign" parameterType="com.ruoyi.visit.domain.FeVisitOwnerAssign" useGeneratedKeys="true" keyProperty="assignId">
+        insert into fe_visit_owner_assign (
+            target_type, target_id, owner_user_id, owner_dept_id, status,
+            create_by, create_time, update_by, update_time, remark
+        ) values (
+            #{targetType}, #{targetId}, #{ownerUserId}, #{ownerDeptId}, #{status},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, #{remark}
+        )
+    </insert>
+
+    <update id="updateFeVisitOwnerAssign" parameterType="com.ruoyi.visit.domain.FeVisitOwnerAssign">
+        update fe_visit_owner_assign
+        set target_type = #{targetType},
+            target_id = #{targetId},
+            owner_user_id = #{ownerUserId},
+            owner_dept_id = #{ownerDeptId},
+            status = #{status},
+            update_by = #{updateBy},
+            update_time = #{updateTime},
+            remark = #{remark}
+        where assign_id = #{assignId}
+    </update>
+
+    <delete id="deleteFeVisitOwnerAssignByAssignIds" parameterType="Long">
+        delete from fe_visit_owner_assign
+        where assign_id in
+        <foreach collection="array" item="assignId" open="(" separator="," close=")">
+            #{assignId}
+        </foreach>
+    </delete>
+</mapper>
