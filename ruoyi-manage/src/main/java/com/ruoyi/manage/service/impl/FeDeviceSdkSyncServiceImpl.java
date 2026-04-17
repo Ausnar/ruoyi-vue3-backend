@@ -77,6 +77,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     private static final String STATUS_UNBOUND = "unbound";
     private static final String ACTIVE_YES = "1";
     private static final String ACTIVE_NO = "0";
+    private static final String SOURCE_SDK = "sdk";
     private static final String SENSOR_STATUS_NORMAL = "0";
     private static final String SENSOR_STATUS_OFFLINE = "2";
     private static final String EXTINGUISHER_STATUS_NORMAL = "0";
@@ -848,9 +849,27 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         {
             company = new FeExternalCompany();
             company.setExternalCompanyId(externalCompanyId);
+            company.setFirstSourceType(SOURCE_SDK);
+            company.setSdkObserved(ACTIVE_YES);
+            company.setManualCreated(ACTIVE_NO);
+            company.setRecordStatus("active");
             company.setFirstSeenTime(now);
             company.setCreateBy(operator);
             company.setCreateTime(now);
+        }
+        else
+        {
+            if (StringUtils.isBlank(company.getFirstSourceType()))
+            {
+                company.setFirstSourceType(SOURCE_SDK);
+            }
+            company.setRecordStatus(StringUtils.defaultIfBlank(company.getRecordStatus(), "active"));
+            company.setSdkObserved(ACTIVE_YES);
+            company.setManualCreated(StringUtils.defaultIfBlank(company.getManualCreated(), ACTIVE_NO));
+            if (company.getFirstSeenTime() == null)
+            {
+                company.setFirstSeenTime(now);
+            }
         }
         company.setExternalCompanyName(StringUtils.defaultIfBlank(companyName, company.getExternalCompanyName()));
         company.setNumberPrefix(StringUtils.defaultIfBlank(numberPrefix, company.getNumberPrefix()));

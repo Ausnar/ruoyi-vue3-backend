@@ -19,4 +19,7 @@ public interface FeGatewayMapper
     int updateFeGateway(FeGateway feGateway);
 
     int updateDeptIdByExternalCompanyId(@Param("externalCompanyId") Long externalCompanyId, @Param("deptId") Long deptId);
+
+    int updateExternalCompanyRef(@Param("sourceExternalCompanyId") Long sourceExternalCompanyId,
+        @Param("targetExternalCompanyId") Long targetExternalCompanyId);
 }

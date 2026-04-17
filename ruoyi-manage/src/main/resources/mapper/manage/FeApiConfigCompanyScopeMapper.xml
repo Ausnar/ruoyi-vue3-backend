@@ -46,6 +46,28 @@
         order by s.scope_id desc
     </select>
 
+    <update id="updateExternalCompanyRef">
+        update fe_api_config_company_scope
+        set external_company_id = #{targetExternalCompanyId},
+            external_company_name = #{targetExternalCompanyName}
+        where external_company_id = #{sourceExternalCompanyId}
+    </update>
+
+    <update id="updateExternalCompanyRefByScopeId">
+        update fe_api_config_company_scope
+        set external_company_id = #{targetExternalCompanyId},
+            external_company_name = #{targetExternalCompanyName}
+        where scope_id = #{scopeId}
+    </update>
+
+    <delete id="deleteByExternalCompanyId" parameterType="Long">
+        delete from fe_api_config_company_scope where external_company_id = #{externalCompanyId}
+    </delete>
+
+    <delete id="deleteByScopeId" parameterType="Long">
+        delete from fe_api_config_company_scope where scope_id = #{scopeId}
+    </delete>
+
     <insert id="insertFeApiConfigCompanyScope" parameterType="FeApiConfigCompanyScope" useGeneratedKeys="true" keyProperty="scopeId">
         insert into fe_api_config_company_scope (
             config_id, source_dept_id, external_company_id, external_company_name,

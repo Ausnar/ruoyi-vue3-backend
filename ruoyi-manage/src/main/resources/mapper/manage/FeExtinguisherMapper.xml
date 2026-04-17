@@ -184,6 +184,12 @@
         where external_company_id = #{externalCompanyId}
     </update>
 
+    <update id="updateExternalCompanyRef">
+        update fe_extinguisher
+        set external_company_id = #{targetExternalCompanyId}
+        where external_company_id = #{sourceExternalCompanyId}
+    </update>
+
     <delete id="deleteFeExtinguisherByExtinguisherId" parameterType="Long">
         delete from fe_extinguisher where extinguisher_id = #{extinguisherId}
     </delete>

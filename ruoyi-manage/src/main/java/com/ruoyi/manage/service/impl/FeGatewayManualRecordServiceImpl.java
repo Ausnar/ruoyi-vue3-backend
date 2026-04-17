@@ -25,6 +25,9 @@ public class FeGatewayManualRecordServiceImpl implements IFeGatewayManualRecordS
     private static final String STATUS_VOID = "void";
     private static final String MATCHED = "matched";
     private static final String UNMATCHED = "unmatched";
+    private static final String SOURCE_MANUAL = "manual";
+    private static final String YES = "1";
+    private static final String NO = "0";
 
     @Autowired
     private FeGatewayManualRecordMapper gatewayManualRecordMapper;
@@ -109,6 +112,11 @@ public class FeGatewayManualRecordServiceImpl implements IFeGatewayManualRecordS
     @Override
     public List<FeExternalCompany> selectExternalCompanyOptions(FeExternalCompany company)
     {
+        if (company == null)
+        {
+            company = new FeExternalCompany();
+        }
+        company.setRecordStatus(STATUS_ACTIVE);
         return externalCompanyMapper.selectFeExternalCompanyList(company);
     }
 
@@ -120,14 +128,16 @@ public class FeGatewayManualRecordServiceImpl implements IFeGatewayManualRecordS
         {
             throw new ServiceException("外部单位名称不能为空");
         }
+        String externalCompanyName = company.getExternalCompanyName().trim();
         FeExternalCompany query = new FeExternalCompany();
-        query.setExternalCompanyName(company.getExternalCompanyName().trim());
+        query.setExternalCompanyName(externalCompanyName);
+        query.setRecordStatus(STATUS_ACTIVE);
         List<FeExternalCompany> exists = externalCompanyMapper.selectFeExternalCompanyList(query);
         if (exists != null)
         {
             for (FeExternalCompany item : exists)
             {
-                if (company.getExternalCompanyName().trim().equals(item.getExternalCompanyName()))
+                if (externalCompanyName.equals(item.getExternalCompanyName()))
                 {
                     return item;
                 }
@@ -137,8 +147,14 @@ public class FeGatewayManualRecordServiceImpl implements IFeGatewayManualRecordS
         long nextManualId = (minId != null && minId.longValue() < 0L) ? (minId.longValue() - 1L) : -1L;
         Date now = DateUtils.getNowDate();
         company.setExternalCompanyId(nextManualId);
-        company.setExternalCompanyName(company.getExternalCompanyName().trim());
-        company.setSyncStatus(defaultValue(company.getSyncStatus(), "manual"));
+        company.setExternalCompanyName(externalCompanyName);
+        company.setSyncStatus(defaultValue(company.getSyncStatus(), SOURCE_MANUAL));
+        company.setFirstSourceType(defaultValue(company.getFirstSourceType(), SOURCE_MANUAL));
+        company.setSdkObserved(defaultValue(company.getSdkObserved(), NO));
+        company.setManualCreated(defaultValue(company.getManualCreated(), YES));
+        company.setManualCreatedBy(SecurityUtils.getUsername());
+        company.setManualCreatedTime(now);
+        company.setRecordStatus(defaultValue(company.getRecordStatus(), STATUS_ACTIVE));
         company.setFirstSeenTime(now);
         company.setLastSeenTime(now);
         company.setLastSourceDeptId(SecurityUtils.getDeptId());
@@ -161,6 +177,10 @@ public class FeGatewayManualRecordServiceImpl implements IFeGatewayManualRecordS
         if (externalCompany == null)
         {
             throw new ServiceException("未找到对应的外部单位，请先创建后再保存");
+        }
+        if (!STATUS_ACTIVE.equals(externalCompany.getRecordStatus()))
+        {
+            throw new ServiceException("当前外部单位不是生效状态，请重新选择");
         }
         record.setExternalCompanyNameSnapshot(externalCompany.getExternalCompanyName());
     }

@@ -6,10 +6,19 @@
         <result property="companyRecordId" column="company_record_id" />
         <result property="externalCompanyId" column="external_company_id" />
         <result property="externalCompanyName" column="external_company_name" />
+        <result property="manualConfirmedName" column="manual_confirmed_name" />
         <result property="numberPrefix" column="number_prefix" />
         <result property="orgPath" column="org_path" />
         <result property="parentExternalCompanyId" column="parent_external_company_id" />
         <result property="syncStatus" column="sync_status" />
+        <result property="firstSourceType" column="first_source_type" />
+        <result property="sdkObserved" column="sdk_observed" />
+        <result property="manualCreated" column="manual_created" />
+        <result property="manualCreatedBy" column="manual_created_by" />
+        <result property="manualCreatedTime" column="manual_created_time" />
+        <result property="recordStatus" column="record_status" />
+        <result property="mergedToCompanyRecordId" column="merged_to_company_record_id" />
+        <result property="mergedToExternalCompanyId" column="merged_to_external_company_id" />
         <result property="firstSeenTime" column="first_seen_time" />
         <result property="lastSeenTime" column="last_seen_time" />
         <result property="lastSourceDeptId" column="last_source_dept_id" />
@@ -25,8 +34,10 @@
 
     <sql id="selectFeExternalCompanyVo">
         select c.company_record_id, c.external_company_id, c.external_company_name, c.number_prefix,
-               c.org_path, c.parent_external_company_id, c.sync_status, c.first_seen_time, c.last_seen_time,
-               c.last_source_dept_id, d.dept_name as last_source_dept_name,
+               c.manual_confirmed_name, c.org_path, c.parent_external_company_id, c.sync_status,
+               c.first_source_type, c.sdk_observed, c.manual_created, c.manual_created_by, c.manual_created_time,
+               c.record_status, c.merged_to_company_record_id, c.merged_to_external_company_id,
+               c.first_seen_time, c.last_seen_time, c.last_source_dept_id, d.dept_name as last_source_dept_name,
                m.dept_id as mapped_dept_id, md.dept_name as mapped_dept_name,
                c.remark, c.create_by, c.create_time, c.update_by, c.update_time
         from fe_external_company c
@@ -34,6 +45,12 @@
         left join fe_company_dept_mapping m on c.external_company_id = m.external_company_id
         left join sys_dept md on m.dept_id = md.dept_id
     </sql>
+
+    <select id="selectByCompanyRecordId" parameterType="Long" resultMap="FeExternalCompanyResult">
+        <include refid="selectFeExternalCompanyVo"/>
+        where c.company_record_id = #{companyRecordId}
+        limit 1
+    </select>
 
     <select id="selectByExternalCompanyId" parameterType="Long" resultMap="FeExternalCompanyResult">
         <include refid="selectFeExternalCompanyVo"/>
@@ -48,23 +65,41 @@
     <select id="selectFeExternalCompanyList" parameterType="FeExternalCompany" resultMap="FeExternalCompanyResult">
         <include refid="selectFeExternalCompanyVo"/>
         <where>
+            <if test="companyRecordId != null"> and c.company_record_id = #{companyRecordId}</if>
             <if test="externalCompanyId != null"> and c.external_company_id = #{externalCompanyId}</if>
-            <if test="externalCompanyName != null and externalCompanyName != ''"> and c.external_company_name like concat('%', #{externalCompanyName}, '%')</if>
+            <if test="externalCompanyName != null and externalCompanyName != ''">
+                and (c.external_company_name like concat('%', #{externalCompanyName}, '%')
+                or c.manual_confirmed_name like concat('%', #{externalCompanyName}, '%'))
+            </if>
             <if test="lastSourceDeptId != null"> and c.last_source_dept_id = #{lastSourceDeptId}</if>
             <if test="syncStatus != null and syncStatus != ''"> and c.sync_status = #{syncStatus}</if>
+            <if test="firstSourceType != null and firstSourceType != ''"> and c.first_source_type = #{firstSourceType}</if>
+            <if test="recordStatus != null and recordStatus != ''"> and c.record_status = #{recordStatus}</if>
+            <if test="sdkObserved != null and sdkObserved != ''"> and c.sdk_observed = #{sdkObserved}</if>
+            <if test="manualCreated != null and manualCreated != ''"> and c.manual_created = #{manualCreated}</if>
+            <if test="mappedDeptId != null"> and m.dept_id = #{mappedDeptId}</if>
         </where>
-        order by c.company_record_id desc
+        order by c.last_seen_time desc, c.company_record_id desc
+    </select>
+
+    <select id="selectActiveExternalCompaniesForMerge" resultMap="FeExternalCompanyResult">
+        <include refid="selectFeExternalCompanyVo"/>
+        where c.record_status = 'active'
+          and c.company_record_id &lt;&gt; #{excludeCompanyRecordId}
+        order by c.last_seen_time desc, c.company_record_id desc
     </select>
 
     <insert id="insertFeExternalCompany" parameterType="FeExternalCompany" useGeneratedKeys="true" keyProperty="companyRecordId">
         insert into fe_external_company (
-            external_company_id, external_company_name, number_prefix, org_path, parent_external_company_id,
-            sync_status, first_seen_time, last_seen_time, last_source_dept_id, remark,
-            create_by, create_time, update_by, update_time
+            external_company_id, external_company_name, manual_confirmed_name, number_prefix, org_path, parent_external_company_id,
+            sync_status, first_source_type, sdk_observed, manual_created, manual_created_by, manual_created_time,
+            record_status, merged_to_company_record_id, merged_to_external_company_id,
+            first_seen_time, last_seen_time, last_source_dept_id, remark, create_by, create_time, update_by, update_time
         ) values (
-            #{externalCompanyId}, #{externalCompanyName}, #{numberPrefix}, #{orgPath}, #{parentExternalCompanyId},
-            #{syncStatus}, #{firstSeenTime}, #{lastSeenTime}, #{lastSourceDeptId}, #{remark},
-            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}
+            #{externalCompanyId}, #{externalCompanyName}, #{manualConfirmedName}, #{numberPrefix}, #{orgPath}, #{parentExternalCompanyId},
+            #{syncStatus}, #{firstSourceType}, #{sdkObserved}, #{manualCreated}, #{manualCreatedBy}, #{manualCreatedTime},
+            #{recordStatus}, #{mergedToCompanyRecordId}, #{mergedToExternalCompanyId},
+            #{firstSeenTime}, #{lastSeenTime}, #{lastSourceDeptId}, #{remark}, #{createBy}, #{createTime}, #{updateBy}, #{updateTime}
         )
     </insert>
 
@@ -72,10 +107,19 @@
         update fe_external_company
         <trim prefix="SET" suffixOverrides=",">
             <if test="externalCompanyName != null">external_company_name = #{externalCompanyName},</if>
+            <if test="manualConfirmedName != null">manual_confirmed_name = #{manualConfirmedName},</if>
             <if test="numberPrefix != null">number_prefix = #{numberPrefix},</if>
             <if test="orgPath != null">org_path = #{orgPath},</if>
             <if test="parentExternalCompanyId != null">parent_external_company_id = #{parentExternalCompanyId},</if>
             <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="firstSourceType != null">first_source_type = #{firstSourceType},</if>
+            <if test="sdkObserved != null">sdk_observed = #{sdkObserved},</if>
+            <if test="manualCreated != null">manual_created = #{manualCreated},</if>
+            <if test="manualCreatedBy != null">manual_created_by = #{manualCreatedBy},</if>
+            <if test="manualCreatedTime != null">manual_created_time = #{manualCreatedTime},</if>
+            <if test="recordStatus != null">record_status = #{recordStatus},</if>
+            <if test="mergedToCompanyRecordId != null">merged_to_company_record_id = #{mergedToCompanyRecordId},</if>
+            <if test="mergedToExternalCompanyId != null">merged_to_external_company_id = #{mergedToExternalCompanyId},</if>
             <if test="firstSeenTime != null">first_seen_time = #{firstSeenTime},</if>
             <if test="lastSeenTime != null">last_seen_time = #{lastSeenTime},</if>
             <if test="lastSourceDeptId != null">last_source_dept_id = #{lastSourceDeptId},</if>
@@ -85,4 +129,16 @@
         </trim>
         where company_record_id = #{companyRecordId}
     </update>
+
+    <insert id="insertMergeLog" parameterType="FeExternalCompanyMergeLog" useGeneratedKeys="true" keyProperty="mergeLogId">
+        insert into fe_external_company_merge_log (
+            source_company_record_id, source_external_company_id, source_external_company_name,
+            target_company_record_id, target_external_company_id, target_external_company_name,
+            merge_strategy, merge_reason, merge_time, create_by, create_time
+        ) values (
+            #{sourceCompanyRecordId}, #{sourceExternalCompanyId}, #{sourceExternalCompanyName},
+            #{targetCompanyRecordId}, #{targetExternalCompanyId}, #{targetExternalCompanyName},
+            #{mergeStrategy}, #{mergeReason}, #{mergeTime}, #{createBy}, #{createTime}
+        )
+    </insert>
 </mapper>

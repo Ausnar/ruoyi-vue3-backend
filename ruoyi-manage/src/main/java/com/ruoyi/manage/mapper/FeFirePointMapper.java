@@ -24,6 +24,9 @@ public interface FeFirePointMapper
 
     int updateDeptIdByExternalCompanyId(@Param("externalCompanyId") Long externalCompanyId, @Param("deptId") Long deptId);
 
+    int updateExternalCompanyRef(@Param("sourceExternalCompanyId") Long sourceExternalCompanyId,
+        @Param("targetExternalCompanyId") Long targetExternalCompanyId);
+
     int deleteFeFirePointByFirePointId(Long firePointId);
 
     int deleteFeFirePointByFirePointIds(Long[] firePointIds);

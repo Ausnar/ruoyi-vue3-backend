@@ -151,4 +151,11 @@
         </trim>
         where sensor_record_id = #{sensorRecordId}
     </update>
+
+    <update id="updateExternalCompanyRef">
+        update fe_sensor_manual_record
+        set external_company_id = #{targetExternalCompanyId},
+            external_company_name_snapshot = #{targetExternalCompanyNameSnapshot}
+        where external_company_id = #{sourceExternalCompanyId}
+    </update>
 </mapper>

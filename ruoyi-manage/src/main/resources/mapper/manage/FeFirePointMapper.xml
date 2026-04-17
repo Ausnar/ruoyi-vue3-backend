@@ -196,6 +196,12 @@
         where external_company_id = #{externalCompanyId}
     </update>
 
+    <update id="updateExternalCompanyRef">
+        update fe_fire_point
+        set external_company_id = #{targetExternalCompanyId}
+        where external_company_id = #{sourceExternalCompanyId}
+    </update>
+
     <delete id="deleteFeFirePointByFirePointId" parameterType="Long">
         delete from fe_fire_point where fire_point_id = #{firePointId}
     </delete>

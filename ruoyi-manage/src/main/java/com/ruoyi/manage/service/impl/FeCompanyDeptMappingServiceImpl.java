@@ -21,6 +21,8 @@ import com.ruoyi.manage.service.IFeCompanyDeptMappingService;
 @Service
 public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingService
 {
+    private static final String STATUS_ACTIVE = "active";
+
     @Autowired
     private FeCompanyDeptMappingMapper feCompanyDeptMappingMapper;
 
@@ -122,6 +124,11 @@ public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingSer
     @Override
     public List<FeExternalCompany> selectExternalCompanyOptions(FeExternalCompany company)
     {
+        if (company == null)
+        {
+            company = new FeExternalCompany();
+        }
+        company.setRecordStatus(STATUS_ACTIVE);
         if (!SecurityUtils.isAdmin())
         {
             company.setLastSourceDeptId(SecurityUtils.getDeptId());
@@ -138,7 +145,11 @@ public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingSer
         FeExternalCompany externalCompany = feExternalCompanyMapper.selectByExternalCompanyId(mapping.getExternalCompanyId());
         if (externalCompany == null)
         {
-            throw new ServiceException("未找到对应的外部单位，请先完成设备同步");
+            throw new ServiceException("未找到对应的外部单位，请先完成外部单位治理");
+        }
+        if (!STATUS_ACTIVE.equals(externalCompany.getRecordStatus()))
+        {
+            throw new ServiceException("当前外部单位不是生效状态，请重新选择");
         }
         mapping.setExternalCompanyName(externalCompany.getExternalCompanyName());
     }
@@ -154,7 +165,7 @@ public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingSer
 
     private String defaultSyncStatus(String syncStatus)
     {
-        return (syncStatus == null || syncStatus.trim().isEmpty()) ? "active" : syncStatus;
+        return (syncStatus == null || syncStatus.trim().isEmpty()) ? STATUS_ACTIVE : syncStatus;
     }
 
     private void syncRelatedDept(Long externalCompanyId, Long deptId)

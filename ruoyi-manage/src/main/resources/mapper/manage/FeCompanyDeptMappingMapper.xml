@@ -86,6 +86,13 @@
         where mapping_id = #{mappingId}
     </update>
 
+    <update id="updateExternalCompanyRef">
+        update fe_company_dept_mapping
+        set external_company_id = #{targetExternalCompanyId},
+            external_company_name = #{targetExternalCompanyName}
+        where external_company_id = #{sourceExternalCompanyId}
+    </update>
+
     <delete id="deleteFeCompanyDeptMappingByMappingIds" parameterType="Long">
         delete from fe_company_dept_mapping
         where mapping_id in
@@ -96,5 +103,9 @@
 
     <delete id="deleteFeCompanyDeptMappingByMappingId" parameterType="Long">
         delete from fe_company_dept_mapping where mapping_id = #{mappingId}
+    </delete>
+
+    <delete id="deleteByExternalCompanyId" parameterType="Long">
+        delete from fe_company_dept_mapping where external_company_id = #{externalCompanyId}
     </delete>
 </mapper>

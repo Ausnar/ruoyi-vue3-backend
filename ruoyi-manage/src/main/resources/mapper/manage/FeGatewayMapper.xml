@@ -150,4 +150,10 @@
         set dept_id = #{deptId,jdbcType=BIGINT}
         where external_company_id = #{externalCompanyId}
     </update>
+
+    <update id="updateExternalCompanyRef">
+        update fe_gateway
+        set external_company_id = #{targetExternalCompanyId}
+        where external_company_id = #{sourceExternalCompanyId}
+    </update>
 </mapper>
