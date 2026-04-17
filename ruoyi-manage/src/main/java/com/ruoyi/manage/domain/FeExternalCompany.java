@@ -25,6 +25,8 @@ public class FeExternalCompany extends BaseEntity
     private Date lastSeenTime;
     private Long lastSourceDeptId;
     private String lastSourceDeptName;
+    private Long mappedDeptId;
+    private String mappedDeptName;
 
     public Long getCompanyRecordId() { return companyRecordId; }
     public void setCompanyRecordId(Long companyRecordId) { this.companyRecordId = companyRecordId; }
@@ -48,6 +50,10 @@ public class FeExternalCompany extends BaseEntity
     public void setLastSourceDeptId(Long lastSourceDeptId) { this.lastSourceDeptId = lastSourceDeptId; }
     public String getLastSourceDeptName() { return lastSourceDeptName; }
     public void setLastSourceDeptName(String lastSourceDeptName) { this.lastSourceDeptName = lastSourceDeptName; }
+    public Long getMappedDeptId() { return mappedDeptId; }
+    public void setMappedDeptId(Long mappedDeptId) { this.mappedDeptId = mappedDeptId; }
+    public String getMappedDeptName() { return mappedDeptName; }
+    public void setMappedDeptName(String mappedDeptName) { this.mappedDeptName = mappedDeptName; }
 
     @Override
     public String toString()
@@ -63,6 +69,8 @@ public class FeExternalCompany extends BaseEntity
             .append("firstSeenTime", firstSeenTime)
             .append("lastSeenTime", lastSeenTime)
             .append("lastSourceDeptId", lastSourceDeptId)
+            .append("mappedDeptId", mappedDeptId)
+            .append("mappedDeptName", mappedDeptName)
             .append("remark", getRemark())
             .toString();
     }

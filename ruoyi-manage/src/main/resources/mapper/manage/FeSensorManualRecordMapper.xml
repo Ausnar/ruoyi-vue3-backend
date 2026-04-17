@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeSensorManualRecordMapper">
+
+    <resultMap id="FeSensorManualRecordResult" type="FeSensorManualRecord">
+        <result property="sensorRecordId" column="sensor_record_id" />
+        <result property="gatewayRecordId" column="gateway_record_id" />
+        <result property="parentGatewayRecordId" column="gateway_record_id" />
+        <result property="externalCompanyId" column="external_company_id" />
+        <result property="externalCompanyNameSnapshot" column="external_company_name_snapshot" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="mappedDeptId" column="mapped_dept_id" />
+        <result property="mappedDeptName" column="mapped_dept_name" />
+        <result property="sensorId" column="sensor_id" />
+        <result property="extinguisherId" column="extinguisher_id" />
+        <result property="sensorCode" column="sensor_code" />
+        <result property="macAddress" column="mac_address" />
+        <result property="assemblyAddress" column="assembly_address" />
+        <result property="extinguisherBodySerialNo" column="extinguisher_body_serial_no" />
+        <result property="extinguisherProductionDate" column="extinguisher_production_date" />
+        <result property="sensorVendorType" column="sensor_vendor_type" />
+        <result property="status" column="status" />
+        <result property="matchStatus" column="match_status" />
+        <result property="matchedSensorCode" column="matched_sensor_code" />
+        <result property="matchedExtinguisherLabelCode" column="matched_extinguisher_label_code" />
+        <result property="gatewayImei" column="gateway_imei" />
+        <result property="gatewayConfigCode" column="gateway_config_code" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectFeSensorManualRecordVo">
+        select s.sensor_record_id, s.gateway_record_id, s.external_company_id, s.external_company_name_snapshot,
+               s.dept_id, d.dept_name, m.dept_id as mapped_dept_id, md.dept_name as mapped_dept_name,
+               s.sensor_id, s.extinguisher_id, s.sensor_code, s.mac_address, s.assembly_address,
+               s.extinguisher_body_serial_no, s.extinguisher_production_date, s.sensor_vendor_type,
+               s.status, s.match_status, ss.sensor_code as matched_sensor_code,
+               e.label_code as matched_extinguisher_label_code,
+               g.gateway_imei, g.gateway_config_code,
+               s.remark, s.create_by, s.create_time, s.update_by, s.update_time
+        from fe_sensor_manual_record s
+        left join fe_gateway_manual_record g on s.gateway_record_id = g.record_id
+        left join sys_dept d on s.dept_id = d.dept_id
+        left join fe_company_dept_mapping m on s.external_company_id = m.external_company_id
+        left join sys_dept md on m.dept_id = md.dept_id
+        left join fe_sensor ss on s.sensor_id = ss.sensor_id
+        left join fe_extinguisher e on s.extinguisher_id = e.extinguisher_id
+    </sql>
+
+    <select id="selectFeSensorManualRecordBySensorRecordId" parameterType="Long" resultMap="FeSensorManualRecordResult">
+        <include refid="selectFeSensorManualRecordVo"/>
+        where s.sensor_record_id = #{sensorRecordId}
+    </select>
+
+    <select id="selectFeSensorManualRecordList" parameterType="FeSensorManualRecord" resultMap="FeSensorManualRecordResult">
+        <include refid="selectFeSensorManualRecordVo"/>
+        <where>
+            <if test="gatewayRecordId != null"> and s.gateway_record_id = #{gatewayRecordId}</if>
+            <if test="externalCompanyId != null"> and s.external_company_id = #{externalCompanyId}</if>
+            <if test="externalCompanyNameSnapshot != null and externalCompanyNameSnapshot != ''"> and s.external_company_name_snapshot like concat('%', #{externalCompanyNameSnapshot}, '%')</if>
+            <if test="deptId != null"> and s.dept_id = #{deptId}</if>
+            <if test="sensorCode != null and sensorCode != ''"> and s.sensor_code like concat('%', #{sensorCode}, '%')</if>
+            <if test="macAddress != null and macAddress != ''"> and s.mac_address like concat('%', #{macAddress}, '%')</if>
+            <if test="assemblyAddress != null and assemblyAddress != ''"> and s.assembly_address like concat('%', #{assemblyAddress}, '%')</if>
+            <if test="sensorVendorType != null and sensorVendorType != ''"> and s.sensor_vendor_type = #{sensorVendorType}</if>
+            <if test="status != null and status != ''"> and s.status = #{status}</if>
+            <if test="matchStatus != null and matchStatus != ''"> and s.match_status = #{matchStatus}</if>
+            ${params.dataScope}
+        </where>
+        order by s.sensor_record_id desc
+    </select>
+
+    <select id="selectByGatewayRecordId" parameterType="Long" resultMap="FeSensorManualRecordResult">
+        <include refid="selectFeSensorManualRecordVo"/>
+        where s.gateway_record_id = #{gatewayRecordId}
+        order by s.sensor_record_id desc
+    </select>
+
+    <insert id="insertFeSensorManualRecord" parameterType="FeSensorManualRecord" useGeneratedKeys="true" keyProperty="sensorRecordId">
+        insert into fe_sensor_manual_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="gatewayRecordId != null">gateway_record_id,</if>
+            <if test="externalCompanyId != null">external_company_id,</if>
+            <if test="externalCompanyNameSnapshot != null">external_company_name_snapshot,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="sensorId != null">sensor_id,</if>
+            <if test="extinguisherId != null">extinguisher_id,</if>
+            <if test="sensorCode != null">sensor_code,</if>
+            <if test="macAddress != null">mac_address,</if>
+            <if test="assemblyAddress != null">assembly_address,</if>
+            <if test="extinguisherBodySerialNo != null">extinguisher_body_serial_no,</if>
+            <if test="extinguisherProductionDate != null">extinguisher_production_date,</if>
+            <if test="sensorVendorType != null">sensor_vendor_type,</if>
+            <if test="status != null">status,</if>
+            <if test="matchStatus != null">match_status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="gatewayRecordId != null">#{gatewayRecordId},</if>
+            <if test="externalCompanyId != null">#{externalCompanyId},</if>
+            <if test="externalCompanyNameSnapshot != null">#{externalCompanyNameSnapshot},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="sensorId != null">#{sensorId},</if>
+            <if test="extinguisherId != null">#{extinguisherId},</if>
+            <if test="sensorCode != null">#{sensorCode},</if>
+            <if test="macAddress != null">#{macAddress},</if>
+            <if test="assemblyAddress != null">#{assemblyAddress},</if>
+            <if test="extinguisherBodySerialNo != null">#{extinguisherBodySerialNo},</if>
+            <if test="extinguisherProductionDate != null">#{extinguisherProductionDate},</if>
+            <if test="sensorVendorType != null">#{sensorVendorType},</if>
+            <if test="status != null">#{status},</if>
+            <if test="matchStatus != null">#{matchStatus},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateFeSensorManualRecord" parameterType="FeSensorManualRecord">
+        update fe_sensor_manual_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="gatewayRecordId != null">gateway_record_id = #{gatewayRecordId},</if>
+            <if test="externalCompanyId != null">external_company_id = #{externalCompanyId},</if>
+            <if test="externalCompanyNameSnapshot != null">external_company_name_snapshot = #{externalCompanyNameSnapshot},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="sensorId != null">sensor_id = #{sensorId},</if>
+            <if test="sensorId == null">sensor_id = null,</if>
+            <if test="extinguisherId != null">extinguisher_id = #{extinguisherId},</if>
+            <if test="extinguisherId == null">extinguisher_id = null,</if>
+            <if test="sensorCode != null">sensor_code = #{sensorCode},</if>
+            <if test="macAddress != null">mac_address = #{macAddress},</if>
+            <if test="assemblyAddress != null">assembly_address = #{assemblyAddress},</if>
+            <if test="extinguisherBodySerialNo != null">extinguisher_body_serial_no = #{extinguisherBodySerialNo},</if>
+            <if test="extinguisherProductionDate != null">extinguisher_production_date = #{extinguisherProductionDate},</if>
+            <if test="sensorVendorType != null">sensor_vendor_type = #{sensorVendorType},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="matchStatus != null">match_status = #{matchStatus},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where sensor_record_id = #{sensorRecordId}
+    </update>
+</mapper>

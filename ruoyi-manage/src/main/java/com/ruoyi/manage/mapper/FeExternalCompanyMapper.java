@@ -8,6 +8,8 @@ public interface FeExternalCompanyMapper
 {
     FeExternalCompany selectByExternalCompanyId(Long externalCompanyId);
 
+    Long selectMinExternalCompanyId();
+
     List<FeExternalCompany> selectFeExternalCompanyList(FeExternalCompany company);
 
     int insertFeExternalCompany(FeExternalCompany company);

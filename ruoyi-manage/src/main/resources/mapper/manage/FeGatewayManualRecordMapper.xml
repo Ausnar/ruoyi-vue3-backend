@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeGatewayManualRecordMapper">
+
+    <resultMap id="FeGatewayManualRecordResult" type="FeGatewayManualRecord">
+        <result property="recordId" column="record_id" />
+        <result property="externalCompanyId" column="external_company_id" />
+        <result property="externalCompanyNameSnapshot" column="external_company_name_snapshot" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="sourceDeptId" column="source_dept_id" />
+        <result property="sourceDeptName" column="source_dept_name" />
+        <result property="gatewayId" column="gateway_id" />
+        <result property="matchedGatewayImei" column="matched_gateway_imei" />
+        <result property="matchedFirePointName" column="matched_fire_point_name" />
+        <result property="mappedDeptId" column="mapped_dept_id" />
+        <result property="mappedDeptName" column="mapped_dept_name" />
+        <result property="gatewayConfigCode" column="gateway_config_code" />
+        <result property="gatewayQrCode" column="gateway_qr_code" />
+        <result property="gatewayImei" column="gateway_imei" />
+        <result property="simNo" column="sim_no" />
+        <result property="simOpenMonth" column="sim_open_month" />
+        <result property="placementLocation" column="placement_location" />
+        <result property="status" column="status" />
+        <result property="matchStatus" column="match_status" />
+        <result property="installerName" column="installer_name" />
+        <result property="installTime" column="install_time" />
+        <result property="sensorCount" column="sensor_count" />
+        <result property="sensorCodeSummary" column="sensor_code_summary" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectFeGatewayManualRecordVo">
+        select g.record_id, g.external_company_id, g.external_company_name_snapshot, g.dept_id, d.dept_name,
+               g.source_dept_id, sd.dept_name as source_dept_name, g.gateway_id,
+               gw.imei as matched_gateway_imei, fp.fire_point_name as matched_fire_point_name,
+               m.dept_id as mapped_dept_id, md.dept_name as mapped_dept_name,
+               g.gateway_config_code, g.gateway_qr_code, g.gateway_imei, g.sim_no, g.sim_open_month,
+               g.placement_location, g.status, g.match_status, g.installer_name, g.install_time,
+               (
+                   select count(1) from fe_sensor_manual_record s
+                    where s.gateway_record_id = g.record_id and s.status &lt;&gt; 'void'
+               ) as sensor_count,
+               (
+                   select group_concat(s.sensor_code order by s.sensor_record_id separator ', ')
+                   from fe_sensor_manual_record s
+                    where s.gateway_record_id = g.record_id and s.status &lt;&gt; 'void' and s.sensor_code is not null and s.sensor_code &lt;&gt; ''
+               ) as sensor_code_summary,
+               g.remark, g.create_by, g.create_time, g.update_by, g.update_time
+        from fe_gateway_manual_record g
+        left join sys_dept d on g.dept_id = d.dept_id
+        left join sys_dept sd on g.source_dept_id = sd.dept_id
+        left join fe_gateway gw on g.gateway_id = gw.gateway_id
+        left join fe_fire_point fp on gw.fire_point_id = fp.fire_point_id
+        left join fe_company_dept_mapping m on g.external_company_id = m.external_company_id
+        left join sys_dept md on m.dept_id = md.dept_id
+    </sql>
+
+    <select id="selectFeGatewayManualRecordByRecordId" parameterType="Long" resultMap="FeGatewayManualRecordResult">
+        <include refid="selectFeGatewayManualRecordVo"/>
+        where g.record_id = #{recordId}
+    </select>
+
+    <select id="selectFeGatewayManualRecordList" parameterType="FeGatewayManualRecord" resultMap="FeGatewayManualRecordResult">
+        <include refid="selectFeGatewayManualRecordVo"/>
+        <where>
+            <if test="externalCompanyId != null"> and g.external_company_id = #{externalCompanyId}</if>
+            <if test="externalCompanyNameSnapshot != null and externalCompanyNameSnapshot != ''"> and g.external_company_name_snapshot like concat('%', #{externalCompanyNameSnapshot}, '%')</if>
+            <if test="deptId != null"> and g.dept_id = #{deptId}</if>
+            <if test="gatewayConfigCode != null and gatewayConfigCode != ''"> and g.gateway_config_code like concat('%', #{gatewayConfigCode}, '%')</if>
+            <if test="gatewayImei != null and gatewayImei != ''"> and g.gateway_imei like concat('%', #{gatewayImei}, '%')</if>
+            <if test="simNo != null and simNo != ''"> and g.sim_no like concat('%', #{simNo}, '%')</if>
+            <if test="placementLocation != null and placementLocation != ''"> and g.placement_location like concat('%', #{placementLocation}, '%')</if>
+            <if test="status != null and status != ''"> and g.status = #{status}</if>
+            <if test="matchStatus != null and matchStatus != ''"> and g.match_status = #{matchStatus}</if>
+            ${params.dataScope}
+        </where>
+        order by g.record_id desc
+    </select>
+
+    <insert id="insertFeGatewayManualRecord" parameterType="FeGatewayManualRecord" useGeneratedKeys="true" keyProperty="recordId">
+        insert into fe_gateway_manual_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="externalCompanyId != null">external_company_id,</if>
+            <if test="externalCompanyNameSnapshot != null">external_company_name_snapshot,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="sourceDeptId != null">source_dept_id,</if>
+            <if test="gatewayId != null">gateway_id,</if>
+            <if test="gatewayConfigCode != null">gateway_config_code,</if>
+            <if test="gatewayQrCode != null">gateway_qr_code,</if>
+            <if test="gatewayImei != null">gateway_imei,</if>
+            <if test="simNo != null">sim_no,</if>
+            <if test="simOpenMonth != null">sim_open_month,</if>
+            <if test="placementLocation != null">placement_location,</if>
+            <if test="status != null">status,</if>
+            <if test="matchStatus != null">match_status,</if>
+            <if test="installerName != null">installer_name,</if>
+            <if test="installTime != null">install_time,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="externalCompanyId != null">#{externalCompanyId},</if>
+            <if test="externalCompanyNameSnapshot != null">#{externalCompanyNameSnapshot},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="sourceDeptId != null">#{sourceDeptId},</if>
+            <if test="gatewayId != null">#{gatewayId},</if>
+            <if test="gatewayConfigCode != null">#{gatewayConfigCode},</if>
+            <if test="gatewayQrCode != null">#{gatewayQrCode},</if>
+            <if test="gatewayImei != null">#{gatewayImei},</if>
+            <if test="simNo != null">#{simNo},</if>
+            <if test="simOpenMonth != null">#{simOpenMonth},</if>
+            <if test="placementLocation != null">#{placementLocation},</if>
+            <if test="status != null">#{status},</if>
+            <if test="matchStatus != null">#{matchStatus},</if>
+            <if test="installerName != null">#{installerName},</if>
+            <if test="installTime != null">#{installTime},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateFeGatewayManualRecord" parameterType="FeGatewayManualRecord">
+        update fe_gateway_manual_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="externalCompanyId != null">external_company_id = #{externalCompanyId},</if>
+            <if test="externalCompanyNameSnapshot != null">external_company_name_snapshot = #{externalCompanyNameSnapshot},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="sourceDeptId != null">source_dept_id = #{sourceDeptId},</if>
+            <if test="gatewayId != null">gateway_id = #{gatewayId},</if>
+            <if test="gatewayId == null">gateway_id = null,</if>
+            <if test="gatewayConfigCode != null">gateway_config_code = #{gatewayConfigCode},</if>
+            <if test="gatewayQrCode != null">gateway_qr_code = #{gatewayQrCode},</if>
+            <if test="gatewayImei != null">gateway_imei = #{gatewayImei},</if>
+            <if test="simNo != null">sim_no = #{simNo},</if>
+            <if test="simOpenMonth != null">sim_open_month = #{simOpenMonth},</if>
+            <if test="placementLocation != null">placement_location = #{placementLocation},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="matchStatus != null">match_status = #{matchStatus},</if>
+            <if test="installerName != null">installer_name = #{installerName},</if>
+            <if test="installTime != null">install_time = #{installTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where record_id = #{recordId}
+    </update>
+</mapper>

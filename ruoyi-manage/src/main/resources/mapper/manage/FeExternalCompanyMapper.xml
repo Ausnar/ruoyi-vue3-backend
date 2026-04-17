@@ -14,6 +14,8 @@
         <result property="lastSeenTime" column="last_seen_time" />
         <result property="lastSourceDeptId" column="last_source_dept_id" />
         <result property="lastSourceDeptName" column="last_source_dept_name" />
+        <result property="mappedDeptId" column="mapped_dept_id" />
+        <result property="mappedDeptName" column="mapped_dept_name" />
         <result property="remark" column="remark" />
         <result property="createBy" column="create_by" />
         <result property="createTime" column="create_time" />
@@ -25,15 +27,22 @@
         select c.company_record_id, c.external_company_id, c.external_company_name, c.number_prefix,
                c.org_path, c.parent_external_company_id, c.sync_status, c.first_seen_time, c.last_seen_time,
                c.last_source_dept_id, d.dept_name as last_source_dept_name,
+               m.dept_id as mapped_dept_id, md.dept_name as mapped_dept_name,
                c.remark, c.create_by, c.create_time, c.update_by, c.update_time
         from fe_external_company c
         left join sys_dept d on c.last_source_dept_id = d.dept_id
+        left join fe_company_dept_mapping m on c.external_company_id = m.external_company_id
+        left join sys_dept md on m.dept_id = md.dept_id
     </sql>
 
     <select id="selectByExternalCompanyId" parameterType="Long" resultMap="FeExternalCompanyResult">
         <include refid="selectFeExternalCompanyVo"/>
         where c.external_company_id = #{externalCompanyId}
         limit 1
+    </select>
+
+    <select id="selectMinExternalCompanyId" resultType="Long">
+        select min(external_company_id) from fe_external_company
     </select>
 
     <select id="selectFeExternalCompanyList" parameterType="FeExternalCompany" resultMap="FeExternalCompanyResult">
