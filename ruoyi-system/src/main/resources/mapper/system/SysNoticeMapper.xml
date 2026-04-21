@@ -10,6 +10,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="noticeType"     column="notice_type"     />
         <result property="noticeContent"  column="notice_content"  />
         <result property="status"         column="status"          />
+        <result property="publishScopeType" column="publish_scope_type" />
+        <result property="publishDeptNames" column="publish_dept_names" />
         <result property="createBy"       column="create_by"       />
         <result property="createTime"     column="create_time"     />
         <result property="updateBy"       column="update_by"       />
@@ -18,36 +20,110 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
     
     <sql id="selectNoticeVo">
-        select notice_id, notice_title, notice_type, cast(notice_content as char) as notice_content, status, create_by, create_time, update_by, update_time, remark 
-		from sys_notice
+        select n.notice_id, n.notice_title, n.notice_type, cast(n.notice_content as char) as notice_content,
+               n.status, n.publish_scope_type,
+               (
+                   select group_concat(d.dept_name order by d.dept_id separator '、')
+                   from sys_notice_dept snd
+                   left join sys_dept d on d.dept_id = snd.dept_id
+                   where snd.notice_id = n.notice_id
+               ) as publish_dept_names,
+               n.create_by, n.create_time, n.update_by, n.update_time, n.remark
+		from sys_notice n
     </sql>
     
     <select id="selectNoticeById" parameterType="Long" resultMap="SysNoticeResult">
         <include refid="selectNoticeVo"/>
-        where notice_id = #{noticeId}
+        where n.notice_id = #{noticeId}
+    </select>
+
+    <select id="selectPublishedNoticeById" parameterType="SysNotice" resultMap="SysNoticeResult">
+        <include refid="selectNoticeVo"/>
+        where n.notice_id = #{noticeId}
+          and n.status = '0'
+          and (
+              n.publish_scope_type = '1'
+              or (
+                  n.publish_scope_type = '2'
+                  and #{currentDeptId} is not null
+                  and exists (
+                      select 1
+                      from sys_notice_dept snd
+                      where snd.notice_id = n.notice_id
+                        and (
+                            snd.dept_id = #{currentDeptId}
+                            or exists (
+                                select 1
+                                from sys_dept sd
+                                where sd.dept_id = #{currentDeptId}
+                                  and find_in_set(snd.dept_id, sd.ancestors)
+                            )
+                        )
+                  )
+              )
+          )
     </select>
     
     <select id="selectNoticeList" parameterType="SysNotice" resultMap="SysNoticeResult">
         <include refid="selectNoticeVo"/>
         <where>
 			<if test="noticeTitle != null and noticeTitle != ''">
-				AND notice_title like concat('%', #{noticeTitle}, '%')
+				AND n.notice_title like concat('%', #{noticeTitle}, '%')
 			</if>
 			<if test="noticeType != null and noticeType != ''">
-				AND notice_type = #{noticeType}
+				AND n.notice_type = #{noticeType}
 			</if>
 			<if test="createBy != null and createBy != ''">
-				AND create_by like concat('%', #{createBy}, '%')
+				AND n.create_by like concat('%', #{createBy}, '%')
+			</if>
+            <if test="publishScopeType != null and publishScopeType != ''">
+				AND n.publish_scope_type = #{publishScopeType}
 			</if>
 		</where>
     </select>
+
+    <select id="selectPublishedNoticeList" parameterType="SysNotice" resultMap="SysNoticeResult">
+        <include refid="selectNoticeVo"/>
+        <where>
+            AND n.status = '0'
+            <if test="noticeTitle != null and noticeTitle != ''">
+                AND n.notice_title like concat('%', #{noticeTitle}, '%')
+            </if>
+            <if test="noticeType != null and noticeType != ''">
+                AND n.notice_type = #{noticeType}
+            </if>
+            AND (
+                n.publish_scope_type = '1'
+                or (
+                    n.publish_scope_type = '2'
+                    and #{currentDeptId} is not null
+                    and exists (
+                        select 1
+                        from sys_notice_dept snd
+                        where snd.notice_id = n.notice_id
+                          and (
+                              snd.dept_id = #{currentDeptId}
+                              or exists (
+                                  select 1
+                                  from sys_dept sd
+                                  where sd.dept_id = #{currentDeptId}
+                                    and find_in_set(snd.dept_id, sd.ancestors)
+                              )
+                          )
+                    )
+                )
+            )
+        </where>
+        order by n.create_time desc, n.notice_id desc
+    </select>
     
-    <insert id="insertNotice" parameterType="SysNotice">
+    <insert id="insertNotice" parameterType="SysNotice" useGeneratedKeys="true" keyProperty="noticeId">
         insert into sys_notice (
 			<if test="noticeTitle != null and noticeTitle != '' ">notice_title, </if>
 			<if test="noticeType != null and noticeType != '' ">notice_type, </if>
 			<if test="noticeContent != null and noticeContent != '' ">notice_content, </if>
 			<if test="status != null and status != '' ">status, </if>
+            <if test="publishScopeType != null and publishScopeType != ''">publish_scope_type, </if>
 			<if test="remark != null and remark != ''">remark,</if>
  			<if test="createBy != null and createBy != ''">create_by,</if>
  			create_time
@@ -56,10 +132,19 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			<if test="noticeType != null and noticeType != ''">#{noticeType}, </if>
 			<if test="noticeContent != null and noticeContent != ''">#{noticeContent}, </if>
 			<if test="status != null and status != ''">#{status}, </if>
+            <if test="publishScopeType != null and publishScopeType != ''">#{publishScopeType}, </if>
 			<if test="remark != null and remark != ''">#{remark},</if>
  			<if test="createBy != null and createBy != ''">#{createBy},</if>
  			sysdate()
 		)
+    </insert>
+
+    <insert id="insertNoticeDeptScopes" parameterType="SysNotice">
+        insert into sys_notice_dept (notice_id, dept_id)
+        values
+        <foreach collection="publishDeptIds" item="deptId" separator=",">
+            (#{noticeId}, #{deptId})
+        </foreach>
     </insert>
 	 
     <update id="updateNotice" parameterType="SysNotice">
@@ -69,11 +154,30 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="noticeType != null and noticeType != ''">notice_type = #{noticeType}, </if>
             <if test="noticeContent != null">notice_content = #{noticeContent}, </if>
             <if test="status != null and status != ''">status = #{status}, </if>
+            <if test="publishScopeType != null and publishScopeType != ''">publish_scope_type = #{publishScopeType}, </if>
             <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
  			update_time = sysdate()
         </set>
         where notice_id = #{noticeId}
     </update>
+
+    <select id="selectNoticeDeptIdsByNoticeId" parameterType="Long" resultType="Long">
+        select dept_id
+        from sys_notice_dept
+        where notice_id = #{noticeId}
+        order by dept_id
+    </select>
+
+    <delete id="deleteNoticeDeptByNoticeId" parameterType="Long">
+        delete from sys_notice_dept where notice_id = #{noticeId}
+    </delete>
+
+    <delete id="deleteNoticeDeptByNoticeIds" parameterType="Long">
+        delete from sys_notice_dept where notice_id in
+        <foreach item="noticeId" collection="array" open="(" separator="," close=")">
+            #{noticeId}
+        </foreach>
+    </delete>
 	
     <delete id="deleteNoticeById" parameterType="Long">
         delete from sys_notice where notice_id = #{noticeId}

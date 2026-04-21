@@ -45,6 +45,17 @@ public class SysNoticeController extends BaseController
     }
 
     /**
+     * 获取公告中心列表
+     */
+    @GetMapping("/published/list")
+    public TableDataInfo publishedList(SysNotice notice)
+    {
+        startPage();
+        List<SysNotice> list = noticeService.selectPublishedNoticeList(notice);
+        return getDataTable(list);
+    }
+
+    /**
      * 根据通知公告编号获取详细信息
      */
     @PreAuthorize("@ss.hasPermi('system:notice:query')")
@@ -52,6 +63,16 @@ public class SysNoticeController extends BaseController
     public AjaxResult getInfo(@PathVariable Long noticeId)
     {
         return success(noticeService.selectNoticeById(noticeId));
+    }
+
+    /**
+     * 根据公告编号获取公告中心详情
+     */
+    @GetMapping(value = "/published/{noticeId}")
+    public AjaxResult getPublishedInfo(@PathVariable Long noticeId)
+    {
+        SysNotice notice = noticeService.selectPublishedNoticeById(noticeId);
+        return notice != null ? success(notice) : error("公告不存在或已关闭");
     }
 
     /**

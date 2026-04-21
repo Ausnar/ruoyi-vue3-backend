@@ -19,12 +19,28 @@ public interface ISysNoticeService
     public SysNotice selectNoticeById(Long noticeId);
 
     /**
+     * 查询已发布公告信息
+     *
+     * @param noticeId 公告ID
+     * @return 公告信息
+     */
+    public SysNotice selectPublishedNoticeById(Long noticeId);
+
+    /**
      * 查询公告列表
      * 
      * @param notice 公告信息
      * @return 公告集合
      */
     public List<SysNotice> selectNoticeList(SysNotice notice);
+
+    /**
+     * 查询已发布公告列表
+     *
+     * @param notice 公告信息
+     * @return 公告集合
+     */
+    public List<SysNotice> selectPublishedNoticeList(SysNotice notice);
 
     /**
      * 新增公告

@@ -1,5 +1,6 @@
 package com.ruoyi.system.domain;
 
+import java.util.List;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -30,6 +31,18 @@ public class SysNotice extends BaseEntity
 
     /** 公告状态（0正常 1关闭） */
     private String status;
+
+    /** 发布范围类型（1全体 2指定部门） */
+    private String publishScopeType;
+
+    /** 发布部门ID集合 */
+    private List<Long> publishDeptIds;
+
+    /** 发布部门名称 */
+    private String publishDeptNames;
+
+    /** 当前登录用户部门ID */
+    private Long currentDeptId;
 
     public Long getNoticeId()
     {
@@ -84,6 +97,46 @@ public class SysNotice extends BaseEntity
         return status;
     }
 
+    public void setPublishScopeType(String publishScopeType)
+    {
+        this.publishScopeType = publishScopeType;
+    }
+
+    public String getPublishScopeType()
+    {
+        return publishScopeType;
+    }
+
+    public void setPublishDeptIds(List<Long> publishDeptIds)
+    {
+        this.publishDeptIds = publishDeptIds;
+    }
+
+    public List<Long> getPublishDeptIds()
+    {
+        return publishDeptIds;
+    }
+
+    public void setPublishDeptNames(String publishDeptNames)
+    {
+        this.publishDeptNames = publishDeptNames;
+    }
+
+    public String getPublishDeptNames()
+    {
+        return publishDeptNames;
+    }
+
+    public void setCurrentDeptId(Long currentDeptId)
+    {
+        this.currentDeptId = currentDeptId;
+    }
+
+    public Long getCurrentDeptId()
+    {
+        return currentDeptId;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -92,6 +145,9 @@ public class SysNotice extends BaseEntity
             .append("noticeType", getNoticeType())
             .append("noticeContent", getNoticeContent())
             .append("status", getStatus())
+            .append("publishScopeType", getPublishScopeType())
+            .append("publishDeptIds", getPublishDeptIds())
+            .append("publishDeptNames", getPublishDeptNames())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())
             .append("updateBy", getUpdateBy())
