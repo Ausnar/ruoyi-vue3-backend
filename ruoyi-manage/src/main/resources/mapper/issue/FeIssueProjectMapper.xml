@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.issue.mapper.FeIssueProjectMapper">
+
+    <resultMap id="FeIssueProjectResult" type="FeIssueProject">
+        <result property="projectId" column="project_id"/>
+        <result property="projectName" column="project_name"/>
+        <result property="projectCode" column="project_code"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectFeIssueProjectVo">
+        select project_id, project_name, project_code, status, remark,
+               create_by, create_time, update_by, update_time, del_flag
+        from fe_issue_project
+    </sql>
+
+    <select id="selectFeIssueProjectByProjectId" parameterType="Long" resultMap="FeIssueProjectResult">
+        <include refid="selectFeIssueProjectVo"/>
+        where project_id = #{projectId}
+          and del_flag = '0'
+    </select>
+
+    <select id="selectByProjectCode" parameterType="String" resultMap="FeIssueProjectResult">
+        <include refid="selectFeIssueProjectVo"/>
+        where project_code = #{projectCode}
+          and del_flag = '0'
+        limit 1
+    </select>
+
+    <select id="selectByProjectName" parameterType="String" resultMap="FeIssueProjectResult">
+        <include refid="selectFeIssueProjectVo"/>
+        where project_name = #{projectName}
+          and del_flag = '0'
+        limit 1
+    </select>
+
+    <select id="selectFeIssueProjectList" parameterType="FeIssueProject" resultMap="FeIssueProjectResult">
+        <include refid="selectFeIssueProjectVo"/>
+        <where>
+            del_flag = '0'
+            <if test="projectName != null and projectName != ''">and project_name like concat('%', #{projectName}, '%')</if>
+            <if test="projectCode != null and projectCode != ''">and project_code like concat('%', #{projectCode}, '%')</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by project_id desc
+    </select>
+
+    <insert id="insertFeIssueProject" parameterType="FeIssueProject" useGeneratedKeys="true" keyProperty="projectId">
+        insert into fe_issue_project (
+            project_name, project_code, status, remark,
+            create_by, create_time, update_by, update_time, del_flag
+        ) values (
+            #{projectName}, #{projectCode}, #{status}, #{remark},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, #{delFlag}
+        )
+    </insert>
+
+    <update id="updateFeIssueProject" parameterType="FeIssueProject">
+        update fe_issue_project
+        <trim prefix="set" suffixOverrides=",">
+            <if test="projectName != null">project_name = #{projectName},</if>
+            <if test="projectCode != null">project_code = #{projectCode},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where project_id = #{projectId}
+    </update>
+
+    <update id="deleteFeIssueProjectByProjectId" parameterType="Long">
+        update fe_issue_project
+        set del_flag = '2'
+        where project_id = #{projectId}
+    </update>
+</mapper>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.issue.mapper.FeIssueItemMapper">
+
+    <resultMap id="FeIssueItemResult" type="FeIssueItem">
+        <result property="issueId" column="issue_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="projectName" column="project_name"/>
+        <result property="moduleId" column="module_id"/>
+        <result property="moduleNameSnapshot" column="module_name_snapshot"/>
+        <result property="issueTitle" column="issue_title"/>
+        <result property="priority" column="priority"/>
+        <result property="status" column="status"/>
+        <result property="ownerSide" column="owner_side"/>
+        <result property="currentSummary" column="current_summary"/>
+        <result property="statusDetail" column="status_detail"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectFeIssueItemVo">
+        select i.issue_id, i.project_id, p.project_name, i.module_id, i.module_name_snapshot, i.issue_title, i.priority, i.status,
+               i.owner_side, i.current_summary, i.status_detail, i.remark,
+               i.create_by, i.create_time, i.update_by, i.update_time, i.del_flag
+        from fe_issue_item i
+        left join fe_issue_project p on i.project_id = p.project_id
+    </sql>
+
+    <select id="selectFeIssueItemByIssueId" parameterType="Long" resultMap="FeIssueItemResult">
+        <include refid="selectFeIssueItemVo"/>
+        where i.issue_id = #{issueId}
+          and i.del_flag = '0'
+    </select>
+
+    <select id="selectFeIssueItemList" parameterType="FeIssueItem" resultMap="FeIssueItemResult">
+        <include refid="selectFeIssueItemVo"/>
+        <where>
+            i.del_flag = '0'
+            <if test="projectId != null">and i.project_id = #{projectId}</if>
+            <if test="moduleId != null">and i.module_id = #{moduleId}</if>
+            <if test="priority != null and priority != ''">and i.priority = #{priority}</if>
+            <if test="status != null and status != ''">and i.status = #{status}</if>
+            <if test="ownerSide != null and ownerSide != ''">and i.owner_side = #{ownerSide}</if>
+            <if test="keyword != null and keyword != ''">
+                and (
+                    i.issue_title like concat('%', #{keyword}, '%')
+                    or i.current_summary like concat('%', #{keyword}, '%')
+                    or i.status_detail like concat('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+        order by
+            case i.priority when 'P1' then 1 when 'P2' then 2 else 3 end,
+            i.issue_id desc
+    </select>
+
+    <insert id="insertFeIssueItem" parameterType="FeIssueItem" useGeneratedKeys="true" keyProperty="issueId">
+        insert into fe_issue_item (
+            project_id, module_id, module_name_snapshot, issue_title, priority, status, owner_side,
+            current_summary, status_detail, remark,
+            create_by, create_time, update_by, update_time, del_flag
+        ) values (
+            #{projectId}, #{moduleId}, #{moduleNameSnapshot}, #{issueTitle}, #{priority}, #{status}, #{ownerSide},
+            #{currentSummary}, #{statusDetail}, #{remark},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, #{delFlag}
+        )
+    </insert>
+
+    <update id="updateFeIssueItem" parameterType="FeIssueItem">
+        update fe_issue_item
+        <trim prefix="set" suffixOverrides=",">
+            <if test="projectId != null">project_id = #{projectId},</if>
+            <if test="moduleId != null">module_id = #{moduleId},</if>
+            <if test="moduleNameSnapshot != null">module_name_snapshot = #{moduleNameSnapshot},</if>
+            <if test="issueTitle != null">issue_title = #{issueTitle},</if>
+            <if test="priority != null">priority = #{priority},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="ownerSide != null">owner_side = #{ownerSide},</if>
+            <if test="currentSummary != null">current_summary = #{currentSummary},</if>
+            <if test="statusDetail != null">status_detail = #{statusDetail},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where issue_id = #{issueId}
+    </update>
+
+    <update id="deleteFeIssueItemByIssueId" parameterType="FeIssueItem">
+        update fe_issue_item
+        set del_flag = '2',
+            update_by = #{updateBy},
+            update_time = #{updateTime}
+        where issue_id = #{issueId}
+    </update>
+</mapper>
