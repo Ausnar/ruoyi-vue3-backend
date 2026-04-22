@@ -90,6 +90,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     private static final String PATH_GPS = "/api/gps/";
     private static final String PATH_SENSOR = "/api/sensor/";
     private static final String PATH_EXTINGUISHER = "/api/extinguisher/";
+    private static final String PATH_COMPANY = "/api/company";
     private static final String PATH_SENSOR_VALUES = "/api/values/{sensor_id}";
     private static final String MESSAGE_SYNC_RUNNING = "Device sync is already running";
 
@@ -224,8 +225,10 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             Map<Long, JsonNode> gpsNodeMap = buildGpsNodeMap(fetchPagedItems(PATH_GPS, tokenContext, config));
             List<JsonNode> sensorNodes = fetchPagedItems(PATH_SENSOR, tokenContext, config);
             List<JsonNode> extinguisherNodes = fetchPagedItems(PATH_EXTINGUISHER, tokenContext, config);
+            List<JsonNode> companyNodes = fetchPagedItems(PATH_COMPANY, tokenContext, config);
 
             Set<Long> syncedCompanyIds = new TreeSet<>();
+            syncObservedCompanies(companyNodes, config, operator, syncedCompanyIds);
             List<FeSensor> syncedSensors = new ArrayList<>();
             for (JsonNode stationNode : stationNodes)
             {
@@ -539,6 +542,27 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         syncFirePointGpsFromGateway(gateway, operator);
         feVisitPassiveEventService.captureGatewayGpsAndDetectEvent(gateway, gpsLongitude, gpsLatitude, gpsTime, syncTime, config, operator);
         return gateway;
+    }
+
+    private void syncObservedCompanies(List<JsonNode> companyNodes, SysDeptApiConfig config, String operator, Set<Long> syncedCompanyIds)
+    {
+        if (companyNodes == null || companyNodes.isEmpty())
+        {
+            return;
+        }
+        for (JsonNode companyNode : companyNodes)
+        {
+            Long externalCompanyId = readLong(companyNode, "id");
+            String externalCompanyName = readText(companyNode, "name");
+            String numberPrefix = readText(companyNode, "number_prefix");
+            String orgPath = readText(companyNode, "org_path");
+            Long parentExternalCompanyId = readLong(companyNode, "parent");
+            captureObservedCompany(config, externalCompanyId, externalCompanyName, numberPrefix, orgPath, parentExternalCompanyId, operator);
+            if (externalCompanyId != null)
+            {
+                syncedCompanyIds.add(externalCompanyId);
+            }
+        }
     }
     private FeSensor upsertSensor(JsonNode sensorNode, SysDeptApiConfig config, String operator)
     {
