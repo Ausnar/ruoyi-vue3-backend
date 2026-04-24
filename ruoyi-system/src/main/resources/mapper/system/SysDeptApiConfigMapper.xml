@@ -10,6 +10,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="contractNo" column="contract_no" />
         <result property="apiId" column="api_id" />
         <result property="apiKey" column="api_key" />
+        <result property="contractType" column="contract_type" />
         <result property="status" column="status" />
         <result property="expireDate" column="expire_date" />
         <result property="remark" column="remark" />
@@ -25,7 +26,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectSysDeptApiConfigVo">
-        select c.config_id, c.dept_id, c.contract_no, c.api_id, c.api_key,
+        select c.config_id, c.dept_id, c.contract_no, c.api_id, c.api_key, c.contract_type,
                c.status, c.expire_date, c.remark,
                c.create_by, c.create_time, c.update_by, c.update_time,
                d.dept_name,
@@ -53,6 +54,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                 </foreach>
             </if>
             <if test="contractNo != null and contractNo != ''"> and c.contract_no like concat('%', #{contractNo}, '%')</if>
+            <if test="contractType != null and contractType != '' and contractType != 'unset'"> and c.contract_type = #{contractType}</if>
+            <if test="contractType != null and contractType == 'unset'"> and (c.contract_type is null or c.contract_type = '')</if>
             <if test="status != null and status != ''"> and c.status = #{status}</if>
             <if test="expireDate != null"> and c.expire_date = #{expireDate}</if>
         </where>
@@ -89,6 +92,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="contractNo != null">contract_no,</if>
             <if test="apiId != null">api_id,</if>
             <if test="apiKey != null">api_key,</if>
+            <if test="contractType != null">contract_type,</if>
             <if test="status != null">status,</if>
             <if test="expireDate != null">expire_date,</if>
             <if test="remark != null">remark,</if>
@@ -102,6 +106,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="contractNo != null">#{contractNo},</if>
             <if test="apiId != null">#{apiId},</if>
             <if test="apiKey != null">#{apiKey},</if>
+            <if test="contractType != null">#{contractType},</if>
             <if test="status != null">#{status},</if>
             <if test="expireDate != null">#{expireDate},</if>
             <if test="remark != null">#{remark},</if>
@@ -119,6 +124,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="contractNo != null">contract_no = #{contractNo},</if>
             <if test="apiId != null">api_id = #{apiId},</if>
             <if test="apiKey != null">api_key = #{apiKey},</if>
+            <if test="contractType != null">contract_type = #{contractType},</if>
+            <if test="contractType == null">contract_type = null,</if>
             <if test="status != null">status = #{status},</if>
             <if test="expireDate != null">expire_date = #{expireDate},</if>
             <if test="remark != null">remark = #{remark},</if>
@@ -139,6 +146,31 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </foreach>
     </delete>
 
+    <sql id="contractTypeFilter">
+        <if test="contractType != null and contractType != '' and contractType != 'unset'">
+            and c.contract_type = #{contractType}
+        </if>
+        <if test="contractType != null and contractType == 'unset'">
+            and (c.contract_type is null or c.contract_type = '')
+        </if>
+    </sql>
+
+    <select id="getContractOverview" resultType="map">
+        select count(*) as total,
+               sum(case when c.contract_type = 'trial' then 1 else 0 end) as trialCount,
+               sum(case when c.contract_type = 'paid' then 1 else 0 end) as paidCount,
+               sum(case when c.contract_type is null or c.contract_type = '' then 1 else 0 end) as unsetCount
+        from sys_dept_api_config c
+        <where>
+            <if test="deptIds != null and deptIds.size() > 0">
+                and c.dept_id in
+                <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
     <select id="getStatusStatistics" resultType="map">
         select c.status as name, count(*) as value
         from sys_dept_api_config c
@@ -149,6 +181,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                     #{deptId}
                 </foreach>
             </if>
+            <include refid="contractTypeFilter"/>
         </where>
         group by c.status
     </select>
@@ -170,6 +203,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                     #{deptId}
                 </foreach>
             </if>
+            <include refid="contractTypeFilter"/>
         </where>
         group by
             case
@@ -192,6 +226,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                     #{deptId}
                 </foreach>
             </if>
+            <if test="contractType != null and contractType != '' and contractType != 'unset'">
+                and c.contract_type = #{contractType}
+            </if>
+            <if test="contractType != null and contractType == 'unset'">
+                and (c.contract_type is null or c.contract_type = '')
+            </if>
         </where>
         group by d.dept_id, d.dept_name
         order by value desc
@@ -211,6 +251,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                     #{deptId}
                 </foreach>
             </if>
+            <include refid="contractTypeFilter"/>
         </where>
         group by date_format(c.expire_date, '%Y-%m')
         order by name

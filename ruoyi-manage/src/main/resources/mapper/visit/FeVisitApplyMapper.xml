@@ -60,6 +60,7 @@
         <result property="deptId" column="dept_id"/>
         <result property="deptName" column="dept_name"/>
         <result property="contractNo" column="contract_no"/>
+        <result property="contractType" column="contract_type"/>
         <result property="contactPerson" column="contact_person"/>
         <result property="contactPhone" column="contact_phone"/>
     </resultMap>
@@ -129,7 +130,7 @@
     </select>
 
     <select id="selectContractOptions" resultMap="FeVisitContractOptionResult">
-        select c.config_id, c.dept_id, d.dept_name, c.contract_no,
+        select c.config_id, c.dept_id, d.dept_name, c.contract_no, c.contract_type,
                d.leader as contact_person, d.phone as contact_phone
         from sys_dept_api_config c
         left join sys_dept d on c.dept_id = d.dept_id
@@ -148,6 +149,7 @@
 
     <select id="selectContractOptionsByDeptIds" resultMap="FeVisitContractOptionResult">
         select min(c.config_id) as config_id, c.dept_id, d.dept_name, min(c.contract_no) as contract_no,
+               min(c.contract_type) as contract_type,
                d.leader as contact_person, d.phone as contact_phone
         from sys_dept_api_config c
         left join sys_dept d on c.dept_id = d.dept_id
@@ -162,7 +164,7 @@
     </select>
 
     <select id="selectContractOptionByConfigId" parameterType="Long" resultMap="FeVisitContractOptionResult">
-        select c.config_id, c.dept_id, d.dept_name, c.contract_no,
+        select c.config_id, c.dept_id, d.dept_name, c.contract_no, c.contract_type,
                d.leader as contact_person, d.phone as contact_phone
         from sys_dept_api_config c
         left join sys_dept d on c.dept_id = d.dept_id

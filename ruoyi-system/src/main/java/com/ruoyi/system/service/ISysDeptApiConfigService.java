@@ -20,11 +20,13 @@ public interface ISysDeptApiConfigService
 
     public int deleteSysDeptApiConfigByConfigId(Long configId);
 
-    public List<Map<String, Object>> getStatusStatistics();
+    public Map<String, Object> getContractOverview();
 
-    public List<Map<String, Object>> getExpireStatusStatistics();
+    public List<Map<String, Object>> getStatusStatistics(String contractType);
 
-    public List<Map<String, Object>> getTopDeptStatistics(int limit);
+    public List<Map<String, Object>> getExpireStatusStatistics(String contractType);
 
-    public List<Map<String, Object>> getExpiryTrendStatistics(int months);
+    public List<Map<String, Object>> getTopDeptStatistics(int limit, String contractType);
+
+    public List<Map<String, Object>> getExpiryTrendStatistics(int months, String contractType);
 }

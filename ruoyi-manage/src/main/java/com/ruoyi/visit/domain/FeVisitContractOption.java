@@ -10,6 +10,7 @@ public class FeVisitContractOption extends BaseEntity
     private Long deptId;
     private String deptName;
     private String contractNo;
+    private String contractType;
     private String contactPerson;
     private String contactPhone;
 
@@ -51,6 +52,16 @@ public class FeVisitContractOption extends BaseEntity
     public void setContractNo(String contractNo)
     {
         this.contractNo = contractNo;
+    }
+
+    public String getContractType()
+    {
+        return contractType;
+    }
+
+    public void setContractType(String contractType)
+    {
+        this.contractType = contractType;
     }
 
     public String getContactPerson()

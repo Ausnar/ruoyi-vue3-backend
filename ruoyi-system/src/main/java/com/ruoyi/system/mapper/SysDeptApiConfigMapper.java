@@ -23,11 +23,17 @@ public interface SysDeptApiConfigMapper
 
     public int checkDeptUnique(@Param("deptId") Long deptId, @Param("configId") Long configId);
 
-    public List<Map<String, Object>> getStatusStatistics(@Param("deptIds") List<Long> deptIds);
+    public Map<String, Object> getContractOverview(@Param("deptIds") List<Long> deptIds);
 
-    public List<Map<String, Object>> getExpireStatusStatistics(@Param("deptIds") List<Long> deptIds);
+    public List<Map<String, Object>> getStatusStatistics(@Param("deptIds") List<Long> deptIds,
+        @Param("contractType") String contractType);
 
-    public List<Map<String, Object>> getTopDeptStatistics(@Param("deptIds") List<Long> deptIds, @Param("limit") int limit);
+    public List<Map<String, Object>> getExpireStatusStatistics(@Param("deptIds") List<Long> deptIds,
+        @Param("contractType") String contractType);
 
-    public List<Map<String, Object>> getExpiryTrendStatistics(@Param("deptIds") List<Long> deptIds, @Param("months") int months);
+    public List<Map<String, Object>> getTopDeptStatistics(@Param("deptIds") List<Long> deptIds,
+        @Param("limit") int limit, @Param("contractType") String contractType);
+
+    public List<Map<String, Object>> getExpiryTrendStatistics(@Param("deptIds") List<Long> deptIds,
+        @Param("months") int months, @Param("contractType") String contractType);
 }

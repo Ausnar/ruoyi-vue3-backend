@@ -3,6 +3,7 @@ package com.ruoyi.system.domain;
 import java.util.Date;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import com.ruoyi.common.annotation.Excel;
@@ -36,6 +37,13 @@ public class SysDeptApiConfig extends BaseEntity
     /** API KEY */
     @Excel(name = "API KEY")
     private String apiKey;
+
+    /** 合同性质(trial/paid) */
+    private String contractType;
+
+    /** 合同性质标签，仅用于导出 */
+    @Excel(name = "合同性质")
+    private String contractTypeLabel;
 
     /** 状态(0停用 1正常) */
     @Excel(name = "状态", readConverterExp = "0=停用,1=正常")
@@ -117,6 +125,35 @@ public class SysDeptApiConfig extends BaseEntity
     public String getApiKey() 
     {
         return apiKey;
+    }
+
+    public void setContractType(String contractType)
+    {
+        this.contractType = contractType;
+    }
+
+    public String getContractType()
+    {
+        return contractType;
+    }
+
+    public void setContractTypeLabel(String contractTypeLabel)
+    {
+        this.contractTypeLabel = contractTypeLabel;
+    }
+
+    @JsonIgnore
+    public String getContractTypeLabel()
+    {
+        if ("trial".equals(contractType))
+        {
+            return "试用合同";
+        }
+        if ("paid".equals(contractType))
+        {
+            return "正式付费合同";
+        }
+        return "未设置";
     }
 
     public void setStatus(String status) 
@@ -208,6 +245,7 @@ public class SysDeptApiConfig extends BaseEntity
             .append("contractNo", getContractNo())
             .append("apiId", getApiId())
             .append("apiKey", getApiKey())
+            .append("contractType", getContractType())
             .append("status", getStatus())
             .append("expireDate", getExpireDate())
             .append("expireStatus", getExpireStatus())

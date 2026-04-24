@@ -2,6 +2,7 @@ package com.ruoyi.web.controller.system;
 
 
 import java.util.List;
+import java.util.Map;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,10 +108,21 @@ public class SysDeptApiConfigController extends BaseController
      * 合同状态分布统计
      */
     @PreAuthorize("@ss.hasPermi('system:contract:list')")
-    @GetMapping("/statistics/status")
-    public AjaxResult getStatusStatistics()
+    @GetMapping("/statistics/overview")
+    public AjaxResult getContractOverview()
     {
-        return success(sysDeptApiConfigService.getStatusStatistics());
+        Map<String, Object> overview = sysDeptApiConfigService.getContractOverview();
+        return success(overview);
+    }
+
+    /**
+     * 鍚堝悓鐘舵€佸垎甯冪粺璁?
+     */
+    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @GetMapping("/statistics/status")
+    public AjaxResult getStatusStatistics(String contractType)
+    {
+        return success(sysDeptApiConfigService.getStatusStatistics(contractType));
     }
 
     /**
@@ -118,9 +130,9 @@ public class SysDeptApiConfigController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('system:contract:list')")
     @GetMapping("/statistics/expireStatus")
-    public AjaxResult getExpireStatusStatistics()
+    public AjaxResult getExpireStatusStatistics(String contractType)
     {
-        return success(sysDeptApiConfigService.getExpireStatusStatistics());
+        return success(sysDeptApiConfigService.getExpireStatusStatistics(contractType));
     }
 
     /**
@@ -128,9 +140,9 @@ public class SysDeptApiConfigController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('system:contract:list')")
     @GetMapping("/statistics/topDept")
-    public AjaxResult getTopDeptStatistics(Integer limit)
+    public AjaxResult getTopDeptStatistics(Integer limit, String contractType)
     {
-        return success(sysDeptApiConfigService.getTopDeptStatistics(limit == null ? 10 : limit));
+        return success(sysDeptApiConfigService.getTopDeptStatistics(limit == null ? 10 : limit, contractType));
     }
 
     /**
@@ -138,8 +150,8 @@ public class SysDeptApiConfigController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('system:contract:list')")
     @GetMapping("/statistics/expiryTrend")
-    public AjaxResult getExpiryTrendStatistics(Integer months)
+    public AjaxResult getExpiryTrendStatistics(Integer months, String contractType)
     {
-        return success(sysDeptApiConfigService.getExpiryTrendStatistics(months == null ? 6 : months));
+        return success(sysDeptApiConfigService.getExpiryTrendStatistics(months == null ? 6 : months, contractType));
     }
 }

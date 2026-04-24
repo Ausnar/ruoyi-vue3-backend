@@ -1,14 +1,14 @@
 package com.ruoyi.system.service.impl;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import com.ruoyi.system.domain.SysDeptApiConfig;
 import com.ruoyi.system.mapper.SysDeptApiConfigMapper;
 import com.ruoyi.system.service.ISysDeptApiConfigService;
@@ -17,6 +17,17 @@ import com.ruoyi.system.service.ISysDeptService;
 @Service
 public class SysDeptApiConfigServiceImpl implements ISysDeptApiConfigService
 {
+    private static final Set<String> PERSISTED_CONTRACT_TYPES = new HashSet<String>();
+    private static final Set<String> QUERY_CONTRACT_TYPES = new HashSet<String>();
+
+    static
+    {
+        PERSISTED_CONTRACT_TYPES.add("trial");
+        PERSISTED_CONTRACT_TYPES.add("paid");
+        QUERY_CONTRACT_TYPES.addAll(PERSISTED_CONTRACT_TYPES);
+        QUERY_CONTRACT_TYPES.add("unset");
+    }
+
     @Autowired
     private SysDeptApiConfigMapper sysDeptApiConfigMapper;
 
@@ -32,6 +43,7 @@ public class SysDeptApiConfigServiceImpl implements ISysDeptApiConfigService
     @Override
     public List<SysDeptApiConfig> selectSysDeptApiConfigList(SysDeptApiConfig sysDeptApiConfig)
     {
+        validateQueryContractType(sysDeptApiConfig == null ? null : sysDeptApiConfig.getContractType());
         if (SecurityUtils.isAdmin())
         {
             return sysDeptApiConfigMapper.selectSysDeptApiConfigList(sysDeptApiConfig);
@@ -60,6 +72,7 @@ public class SysDeptApiConfigServiceImpl implements ISysDeptApiConfigService
         {
             throw new ServiceException("该部门已存在 API 配置，一个部门只能配置一次");
         }
+        validatePersistedContractType(sysDeptApiConfig.getContractType(), true);
 
         sysDeptApiConfig.setCreateTime(DateUtils.getNowDate());
         return sysDeptApiConfigMapper.insertSysDeptApiConfig(sysDeptApiConfig);
@@ -73,6 +86,7 @@ public class SysDeptApiConfigServiceImpl implements ISysDeptApiConfigService
         {
             throw new ServiceException("该部门已存在 API 配置");
         }
+        validatePersistedContractType(sysDeptApiConfig.getContractType(), false);
 
         sysDeptApiConfig.setUpdateTime(DateUtils.getNowDate());
         return sysDeptApiConfigMapper.updateSysDeptApiConfig(sysDeptApiConfig);
@@ -90,6 +104,40 @@ public class SysDeptApiConfigServiceImpl implements ISysDeptApiConfigService
         return sysDeptApiConfigMapper.deleteSysDeptApiConfigByConfigId(configId);
     }
 
+    @Override
+    public Map<String, Object> getContractOverview()
+    {
+        return sysDeptApiConfigMapper.getContractOverview(getPermittedDeptIds());
+    }
+
+    @Override
+    public List<Map<String, Object>> getStatusStatistics(String contractType)
+    {
+        validateQueryContractType(contractType);
+        return sysDeptApiConfigMapper.getStatusStatistics(getPermittedDeptIds(), contractType);
+    }
+
+    @Override
+    public List<Map<String, Object>> getExpireStatusStatistics(String contractType)
+    {
+        validateQueryContractType(contractType);
+        return sysDeptApiConfigMapper.getExpireStatusStatistics(getPermittedDeptIds(), contractType);
+    }
+
+    @Override
+    public List<Map<String, Object>> getTopDeptStatistics(int limit, String contractType)
+    {
+        validateQueryContractType(contractType);
+        return sysDeptApiConfigMapper.getTopDeptStatistics(getPermittedDeptIds(), limit, contractType);
+    }
+
+    @Override
+    public List<Map<String, Object>> getExpiryTrendStatistics(int months, String contractType)
+    {
+        validateQueryContractType(contractType);
+        return sysDeptApiConfigMapper.getExpiryTrendStatistics(getPermittedDeptIds(), months, contractType);
+    }
+
     private List<Long> getPermittedDeptIds()
     {
         if (SecurityUtils.isAdmin())
@@ -104,27 +152,31 @@ public class SysDeptApiConfigServiceImpl implements ISysDeptApiConfigService
         return null;
     }
 
-    @Override
-    public List<Map<String, Object>> getStatusStatistics()
+    private void validatePersistedContractType(String contractType, boolean required)
     {
-        return sysDeptApiConfigMapper.getStatusStatistics(getPermittedDeptIds());
+        if (required && contractType == null)
+        {
+            throw new ServiceException("合同性质不能为空");
+        }
+        if (contractType == null)
+        {
+            return;
+        }
+        if (!PERSISTED_CONTRACT_TYPES.contains(contractType))
+        {
+            throw new ServiceException("合同性质仅支持 trial 或 paid");
+        }
     }
 
-    @Override
-    public List<Map<String, Object>> getExpireStatusStatistics()
+    private void validateQueryContractType(String contractType)
     {
-        return sysDeptApiConfigMapper.getExpireStatusStatistics(getPermittedDeptIds());
-    }
-
-    @Override
-    public List<Map<String, Object>> getTopDeptStatistics(int limit)
-    {
-        return sysDeptApiConfigMapper.getTopDeptStatistics(getPermittedDeptIds(), limit);
-    }
-
-    @Override
-    public List<Map<String, Object>> getExpiryTrendStatistics(int months)
-    {
-        return sysDeptApiConfigMapper.getExpiryTrendStatistics(getPermittedDeptIds(), months);
+        if (contractType == null || contractType.trim().isEmpty())
+        {
+            return;
+        }
+        if (!QUERY_CONTRACT_TYPES.contains(contractType))
+        {
+            throw new ServiceException("合同性质筛选值不合法");
+        }
     }
 }
