@@ -20,6 +20,12 @@ public class DashboardMapFirePoint
     private String contactPerson;
     private String contactPhone;
     private String status;
+    private int gatewayCount;
+    private int sensorCount;
+    private int extinguisherCount;
+    private int normalExtinguisherCount;
+    private int warningExtinguisherCount;
+    private int expiredExtinguisherCount;
 
     public Long getFirePointId() { return firePointId; }
     public void setFirePointId(Long firePointId) { this.firePointId = firePointId; }
@@ -53,4 +59,16 @@ public class DashboardMapFirePoint
     public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public int getGatewayCount() { return gatewayCount; }
+    public void setGatewayCount(int gatewayCount) { this.gatewayCount = gatewayCount; }
+    public int getSensorCount() { return sensorCount; }
+    public void setSensorCount(int sensorCount) { this.sensorCount = sensorCount; }
+    public int getExtinguisherCount() { return extinguisherCount; }
+    public void setExtinguisherCount(int extinguisherCount) { this.extinguisherCount = extinguisherCount; }
+    public int getNormalExtinguisherCount() { return normalExtinguisherCount; }
+    public void setNormalExtinguisherCount(int normalExtinguisherCount) { this.normalExtinguisherCount = normalExtinguisherCount; }
+    public int getWarningExtinguisherCount() { return warningExtinguisherCount; }
+    public void setWarningExtinguisherCount(int warningExtinguisherCount) { this.warningExtinguisherCount = warningExtinguisherCount; }
+    public int getExpiredExtinguisherCount() { return expiredExtinguisherCount; }
+    public void setExpiredExtinguisherCount(int expiredExtinguisherCount) { this.expiredExtinguisherCount = expiredExtinguisherCount; }
 }

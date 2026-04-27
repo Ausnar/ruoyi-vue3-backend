@@ -220,6 +220,12 @@ public class DashboardMapServiceImpl implements IDashboardMapService
             node.setExternalCompanyId(point.getExternalCompanyId());
             node.setExternalCompanyName(point.getExternalCompanyName());
             node.setStatus(StringUtils.isEmpty(point.getStatus()) ? "normal" : point.getStatus());
+            node.setGatewayCount(point.getGatewayCount());
+            node.setSensorCount(point.getSensorCount());
+            node.setExtinguisherCount(point.getExtinguisherCount());
+            node.setNormalExtinguisherCount(point.getNormalExtinguisherCount());
+            node.setWarningExtinguisherCount(point.getWarningExtinguisherCount());
+            node.setExpiredExtinguisherCount(point.getExpiredExtinguisherCount());
             nodes.add(node);
         }
         return nodes;

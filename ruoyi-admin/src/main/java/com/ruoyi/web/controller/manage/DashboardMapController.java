@@ -16,7 +16,7 @@ public class DashboardMapController extends BaseController
     @Autowired
     private IDashboardMapService dashboardMapService;
 
-    @PreAuthorize("@ss.hasPermi('manage:point:list')")
+    @PreAuthorize("@ss.hasAnyPermi('dashboard:card:map,manage:point:list')")
     @GetMapping("/hierarchy")
     public AjaxResult hierarchy()
     {

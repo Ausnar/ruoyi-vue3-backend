@@ -31,6 +31,12 @@ public class DashboardMapNode
     private int childUnitCount;
     private int firePointCount;
     private int directFirePointCount;
+    private int gatewayCount;
+    private int sensorCount;
+    private int extinguisherCount;
+    private int normalExtinguisherCount;
+    private int warningExtinguisherCount;
+    private int expiredExtinguisherCount;
     private List<DashboardMapNode> children = new ArrayList<DashboardMapNode>();
     private List<DashboardMapNode> firePoints = new ArrayList<DashboardMapNode>();
 
@@ -86,6 +92,18 @@ public class DashboardMapNode
     public void setFirePointCount(int firePointCount) { this.firePointCount = firePointCount; }
     public int getDirectFirePointCount() { return directFirePointCount; }
     public void setDirectFirePointCount(int directFirePointCount) { this.directFirePointCount = directFirePointCount; }
+    public int getGatewayCount() { return gatewayCount; }
+    public void setGatewayCount(int gatewayCount) { this.gatewayCount = gatewayCount; }
+    public int getSensorCount() { return sensorCount; }
+    public void setSensorCount(int sensorCount) { this.sensorCount = sensorCount; }
+    public int getExtinguisherCount() { return extinguisherCount; }
+    public void setExtinguisherCount(int extinguisherCount) { this.extinguisherCount = extinguisherCount; }
+    public int getNormalExtinguisherCount() { return normalExtinguisherCount; }
+    public void setNormalExtinguisherCount(int normalExtinguisherCount) { this.normalExtinguisherCount = normalExtinguisherCount; }
+    public int getWarningExtinguisherCount() { return warningExtinguisherCount; }
+    public void setWarningExtinguisherCount(int warningExtinguisherCount) { this.warningExtinguisherCount = warningExtinguisherCount; }
+    public int getExpiredExtinguisherCount() { return expiredExtinguisherCount; }
+    public void setExpiredExtinguisherCount(int expiredExtinguisherCount) { this.expiredExtinguisherCount = expiredExtinguisherCount; }
     public List<DashboardMapNode> getChildren() { return children; }
     public void setChildren(List<DashboardMapNode> children) { this.children = children; }
     public List<DashboardMapNode> getFirePoints() { return firePoints; }

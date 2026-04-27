@@ -19,6 +19,12 @@
         <result property="contactPerson" column="contact_person" />
         <result property="contactPhone" column="contact_phone" />
         <result property="status" column="status" />
+        <result property="gatewayCount" column="gateway_count" />
+        <result property="sensorCount" column="sensor_count" />
+        <result property="extinguisherCount" column="extinguisher_count" />
+        <result property="normalExtinguisherCount" column="normal_extinguisher_count" />
+        <result property="warningExtinguisherCount" column="warning_extinguisher_count" />
+        <result property="expiredExtinguisherCount" column="expired_extinguisher_count" />
     </resultMap>
 
     <select id="selectFirePointsForMap" resultMap="DashboardMapFirePointResult">
@@ -37,7 +43,38 @@
                ec.external_company_name,
                f.contact_person,
                f.contact_phone,
-               f.status
+               f.status,
+               (select count(1)
+                from fe_gateway g
+                where g.fire_point_id = f.fire_point_id) as gateway_count,
+               (select count(1)
+                from fe_sensor s
+                left join fe_gateway g on s.gateway_id = g.gateway_id
+                where g.fire_point_id = f.fire_point_id) as sensor_count,
+               (select count(distinct e.extinguisher_id)
+                from fe_extinguisher e
+                left join fe_sensor s on e.sensor_id = s.sensor_id
+                left join fe_gateway g on s.gateway_id = g.gateway_id
+                where e.fire_point_id = f.fire_point_id
+                   or g.fire_point_id = f.fire_point_id) as extinguisher_count,
+               (select count(distinct e.extinguisher_id)
+                from fe_extinguisher e
+                left join fe_sensor s on e.sensor_id = s.sensor_id
+                left join fe_gateway g on s.gateway_id = g.gateway_id
+                where (e.fire_point_id = f.fire_point_id or g.fire_point_id = f.fire_point_id)
+                  and e.status = '0') as normal_extinguisher_count,
+               (select count(distinct e.extinguisher_id)
+                from fe_extinguisher e
+                left join fe_sensor s on e.sensor_id = s.sensor_id
+                left join fe_gateway g on s.gateway_id = g.gateway_id
+                where (e.fire_point_id = f.fire_point_id or g.fire_point_id = f.fire_point_id)
+                  and e.status = '1') as warning_extinguisher_count,
+               (select count(distinct e.extinguisher_id)
+                from fe_extinguisher e
+                left join fe_sensor s on e.sensor_id = s.sensor_id
+                left join fe_gateway g on s.gateway_id = g.gateway_id
+                where (e.fire_point_id = f.fire_point_id or g.fire_point_id = f.fire_point_id)
+                  and e.status = '2') as expired_extinguisher_count
         from fe_fire_point f
         left join sys_dept d on f.dept_id = d.dept_id
         left join fe_external_company ec on f.external_company_id = ec.external_company_id
