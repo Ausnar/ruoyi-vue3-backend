@@ -256,4 +256,56 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         group by date_format(c.expire_date, '%Y-%m')
         order by name
     </select>
+
+    <select id="getProvinceStatistics" resultType="map">
+        select d.province as name, count(*) as value
+        from sys_dept_api_config c
+        left join sys_dept d on c.dept_id = d.dept_id
+        <where>
+            d.province is not null
+            and d.province != ''
+            <if test="deptIds != null and deptIds.size() > 0">
+                and c.dept_id in
+                <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+            <include refid="contractTypeFilter"/>
+        </where>
+        group by d.province
+        order by value desc
+    </select>
+
+    <select id="getCityStatistics" resultType="map">
+        select
+            case
+                when d.province in ('北京市', '上海市', '天津市', '重庆市') and d.city = d.province
+                    then if(d.area is null or d.area = '', d.province, concat(d.province, '-', d.area))
+                else concat(d.province, '-', d.city)
+            end as name,
+            count(*) as value
+        from sys_dept_api_config c
+        left join sys_dept d on c.dept_id = d.dept_id
+        <where>
+            d.province is not null
+            and d.province != ''
+            and d.city is not null
+            and d.city != ''
+            <if test="deptIds != null and deptIds.size() > 0">
+                and c.dept_id in
+                <foreach item="deptId" collection="deptIds" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+            <include refid="contractTypeFilter"/>
+        </where>
+        group by
+            case
+                when d.province in ('北京市', '上海市', '天津市', '重庆市') and d.city = d.province
+                    then if(d.area is null or d.area = '', d.province, concat(d.province, '-', d.area))
+                else concat(d.province, '-', d.city)
+            end
+        order by value desc
+        limit 15
+    </select>
 </mapper>

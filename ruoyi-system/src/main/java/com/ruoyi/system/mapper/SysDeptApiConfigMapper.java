@@ -36,4 +36,10 @@ public interface SysDeptApiConfigMapper
 
     public List<Map<String, Object>> getExpiryTrendStatistics(@Param("deptIds") List<Long> deptIds,
         @Param("months") int months, @Param("contractType") String contractType);
+
+    public List<Map<String, Object>> getProvinceStatistics(@Param("deptIds") List<Long> deptIds,
+        @Param("contractType") String contractType);
+
+    public List<Map<String, Object>> getCityStatistics(@Param("deptIds") List<Long> deptIds,
+        @Param("contractType") String contractType);
 }

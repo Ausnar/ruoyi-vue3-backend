@@ -1,5 +1,6 @@
 package com.ruoyi.system.service.impl;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -136,6 +137,17 @@ public class SysDeptApiConfigServiceImpl implements ISysDeptApiConfigService
     {
         validateQueryContractType(contractType);
         return sysDeptApiConfigMapper.getExpiryTrendStatistics(getPermittedDeptIds(), months, contractType);
+    }
+
+    @Override
+    public Map<String, Object> getRegionStatistics(String contractType)
+    {
+        validateQueryContractType(contractType);
+        List<Long> deptIds = getPermittedDeptIds();
+        Map<String, Object> result = new HashMap<String, Object>();
+        result.put("province", sysDeptApiConfigMapper.getProvinceStatistics(deptIds, contractType));
+        result.put("city", sysDeptApiConfigMapper.getCityStatistics(deptIds, contractType));
+        return result;
     }
 
     private List<Long> getPermittedDeptIds()

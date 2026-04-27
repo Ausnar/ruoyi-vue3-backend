@@ -29,4 +29,6 @@ public interface ISysDeptApiConfigService
     public List<Map<String, Object>> getTopDeptStatistics(int limit, String contractType);
 
     public List<Map<String, Object>> getExpiryTrendStatistics(int months, String contractType);
+
+    public Map<String, Object> getRegionStatistics(String contractType);
 }

@@ -107,7 +107,7 @@ public class SysDeptApiConfigController extends BaseController
     /**
      * 合同状态分布统计
      */
-    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @PreAuthorize("@ss.hasAnyPermi('system:contract:list,system:contract:analysis')")
     @GetMapping("/statistics/overview")
     public AjaxResult getContractOverview()
     {
@@ -118,7 +118,7 @@ public class SysDeptApiConfigController extends BaseController
     /**
      * 鍚堝悓鐘舵€佸垎甯冪粺璁?
      */
-    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @PreAuthorize("@ss.hasAnyPermi('system:contract:list,system:contract:analysis')")
     @GetMapping("/statistics/status")
     public AjaxResult getStatusStatistics(String contractType)
     {
@@ -128,7 +128,7 @@ public class SysDeptApiConfigController extends BaseController
     /**
      * 合同过期状态分布统计
      */
-    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @PreAuthorize("@ss.hasAnyPermi('system:contract:list,system:contract:analysis')")
     @GetMapping("/statistics/expireStatus")
     public AjaxResult getExpireStatusStatistics(String contractType)
     {
@@ -138,7 +138,7 @@ public class SysDeptApiConfigController extends BaseController
     /**
      * 合同数量TOP部门统计
      */
-    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @PreAuthorize("@ss.hasAnyPermi('system:contract:list,system:contract:analysis')")
     @GetMapping("/statistics/topDept")
     public AjaxResult getTopDeptStatistics(Integer limit, String contractType)
     {
@@ -148,10 +148,20 @@ public class SysDeptApiConfigController extends BaseController
     /**
      * 合同到期趋势统计
      */
-    @PreAuthorize("@ss.hasPermi('system:contract:list')")
+    @PreAuthorize("@ss.hasAnyPermi('system:contract:list,system:contract:analysis')")
     @GetMapping("/statistics/expiryTrend")
     public AjaxResult getExpiryTrendStatistics(Integer months, String contractType)
     {
         return success(sysDeptApiConfigService.getExpiryTrendStatistics(months == null ? 6 : months, contractType));
+    }
+
+    /**
+     * 合同地区分布统计
+     */
+    @PreAuthorize("@ss.hasAnyPermi('system:contract:list,system:contract:analysis')")
+    @GetMapping("/statistics/region")
+    public AjaxResult getRegionStatistics(String contractType)
+    {
+        return success(sysDeptApiConfigService.getRegionStatistics(contractType));
     }
 }
