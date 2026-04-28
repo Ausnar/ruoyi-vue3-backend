@@ -71,13 +71,19 @@ public abstract class AbstractQuartzJob implements Job
     {
         Date startTime = threadLocal.get();
         threadLocal.remove();
+        Date stopTime = new Date();
+        if (startTime == null)
+        {
+            log.warn("Quartz job startTime is missing, fallback to stopTime. jobName={}", sysJob.getJobName());
+            startTime = stopTime;
+        }
 
         final SysJobLog sysJobLog = new SysJobLog();
         sysJobLog.setJobName(sysJob.getJobName());
         sysJobLog.setJobGroup(sysJob.getJobGroup());
         sysJobLog.setInvokeTarget(sysJob.getInvokeTarget());
         sysJobLog.setStartTime(startTime);
-        sysJobLog.setStopTime(new Date());
+        sysJobLog.setStopTime(stopTime);
         long runMs = sysJobLog.getStopTime().getTime() - sysJobLog.getStartTime().getTime();
         sysJobLog.setJobMessage(sysJobLog.getJobName() + " 总共耗时：" + runMs + "毫秒");
         if (e != null)
@@ -92,7 +98,14 @@ public abstract class AbstractQuartzJob implements Job
         }
 
         // 写入数据库当中
-        SpringUtils.getBean(ISysJobLogService.class).addJobLog(sysJobLog);
+        try
+        {
+            SpringUtils.getBean(ISysJobLogService.class).addJobLog(sysJobLog);
+        }
+        catch (Exception logException)
+        {
+            log.warn("Quartz job log write skipped. jobName={}, reason={}", sysJob.getJobName(), logException.getMessage());
+        }
     }
 
     /**

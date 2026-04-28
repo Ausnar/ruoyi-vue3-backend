@@ -91,7 +91,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     private static final String PATH_SENSOR = "/api/sensor/";
     private static final String PATH_EXTINGUISHER = "/api/extinguisher/";
     private static final String PATH_COMPANY = "/api/company";
-    private static final String PATH_SENSOR_VALUES = "/api/values/{sensor_id}";
+    private static final String PATH_SENSOR_VALUES = "/api/sensor/{sensor_id}";
     private static final String MESSAGE_SYNC_RUNNING = "Device sync is already running";
 
     @Autowired private AzdapsProperties azdapsProperties;
@@ -835,15 +835,34 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         for (FeSensor sensor : sensors)
         {
             if (sensor.getExternalSensorId() == null || sensor.getSensorId() == null) continue;
-            JsonNode root = requestJson(HttpMethod.GET,
-                PATH_SENSOR_VALUES.replace("{sensor_id}", String.valueOf(sensor.getExternalSensorId())),
-                Collections.singletonMap("unit", azdapsProperties.getHistoryUnit()), tokenContext, config, true);
-            if (root == null || !root.isArray()) continue;
-            for (JsonNode item : root)
+            stats.incrementInfo("valuesRequest");
+            JsonNode root;
+            try
+            {
+                root = requestJson(HttpMethod.GET,
+                    PATH_SENSOR_VALUES.replace("{sensor_id}", String.valueOf(sensor.getExternalSensorId())),
+                    Collections.singletonMap("unit", azdapsProperties.getHistoryUnit()), tokenContext, config, true);
+            }
+            catch (Exception e)
+            {
+                stats.incrementFail("values");
+                continue;
+            }
+            JsonNode values = extractSensorValueArray(root);
+            if (values == null || !values.isArray() || values.size() == 0)
+            {
+                stats.incrementInfo("valuesEmpty");
+                continue;
+            }
+            for (JsonNode item : values)
             {
                 Date createTime = parseDate(readText(item, "created_time"));
                 if (createTime == null) continue;
-                if (feSensorHistoryMapper.countBySensorIdAndCreateTime(sensor.getSensorId(), createTime) > 0) continue;
+                if (feSensorHistoryMapper.countBySensorIdAndCreateTime(sensor.getSensorId(), createTime) > 0)
+                {
+                    stats.incrementInfo("valuesDuplicate");
+                    continue;
+                }
                 FeSensorHistory history = new FeSensorHistory();
                 history.setSensorId(sensor.getSensorId());
                 history.setSensorCode(sensor.getSensorCode());
@@ -857,6 +876,15 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
                 stats.incrementSuccess("values");
             }
         }
+    }
+
+    private JsonNode extractSensorValueArray(JsonNode root)
+    {
+        if (root == null || root.isMissingNode() || root.isNull()) return null;
+        if (root.isArray()) return root;
+        JsonNode values = root.get("values");
+        if (values != null && values.isArray()) return values;
+        return extractItemArray(root);
     }
     private void captureObservedCompany(SysDeptApiConfig config, Long externalCompanyId, String companyName,
                                         String numberPrefix, String orgPath, Long parentExternalCompanyId,
@@ -1191,17 +1219,20 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     {
         private final Map<String, Integer> detailSuccess = new LinkedHashMap<>();
         private final Map<String, Integer> detailFail = new LinkedHashMap<>();
+        private final Map<String, Integer> detailInfo = new LinkedHashMap<>();
 
         void incrementSuccess(String scope) { detailSuccess.merge(scope, 1, Integer::sum); }
         void incrementFail(String scope) { detailFail.merge(scope, 1, Integer::sum); }
+        void incrementInfo(String scope) { detailInfo.merge(scope, 1, Integer::sum); }
         int getSuccessCount() { return detailSuccess.values().stream().mapToInt(Integer::intValue).sum(); }
         int getFailCount() { return detailFail.values().stream().mapToInt(Integer::intValue).sum(); }
-        String buildMessage() { return "success=" + detailSuccess + ", fail=" + detailFail; }
+        String buildMessage() { return "success=" + detailSuccess + ", fail=" + detailFail + ", info=" + detailInfo; }
         Map<String, Object> toMap()
         {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("success", detailSuccess);
             map.put("fail", detailFail);
+            map.put("info", detailInfo);
             map.put("successCount", getSuccessCount());
             map.put("failCount", getFailCount());
             return map;

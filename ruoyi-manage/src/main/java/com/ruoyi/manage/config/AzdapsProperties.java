@@ -17,7 +17,7 @@ public class AzdapsProperties
 
     private int pageLimit = 100;
 
-    private String historyUnit = "day";
+    private String historyUnit = "hour";
 
     public String getBaseUrl()
     {
