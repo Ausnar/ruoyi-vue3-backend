@@ -10,7 +10,7 @@ import com.ruoyi.manage.domain.FeSensor;
 import com.ruoyi.manage.service.IFeSensorService;
 
 /**
- * 传感器管理Service业务层处理
+ * 传感器信息Service业务层处理
  * 
  * @author ruoyi
  * @date 2026-02-03
@@ -22,10 +22,10 @@ public class FeSensorServiceImpl implements IFeSensorService
     private FeSensorMapper feSensorMapper;
 
     /**
-     * 查询传感器管理
+     * 查询传感器信息
      * 
-     * @param sensorId 传感器管理主键
-     * @return 传感器管理
+     * @param sensorId 传感器信息主键
+     * @return 传感器信息
      */
     @Override
     public FeSensor selectFeSensorBySensorId(Long sensorId)
@@ -34,10 +34,10 @@ public class FeSensorServiceImpl implements IFeSensorService
     }
 
     /**
-     * 查询传感器管理列表
+     * 查询传感器信息列表
      * 
-     * @param feSensor 传感器管理
-     * @return 传感器管理
+     * @param feSensor 传感器信息
+     * @return 传感器信息
      */
     @Override
     public List<FeSensor> selectFeSensorList(FeSensor feSensor)
@@ -50,9 +50,9 @@ public class FeSensorServiceImpl implements IFeSensorService
     }
 
     /**
-     * 新增传感器管理
+     * 新增传感器信息
      * 
-     * @param feSensor 传感器管理
+     * @param feSensor 传感器信息
      * @return 结果
      */
     @Override
@@ -63,9 +63,9 @@ public class FeSensorServiceImpl implements IFeSensorService
     }
 
     /**
-     * 修改传感器管理
+     * 修改传感器信息
      * 
-     * @param feSensor 传感器管理
+     * @param feSensor 传感器信息
      * @return 结果
      */
     @Override
@@ -76,9 +76,9 @@ public class FeSensorServiceImpl implements IFeSensorService
     }
 
     /**
-     * 批量删除传感器管理
+     * 批量删除传感器信息
      * 
-     * @param sensorIds 需要删除的传感器管理主键
+     * @param sensorIds 需要删除的传感器信息主键
      * @return 结果
      */
     @Override
@@ -88,9 +88,9 @@ public class FeSensorServiceImpl implements IFeSensorService
     }
 
     /**
-     * 删除传感器管理信息
+     * 删除传感器信息
      * 
-     * @param sensorId 传感器管理主键
+     * @param sensorId 传感器信息主键
      * @return 结果
      */
     @Override

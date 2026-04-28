@@ -25,7 +25,7 @@ import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
 
 /**
- * 传感器管理Controller
+ * 传感器信息Controller
  * 
  * @author ruoyi
  * @date 2026-02-03
@@ -41,7 +41,7 @@ public class FeSensorController extends BaseController
     private IFeSensorHistoryService feSensorHistoryService;
 
     /**
-     * 查询传感器管理列表
+     * 查询传感器信息列表
      */
     @PreAuthorize("@ss.hasPermi('manage:sensor:list')")
     @GetMapping("/list")
@@ -53,20 +53,20 @@ public class FeSensorController extends BaseController
     }
 
     /**
-     * 导出传感器管理列表
+     * 导出传感器信息列表
      */
     @PreAuthorize("@ss.hasPermi('manage:sensor:export')")
-    @Log(title = "传感器管理", businessType = BusinessType.EXPORT)
+    @Log(title = "传感器信息", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     public void export(HttpServletResponse response, FeSensor feSensor)
     {
         List<FeSensor> list = feSensorService.selectFeSensorList(feSensor);
         ExcelUtil<FeSensor> util = new ExcelUtil<FeSensor>(FeSensor.class);
-        util.exportExcel(response, list, "传感器管理数据");
+        util.exportExcel(response, list, "传感器信息数据");
     }
 
     /**
-     * 获取传感器管理详细信息
+     * 获取传感器信息详细信息
      */
     @PreAuthorize("@ss.hasPermi('manage:sensor:query')")
     @GetMapping(value = "/{sensorId}")
@@ -76,10 +76,10 @@ public class FeSensorController extends BaseController
     }
 
     /**
-     * 新增传感器管理
+     * 新增传感器信息
      */
     @PreAuthorize("@ss.hasPermi('manage:sensor:add')")
-    @Log(title = "传感器管理", businessType = BusinessType.INSERT)
+    @Log(title = "传感器信息", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody FeSensor feSensor)
     {
@@ -87,10 +87,10 @@ public class FeSensorController extends BaseController
     }
 
     /**
-     * 修改传感器管理
+     * 修改传感器信息
      */
     @PreAuthorize("@ss.hasPermi('manage:sensor:edit')")
-    @Log(title = "传感器管理", businessType = BusinessType.UPDATE)
+    @Log(title = "传感器信息", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@RequestBody FeSensor feSensor)
     {
@@ -98,10 +98,10 @@ public class FeSensorController extends BaseController
     }
 
     /**
-     * 删除传感器管理
+     * 删除传感器信息
      */
     @PreAuthorize("@ss.hasPermi('manage:sensor:remove')")
-    @Log(title = "传感器管理", businessType = BusinessType.DELETE)
+    @Log(title = "传感器信息", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{sensorIds}")
     public AjaxResult remove(@PathVariable Long[] sensorIds)
     {
