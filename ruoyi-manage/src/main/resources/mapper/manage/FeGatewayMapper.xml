@@ -64,10 +64,13 @@
         <where>
             <if test="externalTboxId != null"> and g.external_tbox_id = #{externalTboxId}</if>
             <if test="imei != null and imei != ''"> and g.imei = #{imei}</if>
+            <if test="sim != null and sim != ''"> and g.sim like concat('%', #{sim}, '%')</if>
             <if test="firePointId != null"> and g.fire_point_id = #{firePointId}</if>
+            <if test="firePointName != null and firePointName != ''"> and fp.fire_point_name like concat('%', #{firePointName}, '%')</if>
             <if test="deptId != null"> and g.dept_id = #{deptId}</if>
             <if test="sourceDeptId != null"> and g.source_dept_id = #{sourceDeptId}</if>
             <if test="externalCompanyId != null"> and g.external_company_id = #{externalCompanyId}</if>
+            <if test="externalCompanyName != null and externalCompanyName != ''"> and ec.external_company_name like concat('%', #{externalCompanyName}, '%')</if>
             <if test="syncStatus != null and syncStatus != ''"> and g.sync_status = #{syncStatus}</if>
             <if test="status != null and status != ''"> and g.status = #{status}</if>
             ${params.dataScope}
