@@ -82,6 +82,7 @@ public class DeviceReportServiceImpl implements IDeviceReportService
         }
 
         List<DeviceReportRiskItem> riskItems = new ArrayList<>();
+        riskItems.addAll(deviceReportMapper.selectFirePointRiskItems(query));
         riskItems.addAll(deviceReportMapper.selectSensorRiskItems(query));
         riskItems.addAll(deviceReportMapper.selectGatewayRiskItems(query));
         riskItems.addAll(deviceReportMapper.selectExtinguisherRiskItems(query));
@@ -211,14 +212,15 @@ public class DeviceReportServiceImpl implements IDeviceReportService
             writeHeading(document, "一、综合总览");
             DeviceReportOverview overview = preview.getOverview();
             writeTable(document,
-                    new String[] { "消防点数", "网关数", "传感器数", "灭火器数", "风险设备数" },
+                    new String[] { "消防点数", "网关数", "传感器数", "灭火器数", "风险设备数", "灭火器不足消防点" },
                     new String[][] {
                             {
                                     text(overview.getFirePointCount()),
                                     text(overview.getGatewayCount()),
                                     text(overview.getSensorCount()),
                                     text(overview.getExtinguisherCount()),
-                                    text(overview.getRiskDeviceCount())
+                                    text(overview.getRiskDeviceCount()),
+                                    text(overview.getFirePointExtinguisherShortageCount())
                             }
                     });
 
@@ -227,7 +229,7 @@ public class DeviceReportServiceImpl implements IDeviceReportService
 
             writeHeading(document, "三、传感器专题");
             writeTable(document,
-                    new String[] { "正常", "异常", "离线", "低电量", "低压力", "压力脏值", "有效采样数" },
+                    new String[] { "正常", "异常", "离线", "持续低电量", "持续低压力", "持续高压力", "压力脏值", "有效采样数" },
                     new String[][] {
                             {
                                     text(overview.getSensorNormalCount()),
@@ -235,25 +237,29 @@ public class DeviceReportServiceImpl implements IDeviceReportService
                                     text(overview.getSensorOfflineCount()),
                                     text(overview.getSensorLowBatteryCount()),
                                     text(overview.getSensorLowPressureCount()),
+                                    text(overview.getSensorHighPressureCount()),
                                     text(overview.getSensorInvalidPressureCount()),
                                     text(overview.getHistorySampleCount())
                             }
                     });
             writeParagraph(document, "有效采样均值：压力 " + text(overview.getAvgPressure()) + "，温度 "
-                    + text(overview.getAvgTemperature()) + "，电量 " + text(overview.getAvgBatteryLevel()) + "。压力统计已剔除小于 0 或大于 2000 的脏值。");
+                    + text(overview.getAvgTemperature()) + "，电量 " + text(overview.getAvgBatteryLevel())
+                    + "。低/高压力与低电量按最近连续3次有效采样确认；压力统计已剔除小于 0 或大于 2000 的脏值。");
 
             writeHeading(document, "四、灭火器专题");
             writeTable(document,
-                    new String[] { "正常", "30天内到期/报废", "已过期/报废", "未绑定传感器", "缺失归属" },
+                    new String[] { "正常", "30天内到期/报废", "已过期/报废", "未绑定传感器", "缺失归属", "数量不足消防点" },
                     new String[][] {
                             {
                                     text(overview.getExtinguisherNormalCount()),
                                     text(overview.getExtinguisherExpiringSoonCount()),
                                     text(overview.getExtinguisherExpiredCount()),
                                     text(overview.getExtinguisherUnboundSensorCount()),
-                                    text(overview.getExtinguisherMissingDeptCount())
+                                    text(overview.getExtinguisherMissingDeptCount()),
+                                    text(overview.getFirePointExtinguisherShortageCount())
                             }
                     });
+            writeParagraph(document, "灭火器数量不足按消防点应配数量与 SDK 同步后的实测灭火器数量判断，仅当最近连续3次消防点设备数量快照均低于应配数量时确认。");
 
             writeHeading(document, "五、网关专题");
             writeTable(document,

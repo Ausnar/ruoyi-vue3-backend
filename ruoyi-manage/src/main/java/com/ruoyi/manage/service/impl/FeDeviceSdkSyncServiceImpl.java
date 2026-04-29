@@ -53,6 +53,7 @@ import com.ruoyi.manage.mapper.FeCompanyDeptMappingMapper;
 import com.ruoyi.manage.mapper.FeExternalCompanyMapper;
 import com.ruoyi.manage.mapper.FeExtinguisherMapper;
 import com.ruoyi.manage.mapper.FeExtinguisherSensorBindingMapper;
+import com.ruoyi.manage.mapper.FeFirePointDeviceSnapshotMapper;
 import com.ruoyi.manage.mapper.FeFirePointMapper;
 import com.ruoyi.manage.mapper.FeGatewayMapper;
 import com.ruoyi.manage.mapper.FeSdkSyncLogMapper;
@@ -102,6 +103,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     @Autowired private FeSensorMapper feSensorMapper;
     @Autowired private FeExtinguisherMapper feExtinguisherMapper;
     @Autowired private FeExtinguisherSensorBindingMapper feExtinguisherSensorBindingMapper;
+    @Autowired private FeFirePointDeviceSnapshotMapper feFirePointDeviceSnapshotMapper;
     @Autowired private FeExternalCompanyMapper feExternalCompanyMapper;
     @Autowired private FeApiConfigCompanyScopeMapper feApiConfigCompanyScopeMapper;
     @Autowired private FeCompanyDeptMappingMapper feCompanyDeptMappingMapper;
@@ -260,6 +262,9 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
                 stats.incrementSuccess("extinguisher");
             }
             syncSensorValues(syncedSensors, tokenContext, config, stats);
+            int snapshotCount = feFirePointDeviceSnapshotMapper.insertSnapshotsForSourceDept(
+                config.getConfigId(), config.getDeptId(), DateUtils.getNowDate(), operator);
+            stats.addInfo("firePointSnapshot", snapshotCount);
 
             syncLog.setExternalCompanyId(syncedCompanyIds.size() == 1 ? syncedCompanyIds.iterator().next() : null);
             syncLog.setSyncStatus(STATUS_SUCCESS);
@@ -1224,6 +1229,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         void incrementSuccess(String scope) { detailSuccess.merge(scope, 1, Integer::sum); }
         void incrementFail(String scope) { detailFail.merge(scope, 1, Integer::sum); }
         void incrementInfo(String scope) { detailInfo.merge(scope, 1, Integer::sum); }
+        void addInfo(String scope, int count) { if (count > 0) detailInfo.merge(scope, count, Integer::sum); }
         int getSuccessCount() { return detailSuccess.values().stream().mapToInt(Integer::intValue).sum(); }
         int getFailCount() { return detailFail.values().stream().mapToInt(Integer::intValue).sum(); }
         String buildMessage() { return "success=" + detailSuccess + ", fail=" + detailFail + ", info=" + detailInfo; }

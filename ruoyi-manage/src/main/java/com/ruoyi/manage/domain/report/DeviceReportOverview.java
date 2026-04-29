@@ -17,6 +17,7 @@ public class DeviceReportOverview
     private Long sensorOfflineCount = 0L;
     private Long sensorLowBatteryCount = 0L;
     private Long sensorLowPressureCount = 0L;
+    private Long sensorHighPressureCount = 0L;
     private Long sensorInvalidPressureCount = 0L;
     private Long historySampleCount = 0L;
     private Long historyFutureCount = 0L;
@@ -36,6 +37,7 @@ public class DeviceReportOverview
     private Long extinguisherExpiredCount = 0L;
     private Long extinguisherUnboundSensorCount = 0L;
     private Long extinguisherMissingDeptCount = 0L;
+    private Long firePointExtinguisherShortageCount = 0L;
 
     public Long getFirePointCount() { return firePointCount; }
     public void setFirePointCount(Long firePointCount) { this.firePointCount = firePointCount; }
@@ -57,6 +59,8 @@ public class DeviceReportOverview
     public void setSensorLowBatteryCount(Long sensorLowBatteryCount) { this.sensorLowBatteryCount = sensorLowBatteryCount; }
     public Long getSensorLowPressureCount() { return sensorLowPressureCount; }
     public void setSensorLowPressureCount(Long sensorLowPressureCount) { this.sensorLowPressureCount = sensorLowPressureCount; }
+    public Long getSensorHighPressureCount() { return sensorHighPressureCount; }
+    public void setSensorHighPressureCount(Long sensorHighPressureCount) { this.sensorHighPressureCount = sensorHighPressureCount; }
     public Long getSensorInvalidPressureCount() { return sensorInvalidPressureCount; }
     public void setSensorInvalidPressureCount(Long sensorInvalidPressureCount) { this.sensorInvalidPressureCount = sensorInvalidPressureCount; }
     public Long getHistorySampleCount() { return historySampleCount; }
@@ -95,4 +99,6 @@ public class DeviceReportOverview
     public void setExtinguisherUnboundSensorCount(Long extinguisherUnboundSensorCount) { this.extinguisherUnboundSensorCount = extinguisherUnboundSensorCount; }
     public Long getExtinguisherMissingDeptCount() { return extinguisherMissingDeptCount; }
     public void setExtinguisherMissingDeptCount(Long extinguisherMissingDeptCount) { this.extinguisherMissingDeptCount = extinguisherMissingDeptCount; }
+    public Long getFirePointExtinguisherShortageCount() { return firePointExtinguisherShortageCount; }
+    public void setFirePointExtinguisherShortageCount(Long firePointExtinguisherShortageCount) { this.firePointExtinguisherShortageCount = firePointExtinguisherShortageCount; }
 }

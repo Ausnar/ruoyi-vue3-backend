@@ -16,6 +16,8 @@ public interface DeviceReportMapper
 
     List<DeviceReportUnitStat> selectUnitStats(DeviceReportQuery query);
 
+    List<DeviceReportRiskItem> selectFirePointRiskItems(DeviceReportQuery query);
+
     List<DeviceReportRiskItem> selectSensorRiskItems(DeviceReportQuery query);
 
     List<DeviceReportRiskItem> selectGatewayRiskItems(DeviceReportQuery query);

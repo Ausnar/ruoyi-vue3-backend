@@ -44,6 +44,8 @@ public class FeFirePoint extends BaseEntity
     private String contactPerson;
     @Excel(name = "联系电话")
     private String contactPhone;
+    @Excel(name = "应配灭火器数量")
+    private Integer expectedExtinguisherCount;
     @Excel(name = "二维码")
     private String qrCode;
     @Excel(name = "排序")
@@ -94,6 +96,8 @@ public class FeFirePoint extends BaseEntity
     public void setContactPerson(String contactPerson) { this.contactPerson = contactPerson; }
     public String getContactPhone() { return contactPhone; }
     public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
+    public Integer getExpectedExtinguisherCount() { return expectedExtinguisherCount; }
+    public void setExpectedExtinguisherCount(Integer expectedExtinguisherCount) { this.expectedExtinguisherCount = expectedExtinguisherCount; }
     public String getQrCode() { return qrCode; }
     public void setQrCode(String qrCode) { this.qrCode = qrCode; }
     public Integer getSortOrder() { return sortOrder; }
@@ -129,6 +133,7 @@ public class FeFirePoint extends BaseEntity
             .append("latitude", getLatitude())
             .append("contactPerson", getContactPerson())
             .append("contactPhone", getContactPhone())
+            .append("expectedExtinguisherCount", getExpectedExtinguisherCount())
             .append("qrCode", getQrCode())
             .append("sortOrder", getSortOrder())
             .append("status", getStatus())

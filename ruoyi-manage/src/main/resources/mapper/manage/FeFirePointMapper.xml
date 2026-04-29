@@ -23,6 +23,7 @@
         <result property="latitude" column="latitude" />
         <result property="contactPerson" column="contact_person" />
         <result property="contactPhone" column="contact_phone" />
+        <result property="expectedExtinguisherCount" column="expected_extinguisher_count" />
         <result property="qrCode" column="qr_code" />
         <result property="sortOrder" column="sort_order" />
         <result property="status" column="status" />
@@ -41,7 +42,7 @@
                f.station_type, f.external_company_id, ec.external_company_name, f.source_dept_id, sd.dept_name as source_dept_name,
                f.dept_id, d.dept_name, f.point_type, f.location,
                f.floor, f.building, f.longitude, f.latitude, f.contact_person, f.contact_phone,
-               f.qr_code, f.sort_order, f.status, f.sync_status, f.last_sync_time,
+               f.expected_extinguisher_count, f.qr_code, f.sort_order, f.status, f.sync_status, f.last_sync_time,
                f.create_by, f.create_time, f.update_by, f.update_time, f.remark, f.del_flag
         from fe_fire_point f
         left join fe_external_company ec on f.external_company_id = ec.external_company_id
@@ -59,6 +60,7 @@
             <if test="externalCompanyId != null"> and f.external_company_id = #{externalCompanyId}</if>
             <if test="sourceDeptId != null"> and f.source_dept_id = #{sourceDeptId}</if>
             <if test="deptId != null"> and f.dept_id = #{deptId}</if>
+            <if test="expectedExtinguisherCount != null"> and f.expected_extinguisher_count = #{expectedExtinguisherCount}</if>
             <if test="pointType != null and pointType != ''"> and f.point_type = #{pointType}</if>
             <if test="status != null and status != ''"> and f.status = #{status}</if>
             <if test="syncStatus != null and syncStatus != ''"> and f.sync_status = #{syncStatus}</if>
@@ -115,6 +117,7 @@
             <if test="latitude != null">latitude,</if>
             <if test="contactPerson != null">contact_person,</if>
             <if test="contactPhone != null">contact_phone,</if>
+            <if test="expectedExtinguisherCount != null">expected_extinguisher_count,</if>
             <if test="qrCode != null">qr_code,</if>
             <if test="sortOrder != null">sort_order,</if>
             <if test="status != null">status,</if>
@@ -144,6 +147,7 @@
             <if test="latitude != null">#{latitude},</if>
             <if test="contactPerson != null">#{contactPerson},</if>
             <if test="contactPhone != null">#{contactPhone},</if>
+            <if test="expectedExtinguisherCount != null">#{expectedExtinguisherCount},</if>
             <if test="qrCode != null">#{qrCode},</if>
             <if test="sortOrder != null">#{sortOrder},</if>
             <if test="status != null">#{status},</if>
@@ -177,6 +181,7 @@
             <if test="latitude != null">latitude = #{latitude},</if>
             <if test="contactPerson != null">contact_person = #{contactPerson},</if>
             <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="expectedExtinguisherCount != null">expected_extinguisher_count = #{expectedExtinguisherCount},</if>
             <if test="qrCode != null">qr_code = #{qrCode},</if>
             <if test="sortOrder != null">sort_order = #{sortOrder},</if>
             <if test="status != null">status = #{status},</if>

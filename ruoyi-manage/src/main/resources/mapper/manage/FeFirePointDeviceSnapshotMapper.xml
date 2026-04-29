@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeFirePointDeviceSnapshotMapper">
+
+    <insert id="insertSnapshotsForSourceDept">
+        insert into fe_fire_point_device_snapshot (
+            fire_point_id,
+            dept_id,
+            source_dept_id,
+            config_id,
+            expected_extinguisher_count,
+            actual_extinguisher_count,
+            actual_sensor_count,
+            snapshot_time,
+            source_type,
+            create_by,
+            create_time
+        )
+        select f.fire_point_id,
+               f.dept_id,
+               f.source_dept_id,
+               #{configId},
+               f.expected_extinguisher_count,
+               (
+                   select count(distinct e.extinguisher_id)
+                   from fe_extinguisher e
+                   left join fe_sensor es on e.sensor_id = es.sensor_id
+                   left join fe_gateway eg on es.gateway_id = eg.gateway_id
+                   left join fe_sensor cs on e.sensor_code is not null and e.sensor_code = cs.sensor_code
+                   left join fe_gateway cg on cs.gateway_id = cg.gateway_id
+                   where (e.del_flag is null or e.del_flag = '0')
+                     and (
+                         e.fire_point_id = f.fire_point_id
+                         or eg.fire_point_id = f.fire_point_id
+                         or cg.fire_point_id = f.fire_point_id
+                     )
+               ) as actual_extinguisher_count,
+               (
+                   select count(distinct s.sensor_id)
+                   from fe_sensor s
+                   inner join fe_gateway g on s.gateway_id = g.gateway_id
+                   where (s.del_flag is null or s.del_flag = '0')
+                     and (g.del_flag is null or g.del_flag = '0')
+                     and g.fire_point_id = f.fire_point_id
+               ) as actual_sensor_count,
+               #{snapshotTime},
+               'sdk_sync',
+               #{operator},
+               now()
+        from fe_fire_point f
+        where (f.del_flag is null or f.del_flag = '0')
+          and f.source_dept_id = #{sourceDeptId}
+    </insert>
+</mapper>

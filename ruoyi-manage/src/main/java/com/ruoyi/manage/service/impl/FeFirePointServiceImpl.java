@@ -66,6 +66,7 @@ public class FeFirePointServiceImpl implements IFeFirePointService
     @Override
     public int insertFeFirePoint(FeFirePoint feFirePoint)
     {
+        validateExpectedExtinguisherCount(feFirePoint);
         feFirePoint.setCreateTime(DateUtils.getNowDate());
         return feFirePointMapper.insertFeFirePoint(feFirePoint);
     }
@@ -79,6 +80,7 @@ public class FeFirePointServiceImpl implements IFeFirePointService
     @Override
     public int updateFeFirePoint(FeFirePoint feFirePoint)
     {
+        validateExpectedExtinguisherCount(feFirePoint);
         feFirePoint.setUpdateTime(DateUtils.getNowDate());
         return feFirePointMapper.updateFeFirePoint(feFirePoint);
     }
@@ -110,5 +112,15 @@ public class FeFirePointServiceImpl implements IFeFirePointService
     private void checkDeptDataScope(Long deptId)
     {
         // Legacy service bean retained for compatibility; scoped access is handled by the primary service.
+    }
+
+    private void validateExpectedExtinguisherCount(FeFirePoint feFirePoint)
+    {
+        if (feFirePoint != null
+            && feFirePoint.getExpectedExtinguisherCount() != null
+            && feFirePoint.getExpectedExtinguisherCount() < 0)
+        {
+            throw new ServiceException("应配灭火器数量不能小于0");
+        }
     }
 }
