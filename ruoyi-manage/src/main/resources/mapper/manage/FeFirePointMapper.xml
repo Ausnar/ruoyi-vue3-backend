@@ -15,6 +15,9 @@
         <result property="sourceDeptName" column="source_dept_name" />
         <result property="deptId" column="dept_id" />
         <result property="deptName" column="dept_name" />
+        <result property="deptProvince" column="dept_province" />
+        <result property="deptCity" column="dept_city" />
+        <result property="deptArea" column="dept_area" />
         <result property="pointType" column="point_type" />
         <result property="location" column="location" />
         <result property="floor" column="floor" />
@@ -40,7 +43,7 @@
     <sql id="selectFeFirePointVo">
         select f.fire_point_id, f.external_station_id, f.fire_point_code, f.fire_point_name, f.station_number,
                f.station_type, f.external_company_id, ec.external_company_name, f.source_dept_id, sd.dept_name as source_dept_name,
-               f.dept_id, d.dept_name, f.point_type, f.location,
+               f.dept_id, d.dept_name, d.province as dept_province, d.city as dept_city, d.area as dept_area, f.point_type, f.location,
                f.floor, f.building, f.longitude, f.latitude, f.contact_person, f.contact_phone,
                f.expected_extinguisher_count, f.qr_code, f.sort_order, f.status, f.sync_status, f.last_sync_time,
                f.create_by, f.create_time, f.update_by, f.update_time, f.remark, f.del_flag
@@ -60,6 +63,9 @@
             <if test="externalCompanyId != null"> and f.external_company_id = #{externalCompanyId}</if>
             <if test="sourceDeptId != null"> and f.source_dept_id = #{sourceDeptId}</if>
             <if test="deptId != null"> and f.dept_id = #{deptId}</if>
+            <if test="deptProvince != null and deptProvince != ''"> and d.province = #{deptProvince}</if>
+            <if test="deptCity != null and deptCity != ''"> and d.city = #{deptCity}</if>
+            <if test="deptArea != null and deptArea != ''"> and d.area = #{deptArea}</if>
             <if test="expectedExtinguisherCount != null"> and f.expected_extinguisher_count = #{expectedExtinguisherCount}</if>
             <if test="pointType != null and pointType != ''"> and f.point_type = #{pointType}</if>
             <if test="status != null and status != ''"> and f.status = #{status}</if>

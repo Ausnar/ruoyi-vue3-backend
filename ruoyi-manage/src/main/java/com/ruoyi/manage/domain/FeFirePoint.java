@@ -28,6 +28,12 @@ public class FeFirePoint extends BaseEntity
     @Excel(name = "所属部门ID")
     private Long deptId;
     private String deptName;
+    @Excel(name = "归属省")
+    private String deptProvince;
+    @Excel(name = "归属市")
+    private String deptCity;
+    @Excel(name = "归属区县")
+    private String deptArea;
     @Excel(name = "类型")
     private String pointType;
     @Excel(name = "位置")
@@ -80,6 +86,12 @@ public class FeFirePoint extends BaseEntity
     public void setDeptId(Long deptId) { this.deptId = deptId; }
     public String getDeptName() { return deptName; }
     public void setDeptName(String deptName) { this.deptName = deptName; }
+    public String getDeptProvince() { return deptProvince; }
+    public void setDeptProvince(String deptProvince) { this.deptProvince = deptProvince; }
+    public String getDeptCity() { return deptCity; }
+    public void setDeptCity(String deptCity) { this.deptCity = deptCity; }
+    public String getDeptArea() { return deptArea; }
+    public void setDeptArea(String deptArea) { this.deptArea = deptArea; }
     public String getPointType() { return pointType; }
     public void setPointType(String pointType) { this.pointType = pointType; }
     public String getLocation() { return location; }
@@ -125,6 +137,9 @@ public class FeFirePoint extends BaseEntity
             .append("externalCompanyName", getExternalCompanyName())
             .append("sourceDeptId", getSourceDeptId())
             .append("deptId", getDeptId())
+            .append("deptProvince", getDeptProvince())
+            .append("deptCity", getDeptCity())
+            .append("deptArea", getDeptArea())
             .append("pointType", getPointType())
             .append("location", getLocation())
             .append("floor", getFloor())

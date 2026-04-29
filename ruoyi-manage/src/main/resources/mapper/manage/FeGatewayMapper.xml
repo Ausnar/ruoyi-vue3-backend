@@ -11,6 +11,9 @@
         <result property="firePointName" column="fire_point_name" />
         <result property="deptId" column="dept_id" />
         <result property="deptName" column="dept_name" />
+        <result property="deptProvince" column="dept_province" />
+        <result property="deptCity" column="dept_city" />
+        <result property="deptArea" column="dept_area" />
         <result property="sourceDeptId" column="source_dept_id" />
         <result property="sourceDeptName" column="source_dept_name" />
         <result property="externalCompanyId" column="external_company_id" />
@@ -31,7 +34,8 @@
 
     <sql id="selectFeGatewayVo">
         select g.gateway_id, g.external_tbox_id, g.imei, g.sim, g.fire_point_id,
-               fp.fire_point_name, g.dept_id, d.dept_name, g.source_dept_id, sd.dept_name as source_dept_name,
+               fp.fire_point_name, g.dept_id, d.dept_name, d.province as dept_province, d.city as dept_city,
+               d.area as dept_area, g.source_dept_id, sd.dept_name as source_dept_name,
                g.external_company_id, ec.external_company_name, g.gps_longitude, g.gps_latitude, g.last_online_time,
                g.sync_status, g.last_sync_time, g.status,
                g.remark, g.create_by, g.create_time, g.update_by, g.update_time, g.del_flag
@@ -68,6 +72,9 @@
             <if test="firePointId != null"> and g.fire_point_id = #{firePointId}</if>
             <if test="firePointName != null and firePointName != ''"> and fp.fire_point_name like concat('%', #{firePointName}, '%')</if>
             <if test="deptId != null"> and g.dept_id = #{deptId}</if>
+            <if test="deptProvince != null and deptProvince != ''"> and d.province = #{deptProvince}</if>
+            <if test="deptCity != null and deptCity != ''"> and d.city = #{deptCity}</if>
+            <if test="deptArea != null and deptArea != ''"> and d.area = #{deptArea}</if>
             <if test="sourceDeptId != null"> and g.source_dept_id = #{sourceDeptId}</if>
             <if test="externalCompanyId != null"> and g.external_company_id = #{externalCompanyId}</if>
             <if test="externalCompanyName != null and externalCompanyName != ''"> and ec.external_company_name like concat('%', #{externalCompanyName}, '%')</if>

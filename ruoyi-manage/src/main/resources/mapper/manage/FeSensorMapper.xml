@@ -8,6 +8,9 @@
         <result property="sensorCode" column="sensor_code" />
         <result property="deptId" column="dept_id" />
         <result property="deptName" column="dept_name" />
+        <result property="deptProvince" column="dept_province" />
+        <result property="deptCity" column="dept_city" />
+        <result property="deptArea" column="dept_area" />
         <result property="sourceDeptId" column="source_dept_id" />
         <result property="sourceDeptName" column="source_dept_name" />
         <result property="externalCompanyName" column="external_company_name" />
@@ -32,6 +35,7 @@
 
     <sql id="selectFeSensorVo">
         select s.sensor_id, s.external_sensor_id, s.sensor_code, s.dept_id, d.dept_name,
+               d.province as dept_province, d.city as dept_city, d.area as dept_area,
                s.source_dept_id, sd.dept_name as source_dept_name, s.gateway_id,
                s.gateway_code, ec.external_company_name, s.mac, s.pressure, s.temperature, s.battery_level, s.signal_strength,
                s.last_online_time, s.status, s.sync_status, s.last_sync_time,
@@ -49,6 +53,9 @@
             <if test="sensorCode != null and sensorCode != ''"> and s.sensor_code = #{sensorCode}</if>
             <if test="externalSensorId != null"> and s.external_sensor_id = #{externalSensorId}</if>
             <if test="deptId != null"> and s.dept_id = #{deptId}</if>
+            <if test="deptProvince != null and deptProvince != ''"> and d.province = #{deptProvince}</if>
+            <if test="deptCity != null and deptCity != ''"> and d.city = #{deptCity}</if>
+            <if test="deptArea != null and deptArea != ''"> and d.area = #{deptArea}</if>
             <if test="sourceDeptId != null"> and s.source_dept_id = #{sourceDeptId}</if>
             <if test="gatewayId != null"> and s.gateway_id = #{gatewayId}</if>
             <if test="gatewayCode != null and gatewayCode != ''"> and s.gateway_code = #{gatewayCode}</if>

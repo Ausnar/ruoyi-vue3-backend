@@ -12,6 +12,9 @@
         <result property="sensorCode" column="sensor_code" />
         <result property="deptId" column="dept_id" />
         <result property="deptName" column="dept_name" />
+        <result property="deptProvince" column="dept_province" />
+        <result property="deptCity" column="dept_city" />
+        <result property="deptArea" column="dept_area" />
         <result property="sourceDeptId" column="source_dept_id" />
         <result property="sourceDeptName" column="source_dept_name" />
         <result property="externalCompanyName" column="external_company_name" />
@@ -39,6 +42,7 @@
     <sql id="selectFeExtinguisherVo">
         select e.extinguisher_id, e.external_extinguisher_id, e.external_company_id, e.label_code,
                e.specification, e.sensor_id, e.sensor_code, e.dept_id, d.dept_name,
+               d.province as dept_province, d.city as dept_city, d.area as dept_area,
                e.source_dept_id, sd.dept_name as source_dept_name, ec.external_company_name, e.product_name, e.manufacturer,
                e.service_provider, e.production_date, e.inspection_date, e.expiry_date, e.scrap_date,
                e.fire_point_id, e.install_location, e.qr_code, e.status, e.sync_status, e.last_sync_time,
@@ -58,6 +62,9 @@
             <if test="sensorId != null"> and e.sensor_id = #{sensorId}</if>
             <if test="sensorCode != null and sensorCode != ''"> and e.sensor_code = #{sensorCode}</if>
             <if test="deptId != null"> and e.dept_id = #{deptId}</if>
+            <if test="deptProvince != null and deptProvince != ''"> and d.province = #{deptProvince}</if>
+            <if test="deptCity != null and deptCity != ''"> and d.city = #{deptCity}</if>
+            <if test="deptArea != null and deptArea != ''"> and d.area = #{deptArea}</if>
             <if test="sourceDeptId != null"> and e.source_dept_id = #{sourceDeptId}</if>
             <if test="productName != null and productName != ''"> and e.product_name like concat('%', #{productName}, '%')</if>
             <if test="firePointId != null"> and e.fire_point_id = #{firePointId}</if>

@@ -27,6 +27,12 @@ public class FeGateway extends BaseEntity
     private Long deptId;
     @Excel(name = "归属单位")
     private String deptName;
+    @Excel(name = "归属省")
+    private String deptProvince;
+    @Excel(name = "归属市")
+    private String deptCity;
+    @Excel(name = "归属区县")
+    private String deptArea;
     private Long sourceDeptId;
     @Excel(name = "来源单位")
     private String sourceDeptName;
@@ -65,6 +71,12 @@ public class FeGateway extends BaseEntity
     public void setDeptId(Long deptId) { this.deptId = deptId; }
     public String getDeptName() { return deptName; }
     public void setDeptName(String deptName) { this.deptName = deptName; }
+    public String getDeptProvince() { return deptProvince; }
+    public void setDeptProvince(String deptProvince) { this.deptProvince = deptProvince; }
+    public String getDeptCity() { return deptCity; }
+    public void setDeptCity(String deptCity) { this.deptCity = deptCity; }
+    public String getDeptArea() { return deptArea; }
+    public void setDeptArea(String deptArea) { this.deptArea = deptArea; }
     public Long getSourceDeptId() { return sourceDeptId; }
     public void setSourceDeptId(Long sourceDeptId) { this.sourceDeptId = sourceDeptId; }
     public String getSourceDeptName() { return sourceDeptName; }
@@ -98,6 +110,9 @@ public class FeGateway extends BaseEntity
             .append("sim", sim)
             .append("firePointId", firePointId)
             .append("deptId", deptId)
+            .append("deptProvince", deptProvince)
+            .append("deptCity", deptCity)
+            .append("deptArea", deptArea)
             .append("sourceDeptId", sourceDeptId)
             .append("externalCompanyId", externalCompanyId)
             .append("externalCompanyName", externalCompanyName)
