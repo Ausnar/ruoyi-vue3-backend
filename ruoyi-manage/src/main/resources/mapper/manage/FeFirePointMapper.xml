@@ -67,6 +67,8 @@
             <if test="deptCity != null and deptCity != ''"> and d.city = #{deptCity}</if>
             <if test="deptArea != null and deptArea != ''"> and d.area = #{deptArea}</if>
             <if test="expectedExtinguisherCount != null"> and f.expected_extinguisher_count = #{expectedExtinguisherCount}</if>
+            <if test="params.beginLastSyncTime != null and params.beginLastSyncTime != ''"> and f.last_sync_time &gt;= concat(#{params.beginLastSyncTime}, ' 00:00:00')</if>
+            <if test="params.endLastSyncTime != null and params.endLastSyncTime != ''"> and f.last_sync_time &lt;= concat(#{params.endLastSyncTime}, ' 23:59:59')</if>
             <if test="pointType != null and pointType != ''"> and f.point_type = #{pointType}</if>
             <if test="status != null and status != ''"> and f.status = #{status}</if>
             <if test="syncStatus != null and syncStatus != ''"> and f.sync_status = #{syncStatus}</if>

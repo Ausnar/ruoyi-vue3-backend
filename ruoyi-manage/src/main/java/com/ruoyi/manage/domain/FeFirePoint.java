@@ -56,7 +56,7 @@ public class FeFirePoint extends BaseEntity
     private String qrCode;
     @Excel(name = "排序")
     private Integer sortOrder;
-    @Excel(name = "状态")
+    @Excel(name = "状态", readConverterExp = "0=正常,1=停用")
     private String status;
     private String syncStatus;
     private Date lastSyncTime;
