@@ -1,0 +1,550 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.DeviceReportMapper">
+
+    <sql id="deptFilter">
+        <if test="deptId != null">
+            and d.dept_id in (
+                select dept_id
+                from sys_dept
+                where dept_id = #{deptId}
+                   or find_in_set(#{deptId}, ancestors)
+            )
+        </if>
+    </sql>
+
+    <sql id="activeFirePoint">
+        and (f.del_flag is null or f.del_flag = '0')
+    </sql>
+
+    <sql id="activeGateway">
+        and (g.del_flag is null or g.del_flag = '0')
+    </sql>
+
+    <sql id="activeSensor">
+        and (s.del_flag is null or s.del_flag = '0')
+    </sql>
+
+    <sql id="activeExtinguisher">
+        and (e.del_flag is null or e.del_flag = '0')
+    </sql>
+
+    <select id="selectOverview" parameterType="com.ruoyi.manage.domain.report.DeviceReportQuery" resultType="com.ruoyi.manage.domain.report.DeviceReportOverview">
+        select
+            (
+                select count(1)
+                from fe_fire_point f
+                left join sys_dept d on f.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeFirePoint"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as firePointCount,
+            (
+                select count(1)
+                from fe_gateway g
+                left join sys_dept d on g.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeGateway"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as gatewayCount,
+            (
+                select count(1)
+                from fe_sensor s
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as sensorCount,
+            (
+                select count(1)
+                from fe_extinguisher e
+                left join sys_dept d on e.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeExtinguisher"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as extinguisherCount,
+            (
+                (
+                    select count(1)
+                    from fe_sensor s
+                    left join sys_dept d on s.dept_id = d.dept_id
+                    where 1 = 1
+                    <include refid="activeSensor"/>
+                    <include refid="deptFilter"/>
+                    ${params.dataScope}
+                    and (
+                        (s.status is not null and s.status != '0')
+                        or (s.battery_level is not null and s.battery_level &lt; 20)
+                        or (s.pressure is not null and s.pressure &lt; 1000)
+                        or (s.pressure is not null and s.pressure &gt; 2000)
+                    )
+                )
+                +
+                (
+                    select count(1)
+                    from fe_gateway g
+                    left join sys_dept d on g.dept_id = d.dept_id
+                    where 1 = 1
+                    <include refid="activeGateway"/>
+                    <include refid="deptFilter"/>
+                    ${params.dataScope}
+                    and (
+                        (g.status is not null and g.status not in ('0', 'online'))
+                        or g.fire_point_id is null
+                        or g.dept_id is null
+                    )
+                )
+                +
+                (
+                    select count(1)
+                    from fe_extinguisher e
+                    left join sys_dept d on e.dept_id = d.dept_id
+                    where 1 = 1
+                    <include refid="activeExtinguisher"/>
+                    <include refid="deptFilter"/>
+                    ${params.dataScope}
+                    and (
+                        e.dept_id is null
+                        or e.sensor_id is null
+                        or (e.expiry_date is not null and e.expiry_date &lt; #{expireSoonEndTime})
+                        or (e.scrap_date is not null and e.scrap_date &lt; #{expireSoonEndTime})
+                    )
+                )
+            ) as riskDeviceCount,
+            (
+                select count(1)
+                from fe_sensor s
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and s.status = '0'
+            ) as sensorNormalCount,
+            (
+                select count(1)
+                from fe_sensor s
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and s.status = '1'
+            ) as sensorAbnormalCount,
+            (
+                select count(1)
+                from fe_sensor s
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and s.status = '2'
+            ) as sensorOfflineCount,
+            (
+                select count(1)
+                from fe_sensor s
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and s.battery_level is not null
+                and s.battery_level &lt; 20
+            ) as sensorLowBatteryCount,
+            (
+                select count(1)
+                from fe_sensor s
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and s.pressure is not null
+                and s.pressure &gt;= 0
+                and s.pressure &lt;= 2000
+                and s.pressure &lt; 1000
+            ) as sensorLowPressureCount,
+            (
+                select count(1)
+                from fe_sensor s
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and s.pressure is not null
+                and (s.pressure &lt; 0 or s.pressure &gt; 2000)
+            ) as sensorInvalidPressureCount,
+            (
+                select count(1)
+                from fe_sensor_history h
+                left join fe_sensor s on h.sensor_id = s.sensor_id
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and h.create_time &gt;= #{startTime}
+                and h.create_time &lt; #{endTimeExclusive}
+                and h.pressure is not null
+                and h.pressure &gt;= 0
+                and h.pressure &lt;= 2000
+            ) as historySampleCount,
+            (
+                select count(1)
+                from fe_sensor_history h
+                left join fe_sensor s on h.sensor_id = s.sensor_id
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and h.create_time &gt; now()
+            ) as historyFutureCount,
+            (
+                select count(1)
+                from fe_sensor_history h
+                left join fe_sensor s on h.sensor_id = s.sensor_id
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and h.create_time &gt;= #{startTime}
+                and h.create_time &lt; #{endTimeExclusive}
+                and h.pressure is not null
+                and (h.pressure &lt; 0 or h.pressure &gt; 2000)
+            ) as historyInvalidPressureCount,
+            (
+                select round(avg(h.pressure), 2)
+                from fe_sensor_history h
+                left join fe_sensor s on h.sensor_id = s.sensor_id
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and h.create_time &gt;= #{startTime}
+                and h.create_time &lt; #{endTimeExclusive}
+                and h.pressure is not null
+                and h.pressure &gt;= 0
+                and h.pressure &lt;= 2000
+            ) as avgPressure,
+            (
+                select min(h.pressure)
+                from fe_sensor_history h
+                left join fe_sensor s on h.sensor_id = s.sensor_id
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and h.create_time &gt;= #{startTime}
+                and h.create_time &lt; #{endTimeExclusive}
+                and h.pressure is not null
+                and h.pressure &gt;= 0
+                and h.pressure &lt;= 2000
+            ) as minPressure,
+            (
+                select max(h.pressure)
+                from fe_sensor_history h
+                left join fe_sensor s on h.sensor_id = s.sensor_id
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and h.create_time &gt;= #{startTime}
+                and h.create_time &lt; #{endTimeExclusive}
+                and h.pressure is not null
+                and h.pressure &gt;= 0
+                and h.pressure &lt;= 2000
+            ) as maxPressure,
+            (
+                select round(avg(h.temperature), 2)
+                from fe_sensor_history h
+                left join fe_sensor s on h.sensor_id = s.sensor_id
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and h.create_time &gt;= #{startTime}
+                and h.create_time &lt; #{endTimeExclusive}
+                and h.temperature is not null
+            ) as avgTemperature,
+            (
+                select round(avg(h.battery_level), 2)
+                from fe_sensor_history h
+                left join fe_sensor s on h.sensor_id = s.sensor_id
+                left join sys_dept d on s.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeSensor"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and h.create_time &gt;= #{startTime}
+                and h.create_time &lt; #{endTimeExclusive}
+                and h.battery_level is not null
+            ) as avgBatteryLevel,
+            (
+                select count(1)
+                from fe_gateway g
+                left join sys_dept d on g.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeGateway"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and g.status in ('0', 'online')
+            ) as gatewayNormalCount,
+            (
+                select count(1)
+                from fe_gateway g
+                left join sys_dept d on g.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeGateway"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and g.status in ('1', 'abnormal')
+            ) as gatewayAbnormalCount,
+            (
+                select count(1)
+                from fe_gateway g
+                left join sys_dept d on g.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeGateway"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and g.status in ('2', 'offline')
+            ) as gatewayOfflineCount,
+            (
+                select count(1)
+                from fe_gateway g
+                left join sys_dept d on g.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeGateway"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and g.fire_point_id is null
+            ) as gatewayUnboundFirePointCount,
+            (
+                select count(1)
+                from fe_gateway g
+                left join sys_dept d on g.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeGateway"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and g.dept_id is null
+            ) as gatewayMissingDeptCount,
+            (
+                select count(1)
+                from fe_extinguisher e
+                left join sys_dept d on e.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeExtinguisher"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and (e.expiry_date is null or e.expiry_date &gt;= #{expireSoonEndTime})
+                and (e.scrap_date is null or e.scrap_date &gt;= #{expireSoonEndTime})
+            ) as extinguisherNormalCount,
+            (
+                select count(1)
+                from fe_extinguisher e
+                left join sys_dept d on e.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeExtinguisher"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and (
+                    (e.expiry_date is not null and e.expiry_date &gt;= #{endTimeExclusive} and e.expiry_date &lt; #{expireSoonEndTime})
+                    or (e.scrap_date is not null and e.scrap_date &gt;= #{endTimeExclusive} and e.scrap_date &lt; #{expireSoonEndTime})
+                )
+            ) as extinguisherExpiringSoonCount,
+            (
+                select count(1)
+                from fe_extinguisher e
+                left join sys_dept d on e.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeExtinguisher"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and (
+                    (e.expiry_date is not null and e.expiry_date &lt; #{endTimeExclusive})
+                    or (e.scrap_date is not null and e.scrap_date &lt; #{endTimeExclusive})
+                )
+            ) as extinguisherExpiredCount,
+            (
+                select count(1)
+                from fe_extinguisher e
+                left join sys_dept d on e.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeExtinguisher"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and e.sensor_id is null
+            ) as extinguisherUnboundSensorCount,
+            (
+                select count(1)
+                from fe_extinguisher e
+                left join sys_dept d on e.dept_id = d.dept_id
+                where 1 = 1
+                <include refid="activeExtinguisher"/>
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+                and e.dept_id is null
+            ) as extinguisherMissingDeptCount
+    </select>
+
+    <select id="selectUnitStats" parameterType="com.ruoyi.manage.domain.report.DeviceReportQuery" resultType="com.ruoyi.manage.domain.report.DeviceReportUnitStat">
+        select d.dept_id as deptId,
+               d.dept_name as deptName,
+               sum(t.fire_point_count) as firePointCount,
+               sum(t.gateway_count) as gatewayCount,
+               sum(t.sensor_count) as sensorCount,
+               sum(t.extinguisher_count) as extinguisherCount,
+               sum(t.fire_point_count + t.gateway_count + t.sensor_count + t.extinguisher_count) as totalCount,
+               sum(t.risk_count) as riskCount
+        from (
+            select f.dept_id, count(1) as fire_point_count, 0 as gateway_count, 0 as sensor_count, 0 as extinguisher_count, 0 as risk_count
+            from fe_fire_point f
+            where (f.del_flag is null or f.del_flag = '0')
+            group by f.dept_id
+            union all
+            select g.dept_id, 0, count(1), 0, 0,
+                   sum(case when g.status is not null and g.status not in ('0', 'online') or g.fire_point_id is null or g.dept_id is null then 1 else 0 end)
+            from fe_gateway g
+            where (g.del_flag is null or g.del_flag = '0')
+            group by g.dept_id
+            union all
+            select s.dept_id, 0, 0, count(1), 0,
+                   sum(case when (s.status is not null and s.status != '0')
+                              or (s.battery_level is not null and s.battery_level &lt; 20)
+                              or (s.pressure is not null and s.pressure &gt;= 0 and s.pressure &lt; 1000)
+                              or (s.pressure is not null and (s.pressure &lt; 0 or s.pressure &gt; 2000))
+                            then 1 else 0 end)
+            from fe_sensor s
+            where (s.del_flag is null or s.del_flag = '0')
+            group by s.dept_id
+            union all
+            select e.dept_id, 0, 0, 0, count(1),
+                   sum(case when e.sensor_id is null
+                              or e.dept_id is null
+                              or (e.expiry_date is not null and e.expiry_date &lt; #{expireSoonEndTime})
+                              or (e.scrap_date is not null and e.scrap_date &lt; #{expireSoonEndTime})
+                            then 1 else 0 end)
+            from fe_extinguisher e
+            where (e.del_flag is null or e.del_flag = '0')
+            group by e.dept_id
+        ) t
+        left join sys_dept d on t.dept_id = d.dept_id
+        where d.dept_id is not null
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+        group by d.dept_id, d.dept_name
+        order by riskCount desc, totalCount desc, d.dept_id asc
+        limit 10
+    </select>
+
+    <select id="selectSensorRiskItems" parameterType="com.ruoyi.manage.domain.report.DeviceReportQuery" resultType="com.ruoyi.manage.domain.report.DeviceReportRiskItem">
+        select '传感器' as category,
+               case
+                   when s.pressure is not null and (s.pressure &lt; 0 or s.pressure &gt; 2000) then '压力脏值'
+                   when s.pressure is not null and s.pressure &gt;= 0 and s.pressure &lt; 1000 then '压力偏低'
+                   when s.battery_level is not null and s.battery_level &lt; 20 then '电量偏低'
+                   when s.status = '2' then '离线'
+                   else '状态异常'
+               end as riskType,
+               case
+                   when s.pressure is not null and (s.pressure &lt; 0 or s.pressure &gt; 2000) then '数据质量'
+                   when s.pressure is not null and s.pressure &gt;= 0 and s.pressure &lt; 1000 then '较高'
+                   else '一般'
+               end as riskLevel,
+               d.dept_name as deptName,
+               coalesce(s.sensor_code, concat('传感器#', s.sensor_id)) as itemName,
+               s.sensor_code as itemCode,
+               concat('压力=', coalesce(cast(s.pressure as char), '未采集'), '；电量=', coalesce(cast(s.battery_level as char), '未采集'), '；状态=', coalesce(s.status, '未设置')) as description,
+               s.last_online_time as occurTime
+        from fe_sensor s
+        left join sys_dept d on s.dept_id = d.dept_id
+        where 1 = 1
+        <include refid="activeSensor"/>
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+        and (
+            (s.status is not null and s.status != '0')
+            or (s.battery_level is not null and s.battery_level &lt; 20)
+            or (s.pressure is not null and s.pressure &lt; 1000)
+            or (s.pressure is not null and s.pressure &gt; 2000)
+        )
+        order by s.last_online_time desc, s.sensor_id desc
+        limit 20
+    </select>
+
+    <select id="selectGatewayRiskItems" parameterType="com.ruoyi.manage.domain.report.DeviceReportQuery" resultType="com.ruoyi.manage.domain.report.DeviceReportRiskItem">
+        select '网关' as category,
+               case
+                   when g.dept_id is null then '缺失归属单位'
+                   when g.fire_point_id is null then '未绑定消防点'
+                   when g.status in ('2', 'offline') then '离线'
+                   else '状态异常'
+               end as riskType,
+               case when g.dept_id is null or g.fire_point_id is null then '数据质量' else '一般' end as riskLevel,
+               d.dept_name as deptName,
+               coalesce(g.imei, concat('网关#', g.gateway_id)) as itemName,
+               g.imei as itemCode,
+               concat('消防点ID=', coalesce(cast(g.fire_point_id as char), '未绑定'), '；状态=', coalesce(g.status, '未设置'), '；同步状态=', coalesce(g.sync_status, '未设置')) as description,
+               g.last_sync_time as occurTime
+        from fe_gateway g
+        left join sys_dept d on g.dept_id = d.dept_id
+        where 1 = 1
+        <include refid="activeGateway"/>
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+        and (
+            (g.status is not null and g.status not in ('0', 'online'))
+            or g.fire_point_id is null
+            or g.dept_id is null
+        )
+        order by g.last_sync_time desc, g.gateway_id desc
+        limit 20
+    </select>
+
+    <select id="selectExtinguisherRiskItems" parameterType="com.ruoyi.manage.domain.report.DeviceReportQuery" resultType="com.ruoyi.manage.domain.report.DeviceReportRiskItem">
+        select '灭火器' as category,
+               case
+                   when e.dept_id is null then '缺失归属单位'
+                   when e.sensor_id is null then '未绑定传感器'
+                   when (e.expiry_date is not null and e.expiry_date &lt; #{endTimeExclusive}) or (e.scrap_date is not null and e.scrap_date &lt; #{endTimeExclusive}) then '已过期/报废'
+                   else '即将到期/报废'
+               end as riskType,
+               case
+                   when (e.expiry_date is not null and e.expiry_date &lt; #{endTimeExclusive}) or (e.scrap_date is not null and e.scrap_date &lt; #{endTimeExclusive}) then '较高'
+                   when e.dept_id is null or e.sensor_id is null then '数据质量'
+                   else '一般'
+               end as riskLevel,
+               d.dept_name as deptName,
+               coalesce(e.label_code, concat('灭火器#', e.extinguisher_id)) as itemName,
+               e.label_code as itemCode,
+               concat('传感器ID=', coalesce(cast(e.sensor_id as char), '未绑定'), '；到期日=', coalesce(date_format(e.expiry_date, '%Y-%m-%d'), '未设置'), '；报废日=', coalesce(date_format(e.scrap_date, '%Y-%m-%d'), '未设置')) as description,
+               e.last_sync_time as occurTime
+        from fe_extinguisher e
+        left join sys_dept d on e.dept_id = d.dept_id
+        where 1 = 1
+        <include refid="activeExtinguisher"/>
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+        and (
+            e.dept_id is null
+            or e.sensor_id is null
+            or (e.expiry_date is not null and e.expiry_date &lt; #{expireSoonEndTime})
+            or (e.scrap_date is not null and e.scrap_date &lt; #{expireSoonEndTime})
+        )
+        order by coalesce(e.expiry_date, e.scrap_date, e.last_sync_time) asc, e.extinguisher_id desc
+        limit 20
+    </select>
+</mapper>
