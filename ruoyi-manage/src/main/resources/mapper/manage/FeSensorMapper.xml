@@ -60,6 +60,12 @@
             <if test="gatewayId != null"> and s.gateway_id = #{gatewayId}</if>
             <if test="gatewayCode != null and gatewayCode != ''"> and s.gateway_code = #{gatewayCode}</if>
             <if test="mac != null and mac != ''"> and s.mac = #{mac}</if>
+            <if test="params.beginLastOnlineTime != null and params.beginLastOnlineTime != ''">
+                and s.last_online_time &gt;= concat(#{params.beginLastOnlineTime}, ' 00:00:00')
+            </if>
+            <if test="params.endLastOnlineTime != null and params.endLastOnlineTime != ''">
+                and s.last_online_time &lt;= concat(#{params.endLastOnlineTime}, ' 23:59:59')
+            </if>
             <if test="status != null and status != ''"> and s.status = #{status}</if>
             <if test="syncStatus != null and syncStatus != ''"> and s.sync_status = #{syncStatus}</if>
             ${params.dataScope}

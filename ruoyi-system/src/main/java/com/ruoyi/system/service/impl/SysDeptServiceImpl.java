@@ -1,8 +1,10 @@
 package com.ruoyi.system.service.impl;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -57,7 +59,69 @@ public class SysDeptServiceImpl implements ISysDeptService
     public List<TreeSelect> selectDeptTreeList(SysDept dept)
     {
         List<SysDept> depts = SpringUtils.getAopProxy(this).selectDeptList(dept);
+        if (hasRegionFilter(dept))
+        {
+            depts = filterDeptsByRegion(depts, dept);
+        }
         return buildDeptTreeSelect(depts);
+    }
+
+    private boolean hasRegionFilter(SysDept dept)
+    {
+        return dept != null && (StringUtils.isNotEmpty(dept.getProvince())
+                || StringUtils.isNotEmpty(dept.getCity())
+                || StringUtils.isNotEmpty(dept.getArea()));
+    }
+
+    private List<SysDept> filterDeptsByRegion(List<SysDept> depts, SysDept query)
+    {
+        Set<Long> keepDeptIds = new HashSet<Long>();
+        for (SysDept dept : depts)
+        {
+            if (matchesDeptRegion(dept, query))
+            {
+                keepDeptIds.add(dept.getDeptId());
+                appendAncestorIds(keepDeptIds, dept.getAncestors());
+            }
+        }
+        return depts.stream()
+                .filter(dept -> keepDeptIds.contains(dept.getDeptId()))
+                .collect(Collectors.toList());
+    }
+
+    private boolean matchesDeptRegion(SysDept dept, SysDept query)
+    {
+        if (StringUtils.isNotEmpty(query.getProvince()) && !StringUtils.equals(query.getProvince(), dept.getProvince()))
+        {
+            return false;
+        }
+        if (StringUtils.isNotEmpty(query.getCity()) && !StringUtils.equals(query.getCity(), dept.getCity()))
+        {
+            return false;
+        }
+        if (StringUtils.isNotEmpty(query.getArea()) && !StringUtils.equals(query.getArea(), dept.getArea()))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    private void appendAncestorIds(Set<Long> keepDeptIds, String ancestors)
+    {
+        if (StringUtils.isEmpty(ancestors))
+        {
+            return;
+        }
+        for (String ancestor : ancestors.split(","))
+        {
+            try
+            {
+                keepDeptIds.add(Long.valueOf(ancestor));
+            }
+            catch (NumberFormatException ignored)
+            {
+            }
+        }
     }
 
     /**
