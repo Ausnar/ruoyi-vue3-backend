@@ -48,11 +48,12 @@ public class FeExtinguisher extends BaseEntity
     @JsonFormat(pattern = "yyyy-MM-dd")
     private Date scrapDate;
     private Long firePointId;
+    private String firePointName;
     @Excel(name = "安装位置")
     private String installLocation;
     @Excel(name = "二维码")
     private String qrCode;
-    @Excel(name = "状态")
+    @Excel(name = "状态", readConverterExp = "0=正常,1=待检,2=过期,3=停用,4=报废")
     private String status;
     private String syncStatus;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -105,6 +106,8 @@ public class FeExtinguisher extends BaseEntity
     public void setScrapDate(Date scrapDate) { this.scrapDate = scrapDate; }
     public Long getFirePointId() { return firePointId; }
     public void setFirePointId(Long firePointId) { this.firePointId = firePointId; }
+    public String getFirePointName() { return firePointName; }
+    public void setFirePointName(String firePointName) { this.firePointName = firePointName; }
     public String getInstallLocation() { return installLocation; }
     public void setInstallLocation(String installLocation) { this.installLocation = installLocation; }
     public String getQrCode() { return qrCode; }
@@ -143,6 +146,7 @@ public class FeExtinguisher extends BaseEntity
             .append("expiryDate", getExpiryDate())
             .append("scrapDate", getScrapDate())
             .append("firePointId", getFirePointId())
+            .append("firePointName", getFirePointName())
             .append("installLocation", getInstallLocation())
             .append("qrCode", getQrCode())
             .append("status", getStatus())

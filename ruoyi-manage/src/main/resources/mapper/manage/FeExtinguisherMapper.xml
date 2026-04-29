@@ -26,6 +26,7 @@
         <result property="expiryDate" column="expiry_date" />
         <result property="scrapDate" column="scrap_date" />
         <result property="firePointId" column="fire_point_id" />
+        <result property="firePointName" column="fire_point_name" />
         <result property="installLocation" column="install_location" />
         <result property="qrCode" column="qr_code" />
         <result property="status" column="status" />
@@ -45,10 +46,11 @@
                d.province as dept_province, d.city as dept_city, d.area as dept_area,
                e.source_dept_id, sd.dept_name as source_dept_name, ec.external_company_name, e.product_name, e.manufacturer,
                e.service_provider, e.production_date, e.inspection_date, e.expiry_date, e.scrap_date,
-               e.fire_point_id, e.install_location, e.qr_code, e.status, e.sync_status, e.last_sync_time,
+               e.fire_point_id, fp.fire_point_name, e.install_location, e.qr_code, e.status, e.sync_status, e.last_sync_time,
                e.create_by, e.create_time, e.update_by, e.update_time, e.remark, e.del_flag
         from fe_extinguisher e
         left join fe_external_company ec on e.external_company_id = ec.external_company_id
+        left join fe_fire_point fp on e.fire_point_id = fp.fire_point_id
         left join sys_dept d on e.dept_id = d.dept_id
         left join sys_dept sd on e.source_dept_id = sd.dept_id
     </sql>
@@ -68,6 +70,13 @@
             <if test="sourceDeptId != null"> and e.source_dept_id = #{sourceDeptId}</if>
             <if test="productName != null and productName != ''"> and e.product_name like concat('%', #{productName}, '%')</if>
             <if test="firePointId != null"> and e.fire_point_id = #{firePointId}</if>
+            <if test="firePointName != null and firePointName != ''"> and fp.fire_point_name like concat('%', #{firePointName}, '%')</if>
+            <if test="params.beginLastSyncTime != null and params.beginLastSyncTime != ''">
+                and e.last_sync_time &gt;= concat(#{params.beginLastSyncTime}, ' 00:00:00')
+            </if>
+            <if test="params.endLastSyncTime != null and params.endLastSyncTime != ''">
+                and e.last_sync_time &lt;= concat(#{params.endLastSyncTime}, ' 23:59:59')
+            </if>
             <if test="status != null and status != ''"> and e.status = #{status}</if>
             <if test="syncStatus != null and syncStatus != ''"> and e.sync_status = #{syncStatus}</if>
             ${params.dataScope}
