@@ -78,6 +78,12 @@
             <if test="sourceDeptId != null"> and g.source_dept_id = #{sourceDeptId}</if>
             <if test="externalCompanyId != null"> and g.external_company_id = #{externalCompanyId}</if>
             <if test="externalCompanyName != null and externalCompanyName != ''"> and ec.external_company_name like concat('%', #{externalCompanyName}, '%')</if>
+            <if test="params.beginLastOnlineTime != null and params.beginLastOnlineTime != ''">
+                and g.last_online_time &gt;= concat(#{params.beginLastOnlineTime}, ' 00:00:00')
+            </if>
+            <if test="params.endLastOnlineTime != null and params.endLastOnlineTime != ''">
+                and g.last_online_time &lt;= concat(#{params.endLastOnlineTime}, ' 23:59:59')
+            </if>
             <if test="syncStatus != null and syncStatus != ''"> and g.sync_status = #{syncStatus}</if>
             <if test="status != null and status != ''"> and g.status = #{status}</if>
             ${params.dataScope}
