@@ -32,6 +32,10 @@ public class DashboardMapServiceImpl implements IDashboardMapService
     private static final String NODE_DIRECT_GROUP = "directGroup";
     private static final String NODE_FIRE_POINT = "firePoint";
     private static final String DIRECT_GROUP_NAME = "直属/未分配消防点";
+    private static final String CONTRACT_TYPE_PAID = "paid";
+    private static final String CONTRACT_TYPE_TRIAL = "trial";
+    private static final String CONTRACT_TYPE_MIXED = "mixed";
+    private static final String CONTRACT_TYPE_UNSET = "unset";
 
     @Autowired
     private ISysDeptService deptService;
@@ -50,6 +54,7 @@ public class DashboardMapServiceImpl implements IDashboardMapService
         List<Long> permittedDeptIds = getPermittedDeptIds();
         List<DashboardMapFirePoint> firePoints = dashboardMapMapper.selectFirePointsForMap(permittedDeptIds);
         List<SysDeptApiConfig> contracts = contractService.selectSysDeptApiConfigList(new SysDeptApiConfig());
+        Map<Long, String> contractTypeByDept = buildContractTypeByDept(depts, deptMap, contracts);
 
         Map<Long, List<DashboardMapFirePoint>> directPointsByRoot = new HashMap<Long, List<DashboardMapFirePoint>>();
         Map<Long, List<DashboardMapFirePoint>> pointsByDirectChild = new HashMap<Long, List<DashboardMapFirePoint>>();
@@ -86,13 +91,15 @@ public class DashboardMapServiceImpl implements IDashboardMapService
 
         DashboardMapResponse response = new DashboardMapResponse();
         response.setRootDeptId(ADMIN_ROOT_DEPT_ID);
-        response.setRoots(buildRootNodes(depts, deptMap, rootIds, directPointsByRoot, pointsByDirectChild, contracts));
+        response.setRoots(buildRootNodes(depts, deptMap, rootIds, directPointsByRoot, pointsByDirectChild, contracts,
+                contractTypeByDept));
         return response;
     }
 
     private List<DashboardMapNode> buildRootNodes(List<SysDept> depts, Map<Long, SysDept> deptMap, Set<Long> rootIds,
             Map<Long, List<DashboardMapFirePoint>> directPointsByRoot,
-            Map<Long, List<DashboardMapFirePoint>> pointsByDirectChild, List<SysDeptApiConfig> contracts)
+            Map<Long, List<DashboardMapFirePoint>> pointsByDirectChild, List<SysDeptApiConfig> contracts,
+            Map<Long, String> contractTypeByDept)
     {
         List<DashboardMapNode> roots = new ArrayList<DashboardMapNode>();
         for (SysDept dept : depts)
@@ -101,12 +108,13 @@ public class DashboardMapServiceImpl implements IDashboardMapService
             {
                 continue;
             }
-            DashboardMapNode root = buildDeptNode(dept, NODE_PARENT_DEPT);
-            List<DashboardMapNode> children = buildChildNodes(dept, depts, deptMap, pointsByDirectChild, contracts);
+            DashboardMapNode root = buildDeptNode(dept, NODE_PARENT_DEPT, contractTypeByDept);
+            List<DashboardMapNode> children = buildChildNodes(dept, depts, deptMap, pointsByDirectChild, contracts,
+                    contractTypeByDept);
             List<DashboardMapNode> directFirePoints = buildFirePointNodes(directPointsByRoot.get(dept.getDeptId()));
             if (!directFirePoints.isEmpty())
             {
-                children.add(buildDirectGroupNode(dept, directFirePoints));
+                children.add(buildDirectGroupNode(dept, directFirePoints, contractTypeByDept));
             }
 
             root.setChildren(children);
@@ -123,7 +131,8 @@ public class DashboardMapServiceImpl implements IDashboardMapService
     }
 
     private List<DashboardMapNode> buildChildNodes(SysDept root, List<SysDept> depts, Map<Long, SysDept> deptMap,
-            Map<Long, List<DashboardMapFirePoint>> pointsByDirectChild, List<SysDeptApiConfig> contracts)
+            Map<Long, List<DashboardMapFirePoint>> pointsByDirectChild, List<SysDeptApiConfig> contracts,
+            Map<Long, String> contractTypeByDept)
     {
         Set<Long> contractChildIds = new HashSet<Long>();
         for (SysDeptApiConfig contract : contracts)
@@ -148,7 +157,7 @@ public class DashboardMapServiceImpl implements IDashboardMapService
             {
                 continue;
             }
-            DashboardMapNode child = buildDeptNode(dept, NODE_CHILD_DEPT);
+            DashboardMapNode child = buildDeptNode(dept, NODE_CHILD_DEPT, contractTypeByDept);
             child.setFirePoints(firePointNodes);
             child.setFirePointCount(firePointNodes.size());
             applyFallbackCoordinate(child, firePointNodes);
@@ -157,7 +166,7 @@ public class DashboardMapServiceImpl implements IDashboardMapService
         return children;
     }
 
-    private DashboardMapNode buildDeptNode(SysDept dept, String nodeType)
+    private DashboardMapNode buildDeptNode(SysDept dept, String nodeType, Map<Long, String> contractTypeByDept)
     {
         DashboardMapNode node = new DashboardMapNode();
         node.setNodeType(nodeType);
@@ -166,6 +175,7 @@ public class DashboardMapServiceImpl implements IDashboardMapService
         node.setParentDeptId(dept.getParentId());
         node.setName(dept.getDeptName());
         node.setDeptName(dept.getDeptName());
+        node.setContractType(contractTypeByDept.get(dept.getDeptId()));
         node.setLongitude(blankToNull(dept.getLongitude()));
         node.setLatitude(blankToNull(dept.getLatitude()));
         node.setProvince(dept.getProvince());
@@ -177,7 +187,8 @@ public class DashboardMapServiceImpl implements IDashboardMapService
         return node;
     }
 
-    private DashboardMapNode buildDirectGroupNode(SysDept root, List<DashboardMapNode> firePointNodes)
+    private DashboardMapNode buildDirectGroupNode(SysDept root, List<DashboardMapNode> firePointNodes,
+            Map<Long, String> contractTypeByDept)
     {
         DashboardMapNode node = new DashboardMapNode();
         node.setNodeType(NODE_DIRECT_GROUP);
@@ -186,6 +197,7 @@ public class DashboardMapServiceImpl implements IDashboardMapService
         node.setParentDeptId(root.getDeptId());
         node.setName(DIRECT_GROUP_NAME);
         node.setDeptName(root.getDeptName());
+        node.setContractType(contractTypeByDept.get(root.getDeptId()));
         node.setFirePoints(firePointNodes);
         node.setFirePointCount(firePointNodes.size());
         node.setStatus("normal");
@@ -229,6 +241,96 @@ public class DashboardMapServiceImpl implements IDashboardMapService
             nodes.add(node);
         }
         return nodes;
+    }
+
+    private Map<Long, String> buildContractTypeByDept(List<SysDept> depts, Map<Long, SysDept> deptMap,
+            List<SysDeptApiConfig> contracts)
+    {
+        Map<Long, String> result = new HashMap<Long, String>();
+        if (contracts == null || contracts.isEmpty())
+        {
+            return result;
+        }
+        for (SysDept dept : depts)
+        {
+            Set<String> types = new HashSet<String>();
+            for (SysDeptApiConfig contract : contracts)
+            {
+                if (isDeptInScope(dept.getDeptId(), contract.getDeptId(), deptMap))
+                {
+                    types.add(normalizeContractType(contract.getContractType()));
+                }
+            }
+            String contractType = resolveAggregateContractType(types);
+            if (StringUtils.isNotEmpty(contractType))
+            {
+                result.put(dept.getDeptId(), contractType);
+            }
+        }
+        return result;
+    }
+
+    private boolean isDeptInScope(Long scopeDeptId, Long deptId, Map<Long, SysDept> deptMap)
+    {
+        if (scopeDeptId == null || deptId == null)
+        {
+            return false;
+        }
+        if (scopeDeptId.equals(deptId))
+        {
+            return true;
+        }
+        SysDept current = deptMap.get(deptId);
+        while (current != null)
+        {
+            if (scopeDeptId.equals(current.getDeptId()))
+            {
+                return true;
+            }
+            Long parentId = current.getParentId();
+            if (parentId == null || parentId.longValue() == 0L || current.getDeptId().equals(parentId))
+            {
+                break;
+            }
+            current = deptMap.get(parentId);
+        }
+        return false;
+    }
+
+    private String normalizeContractType(String contractType)
+    {
+        if (CONTRACT_TYPE_PAID.equals(contractType))
+        {
+            return CONTRACT_TYPE_PAID;
+        }
+        if (CONTRACT_TYPE_TRIAL.equals(contractType))
+        {
+            return CONTRACT_TYPE_TRIAL;
+        }
+        return CONTRACT_TYPE_UNSET;
+    }
+
+    private String resolveAggregateContractType(Set<String> types)
+    {
+        if (types == null || types.isEmpty())
+        {
+            return null;
+        }
+        boolean hasPaid = types.contains(CONTRACT_TYPE_PAID);
+        boolean hasTrial = types.contains(CONTRACT_TYPE_TRIAL);
+        if (hasPaid && hasTrial)
+        {
+            return CONTRACT_TYPE_MIXED;
+        }
+        if (hasPaid)
+        {
+            return CONTRACT_TYPE_PAID;
+        }
+        if (hasTrial)
+        {
+            return CONTRACT_TYPE_TRIAL;
+        }
+        return CONTRACT_TYPE_UNSET;
     }
 
     private Long findBusinessRootId(Long deptId, Map<Long, SysDept> deptMap)

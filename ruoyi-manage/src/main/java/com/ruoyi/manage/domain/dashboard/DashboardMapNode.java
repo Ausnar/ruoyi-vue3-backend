@@ -12,6 +12,7 @@ public class DashboardMapNode
     private Long firePointId;
     private String name;
     private String deptName;
+    private String contractType;
     private String firePointName;
     private String longitude;
     private String latitude;
@@ -54,6 +55,8 @@ public class DashboardMapNode
     public void setName(String name) { this.name = name; }
     public String getDeptName() { return deptName; }
     public void setDeptName(String deptName) { this.deptName = deptName; }
+    public String getContractType() { return contractType; }
+    public void setContractType(String contractType) { this.contractType = contractType; }
     public String getFirePointName() { return firePointName; }
     public void setFirePointName(String firePointName) { this.firePointName = firePointName; }
     public String getLongitude() { return longitude; }
