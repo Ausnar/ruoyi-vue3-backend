@@ -2,6 +2,7 @@ package com.ruoyi.manage.service.impl;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,6 +62,7 @@ import com.ruoyi.manage.mapper.FeSdkSyncLogMapper;
 import com.ruoyi.manage.mapper.FeSensorHistoryMapper;
 import com.ruoyi.manage.mapper.FeSensorMapper;
 import com.ruoyi.manage.service.IFeDeviceSdkSyncService;
+import com.ruoyi.manage.service.IFeDeviceWarningScanService;
 import com.ruoyi.system.domain.SysDeptApiConfig;
 import com.ruoyi.system.service.ISysDeptApiConfigService;
 import com.ruoyi.visit.service.IFeVisitPassiveEventService;
@@ -109,6 +112,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     @Autowired private FeCompanyDeptMappingMapper feCompanyDeptMappingMapper;
     @Autowired private FeSdkSyncLogMapper feSdkSyncLogMapper;
     @Autowired private FeSensorHistoryMapper feSensorHistoryMapper;
+    @Autowired private IFeDeviceWarningScanService feDeviceWarningScanService;
     @Autowired private IFeVisitPassiveEventService feVisitPassiveEventService;
 
     private volatile RestTemplate restTemplate;
@@ -190,6 +194,51 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         }
     }
 
+    @Override
+    public Map<String, Object> refreshExtinguisherProfile(Long extinguisherId, String operator)
+    {
+        FeExtinguisher extinguisher = feExtinguisherMapper.selectFeExtinguisherByExtinguisherId(extinguisherId);
+        if (extinguisher == null)
+        {
+            throw new IllegalArgumentException("Extinguisher does not exist");
+        }
+        if (StringUtils.isBlank(extinguisher.getLabelCode()))
+        {
+            markProfileSyncFailed(extinguisher, "Missing label code", operator);
+            return buildProfileResult(extinguisher, false, "Missing label code");
+        }
+
+        List<SysDeptApiConfig> configs = selectProfileRefreshConfigs(extinguisher);
+        if (configs.isEmpty())
+        {
+            markProfileSyncFailed(extinguisher, "No active SDK credential is available", operator);
+            return buildProfileResult(extinguisher, false, "No active SDK credential is available");
+        }
+
+        String lastMessage = null;
+        for (SysDeptApiConfig config : configs)
+        {
+            try
+            {
+                validateConfig(config);
+                TokenContext tokenContext = login(config);
+                JsonNode profileNode = fetchExtinguisherProfileNode(extinguisher.getLabelCode(), tokenContext, config);
+                applySdkProfile(extinguisher, profileNode, operator);
+                feExtinguisherMapper.updateFeExtinguisher(extinguisher);
+                return buildProfileResult(extinguisher, true, "Profile refreshed");
+            }
+            catch (Exception e)
+            {
+                lastMessage = e.getMessage();
+                log.warn("[DeviceSync] refresh extinguisher profile failed, extinguisherId={}, labelCode={}, configId={}, message={}",
+                    extinguisherId, extinguisher.getLabelCode(), config.getConfigId(), e.getMessage());
+            }
+        }
+
+        markProfileSyncFailed(extinguisher, StringUtils.defaultIfBlank(lastMessage, "SDK profile refresh failed"), operator);
+        return buildProfileResult(extinguisher, false, StringUtils.defaultIfBlank(lastMessage, "SDK profile refresh failed"));
+    }
+
     private Map<String, Object> buildBusyResult(Long configId)
     {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -255,7 +304,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             }
             for (JsonNode extinguisherNode : extinguisherNodes)
             {
-                FeExtinguisher extinguisher = upsertExtinguisher(extinguisherNode, config, operator);
+                FeExtinguisher extinguisher = upsertExtinguisher(extinguisherNode, tokenContext, config, operator);
                 Long externalCompanyId = readNestedLong(extinguisherNode, "company", "id");
                 if (externalCompanyId != null) syncedCompanyIds.add(externalCompanyId);
                 if (STATUS_UNBOUND.equals(extinguisher.getSyncStatus())) stats.incrementFail("binding");
@@ -265,6 +314,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             int snapshotCount = feFirePointDeviceSnapshotMapper.insertSnapshotsForSourceDept(
                 config.getConfigId(), config.getDeptId(), DateUtils.getNowDate(), operator);
             stats.addInfo("firePointSnapshot", snapshotCount);
+            runWarningScan(config.getDeptId(), operator, stats);
 
             syncLog.setExternalCompanyId(syncedCompanyIds.size() == 1 ? syncedCompanyIds.iterator().next() : null);
             syncLog.setSyncStatus(STATUS_SUCCESS);
@@ -303,6 +353,53 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             result.put("stats", stats.toMap());
             return result;
         }
+    }
+
+    private void runWarningScan(Long sourceDeptId, String operator, SyncStats stats)
+    {
+        try
+        {
+            Map<String, Object> scanResult = feDeviceWarningScanService.scanAfterSdkSync(sourceDeptId, operator);
+            int suspectedFireCount = getInt(scanResult, "suspectedFireCount");
+            int lowBatteryCount = getInt(scanResult, "lowBatteryCount");
+            int lowPressureCount = getInt(scanResult, "lowPressureCount");
+            int highPressureCount = getInt(scanResult, "highPressureCount");
+            int insufficientExtinguisherCount = getInt(scanResult, "insufficientExtinguisherCount");
+            int extinguisherExpiredCount = getInt(scanResult, "extinguisherExpiredCount");
+            int abnormalTemperatureCount = getInt(scanResult, "abnormalTemperatureCount");
+
+            stats.putInfo("warningSuspectedFire", suspectedFireCount);
+            stats.putInfo("warningLowBattery", lowBatteryCount);
+            stats.putInfo("warningLowPressure", lowPressureCount);
+            stats.putInfo("warningHighPressure", highPressureCount);
+            stats.putInfo("warningInsufficientExtinguisher", insufficientExtinguisherCount);
+            stats.putInfo("warningExtinguisherExpired", extinguisherExpiredCount);
+            stats.putInfo("warningAbnormalTemperature", abnormalTemperatureCount);
+            stats.putInfo("warningScanSummary", buildWarningScanSummary(suspectedFireCount, lowBatteryCount,
+                lowPressureCount, highPressureCount, insufficientExtinguisherCount, extinguisherExpiredCount,
+                abnormalTemperatureCount));
+            stats.incrementInfo("warningScanSuccess");
+        }
+        catch (Exception e)
+        {
+            log.warn("Device warning scan failed after SDK sync, sourceDeptId={}", sourceDeptId, e);
+            stats.incrementInfo("warningScanFailed");
+        }
+    }
+
+    private int getInt(Map<String, Object> source, String key)
+    {
+        Object value = source == null ? null : source.get(key);
+        return value instanceof Number ? ((Number) value).intValue() : 0;
+    }
+
+    private String buildWarningScanSummary(int suspectedFireCount, int lowBatteryCount, int lowPressureCount,
+                                           int highPressureCount, int insufficientExtinguisherCount,
+                                           int extinguisherExpiredCount, int abnormalTemperatureCount)
+    {
+        return String.format("预警扫描完成：疑似火灾%d条，低电量%d条，低压%d条，高压%d条，数量不足%d条，灭火器到期%d条，环境温度异常%d条",
+            suspectedFireCount, lowBatteryCount, lowPressureCount, highPressureCount, insufficientExtinguisherCount,
+            extinguisherExpiredCount, abnormalTemperatureCount);
     }
 
     private FeSdkSyncLog buildRunningLog(SysDeptApiConfig config, String operator, Date now)
@@ -384,6 +481,169 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             if (candidate != null && candidate.isArray()) return candidate;
         }
         return null;
+    }
+
+    private JsonNode fetchExtinguisherProfileNode(String labelCode, TokenContext tokenContext, SysDeptApiConfig config)
+    {
+        if (StringUtils.isBlank(labelCode))
+        {
+            throw new IllegalArgumentException("Missing label code");
+        }
+        JsonNode root = requestJson(HttpMethod.GET, PATH_EXTINGUISHER + encodePathSegment(labelCode), null, tokenContext, config, true);
+        JsonNode payload = unwrapObjectPayload(root);
+        if (payload == null || payload.isMissingNode() || payload.isNull())
+        {
+            throw new IllegalStateException("SDK profile response is empty");
+        }
+        return payload;
+    }
+
+    private JsonNode unwrapObjectPayload(JsonNode root)
+    {
+        if (root == null || root.isMissingNode() || root.isNull())
+        {
+            return null;
+        }
+        if (root.isObject())
+        {
+            for (String field : new String[] { "data", "result", "item" })
+            {
+                JsonNode candidate = root.get(field);
+                if (candidate != null && candidate.isObject())
+                {
+                    return candidate;
+                }
+            }
+            return root;
+        }
+        if (root.isArray() && root.size() > 0 && root.get(0).isObject())
+        {
+            return root.get(0);
+        }
+        return null;
+    }
+
+    private String encodePathSegment(String value)
+    {
+        return UriUtils.encodePathSegment(value, StandardCharsets.UTF_8);
+    }
+
+    private void applySdkProfile(FeExtinguisher extinguisher, JsonNode profileNode, String operator)
+    {
+        applySdkRawFields(extinguisher, profileNode);
+        applySdkProfileMetadata(extinguisher, operator);
+    }
+
+    private void applySdkRawFields(FeExtinguisher extinguisher, JsonNode node)
+    {
+        if (extinguisher == null || node == null || node.isMissingNode() || node.isNull())
+        {
+            return;
+        }
+        Long externalExtinguisherId = readLong(node, "id");
+        if (externalExtinguisherId != null)
+        {
+            extinguisher.setExternalExtinguisherId(externalExtinguisherId);
+        }
+        String labelCode = readFirstText(node, "gb_number", "label_code", "labelCode", "gbNumber");
+        if (StringUtils.isNotBlank(labelCode))
+        {
+            extinguisher.setLabelCode(labelCode);
+        }
+        String specification = readFirstText(node, "model_display", "specification", "spec", "model_name", "model");
+        if (StringUtils.isNotBlank(specification))
+        {
+            extinguisher.setSpecification(specification);
+        }
+        String productName = readFirstText(node, "product_name", "productName", "model", "name");
+        if (StringUtils.isNotBlank(productName))
+        {
+            extinguisher.setProductName(productName);
+        }
+        String manufacturer = StringUtils.defaultIfBlank(readNestedText(node, "factory", "name"),
+            readFirstText(node, "factory_name", "manufacturer"));
+        if (StringUtils.isNotBlank(manufacturer))
+        {
+            extinguisher.setManufacturer(manufacturer);
+        }
+        String serviceProvider = StringUtils.defaultIfBlank(readNestedText(node, "serve", "name"),
+            readFirstText(node, "service_provider", "serviceProvider"));
+        if (StringUtils.isNotBlank(serviceProvider))
+        {
+            extinguisher.setServiceProvider(serviceProvider);
+        }
+        Date productionDate = readFirstDate(node, "made_time", "production_date", "productionDate", "made_date", "manufacture_date");
+        if (productionDate != null)
+        {
+            extinguisher.setProductionDate(productionDate);
+        }
+    }
+
+    private void applySdkProfileMetadata(FeExtinguisher extinguisher, String operator)
+    {
+        Date now = DateUtils.getNowDate();
+        FeExtinguisherBusinessFieldUtils.completeWarningBusinessFields(extinguisher, true);
+        String profileStatus = FeExtinguisherBusinessFieldUtils.resolveProfileSyncStatus(extinguisher);
+        extinguisher.setProfileSource(StringUtils.isNotBlank(extinguisher.getTemperatureRange())
+            ? FeExtinguisherBusinessFieldUtils.PROFILE_SOURCE_MIXED
+            : FeExtinguisherBusinessFieldUtils.PROFILE_SOURCE_DERIVED);
+        extinguisher.setProfileSyncStatus(profileStatus);
+        extinguisher.setProfileSyncTime(now);
+        extinguisher.setProfileSyncMessage(FeExtinguisherBusinessFieldUtils.PROFILE_SYNC_STATUS_SUCCESS.equals(profileStatus)
+            ? "标志明码资料已同步并完成本地规则推导"
+            : "标志明码资料已同步，但生产日期、灭火器类型或形式不完整");
+        extinguisher.setUpdateBy(operator);
+        extinguisher.setUpdateTime(now);
+    }
+
+    private void markProfileSyncFailed(FeExtinguisher extinguisher, String message, String operator)
+    {
+        if (extinguisher == null)
+        {
+            return;
+        }
+        extinguisher.setProfileSyncStatus(FeExtinguisherBusinessFieldUtils.PROFILE_SYNC_STATUS_FAILED);
+        extinguisher.setProfileSyncTime(DateUtils.getNowDate());
+        extinguisher.setProfileSyncMessage(StringUtils.left(message, 500));
+        extinguisher.setUpdateBy(operator);
+        extinguisher.setUpdateTime(DateUtils.getNowDate());
+        feExtinguisherMapper.updateFeExtinguisher(extinguisher);
+    }
+
+    private Map<String, Object> buildProfileResult(FeExtinguisher extinguisher, boolean success, String message)
+    {
+        FeExtinguisher latest = extinguisher == null || extinguisher.getExtinguisherId() == null
+            ? extinguisher : feExtinguisherMapper.selectFeExtinguisherByExtinguisherId(extinguisher.getExtinguisherId());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", success);
+        result.put("message", message);
+        result.put("data", latest);
+        return result;
+    }
+
+    private List<SysDeptApiConfig> selectProfileRefreshConfigs(FeExtinguisher extinguisher)
+    {
+        List<SysDeptApiConfig> activeConfigs = sysDeptApiConfigService.selectActiveSysDeptApiConfigs();
+        if (activeConfigs == null || activeConfigs.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+        List<SysDeptApiConfig> configs = new ArrayList<>();
+        for (SysDeptApiConfig config : activeConfigs)
+        {
+            if (Objects.equals(config.getDeptId(), extinguisher.getSourceDeptId()))
+            {
+                configs.add(config);
+            }
+        }
+        for (SysDeptApiConfig config : activeConfigs)
+        {
+            if (!configs.contains(config))
+            {
+                configs.add(config);
+            }
+        }
+        return configs;
     }
 
     private JsonNode requestJson(HttpMethod method, String path, Map<String, Object> queryParams,
@@ -610,7 +870,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         else feSensorMapper.updateFeSensor(sensor);
         return sensor;
     }
-    private FeExtinguisher upsertExtinguisher(JsonNode extinguisherNode, SysDeptApiConfig config, String operator)
+    private FeExtinguisher upsertExtinguisher(JsonNode extinguisherNode, TokenContext tokenContext, SysDeptApiConfig config, String operator)
     {
         Long externalExtinguisherId = readLong(extinguisherNode, "id");
         String labelCode = readText(extinguisherNode, "gb_number");
@@ -633,11 +893,17 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         extinguisher.setLabelCode(labelCode);
         extinguisher.setSourceDeptId(config.getDeptId());
         extinguisher.setDeptId(resolveDeptId(externalCompanyId));
-        extinguisher.setSpecification(StringUtils.defaultIfBlank(readText(extinguisherNode, "model_display"), readText(extinguisherNode, "model")));
-        extinguisher.setProductName(readText(extinguisherNode, "model"));
-        extinguisher.setManufacturer(readNestedText(extinguisherNode, "factory", "name"));
-        extinguisher.setServiceProvider(readNestedText(extinguisherNode, "serve", "name"));
-        extinguisher.setProductionDate(parseDate(readText(extinguisherNode, "made_time")));
+        applySdkRawFields(extinguisher, extinguisherNode);
+        try
+        {
+            JsonNode profileNode = fetchExtinguisherProfileNode(labelCode, tokenContext, config);
+            applySdkRawFields(extinguisher, profileNode);
+        }
+        catch (Exception e)
+        {
+            log.warn("[DeviceSync] detail profile refresh skipped, labelCode={}, message={}", labelCode, e.getMessage());
+        }
+        applySdkProfileMetadata(extinguisher, operator);
         extinguisher.setStatus(StringUtils.defaultIfBlank(extinguisher.getStatus(), EXTINGUISHER_STATUS_NORMAL));
         extinguisher.setLastSyncTime(DateUtils.getNowDate());
         extinguisher.setUpdateBy(operator);
@@ -1040,6 +1306,23 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         return asText(node.get(fieldName));
     }
 
+    private String readFirstText(JsonNode node, String... fieldNames)
+    {
+        if (node == null || fieldNames == null)
+        {
+            return null;
+        }
+        for (String fieldName : fieldNames)
+        {
+            String value = readText(node, fieldName);
+            if (StringUtils.isNotBlank(value))
+            {
+                return value;
+            }
+        }
+        return null;
+    }
+
     private String readNestedText(JsonNode node, String parentField, String childField)
     {
         if (node == null) return null;
@@ -1224,12 +1507,27 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     {
         private final Map<String, Integer> detailSuccess = new LinkedHashMap<>();
         private final Map<String, Integer> detailFail = new LinkedHashMap<>();
-        private final Map<String, Integer> detailInfo = new LinkedHashMap<>();
+        private final Map<String, Object> detailInfo = new LinkedHashMap<>();
 
         void incrementSuccess(String scope) { detailSuccess.merge(scope, 1, Integer::sum); }
         void incrementFail(String scope) { detailFail.merge(scope, 1, Integer::sum); }
-        void incrementInfo(String scope) { detailInfo.merge(scope, 1, Integer::sum); }
-        void addInfo(String scope, int count) { if (count > 0) detailInfo.merge(scope, count, Integer::sum); }
+        void incrementInfo(String scope)
+        {
+            Object value = detailInfo.get(scope);
+            int count = value instanceof Number ? ((Number) value).intValue() : 0;
+            detailInfo.put(scope, count + 1);
+        }
+        void addInfo(String scope, int count)
+        {
+            if (count > 0)
+            {
+                Object value = detailInfo.get(scope);
+                int current = value instanceof Number ? ((Number) value).intValue() : 0;
+                detailInfo.put(scope, current + count);
+            }
+        }
+        void putInfo(String scope, int count) { detailInfo.put(scope, count); }
+        void putInfo(String scope, String value) { detailInfo.put(scope, value); }
         int getSuccessCount() { return detailSuccess.values().stream().mapToInt(Integer::intValue).sum(); }
         int getFailCount() { return detailFail.values().stream().mapToInt(Integer::intValue).sum(); }
         String buildMessage() { return "success=" + detailSuccess + ", fail=" + detailFail + ", info=" + detailInfo; }

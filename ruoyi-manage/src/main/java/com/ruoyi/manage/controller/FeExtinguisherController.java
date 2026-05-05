@@ -17,6 +17,7 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.manage.domain.FeExtinguisher;
+import com.ruoyi.manage.service.IFeDeviceSdkSyncService;
 import com.ruoyi.manage.service.IFeExtinguisherService;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
@@ -33,6 +34,9 @@ public class FeExtinguisherController extends BaseController
 {
     @Autowired
     private IFeExtinguisherService feExtinguisherService;
+
+    @Autowired
+    private IFeDeviceSdkSyncService feDeviceSdkSyncService;
 
     /**
      * 查询灭火器信息列表
@@ -89,6 +93,18 @@ public class FeExtinguisherController extends BaseController
     public AjaxResult edit(@RequestBody FeExtinguisher feExtinguisher)
     {
         return toAjax(feExtinguisherService.updateFeExtinguisher(feExtinguisher));
+    }
+
+    /**
+     * 按标志明码刷新灭火器预警资料
+     */
+    @PreAuthorize("@ss.hasPermi('manage:extinguisher:edit')")
+    @Log(title = "灭火器预警资料", businessType = BusinessType.UPDATE)
+    @PutMapping("/{extinguisherId}/profile/refresh")
+    public AjaxResult refreshProfile(@PathVariable("extinguisherId") Long extinguisherId)
+    {
+        feExtinguisherService.selectFeExtinguisherByExtinguisherId(extinguisherId);
+        return success(feDeviceSdkSyncService.refreshExtinguisherProfile(extinguisherId, getUsername()));
     }
 
     /**

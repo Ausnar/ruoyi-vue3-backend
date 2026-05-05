@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeDeviceWarningMapper">
+
+    <resultMap id="FeDeviceWarningResult" type="FeDeviceWarning">
+        <result property="warningId" column="warning_id" />
+        <result property="warningType" column="warning_type" />
+        <result property="objectType" column="object_type" />
+        <result property="objectId" column="object_id" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="deptProvince" column="dept_province" />
+        <result property="deptCity" column="dept_city" />
+        <result property="deptArea" column="dept_area" />
+        <result property="sourceDeptId" column="source_dept_id" />
+        <result property="sourceDeptName" column="source_dept_name" />
+        <result property="firePointId" column="fire_point_id" />
+        <result property="firePointName" column="fire_point_name" />
+        <result property="gatewayId" column="gateway_id" />
+        <result property="gatewayImei" column="gateway_imei" />
+        <result property="sensorId" column="sensor_id" />
+        <result property="sensorCode" column="sensor_code" />
+        <result property="extinguisherId" column="extinguisher_id" />
+        <result property="extinguisherLabelCode" column="extinguisher_label_code" />
+        <result property="extinguisherProductName" column="extinguisher_product_name" />
+        <result property="triggerTime" column="trigger_time" />
+        <result property="lastTriggerTime" column="last_trigger_time" />
+        <result property="windowStartTime" column="window_start_time" />
+        <result property="windowEndTime" column="window_end_time" />
+        <result property="sampleCount" column="sample_count" />
+        <result property="thresholdSnapshot" column="threshold_snapshot" />
+        <result property="evidenceSummary" column="evidence_summary" />
+        <result property="warningStatus" column="warning_status" />
+        <result property="confirmBy" column="confirm_by" />
+        <result property="confirmTime" column="confirm_time" />
+        <result property="handleBy" column="handle_by" />
+        <result property="handleTime" column="handle_time" />
+        <result property="resolveBy" column="resolve_by" />
+        <result property="resolveTime" column="resolve_time" />
+        <result property="falseAlarmReason" column="false_alarm_reason" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="delFlag" column="del_flag" />
+    </resultMap>
+
+    <sql id="selectFeDeviceWarningVo">
+        select w.warning_id, w.warning_type, w.object_type, w.object_id,
+               w.dept_id, d.dept_name, d.province as dept_province, d.city as dept_city, d.area as dept_area,
+               w.source_dept_id, sd.dept_name as source_dept_name,
+               w.fire_point_id, fp.fire_point_name,
+               w.gateway_id, g.imei as gateway_imei,
+               w.sensor_id, s.sensor_code,
+               w.extinguisher_id, e.label_code as extinguisher_label_code, e.product_name as extinguisher_product_name,
+               w.trigger_time, w.last_trigger_time, w.window_start_time, w.window_end_time, w.sample_count,
+               w.threshold_snapshot, w.evidence_summary, w.warning_status,
+               w.confirm_by, w.confirm_time, w.handle_by, w.handle_time, w.resolve_by, w.resolve_time,
+               w.false_alarm_reason, w.remark, w.create_by, w.create_time, w.update_by, w.update_time, w.del_flag
+        from fe_device_warning w
+        left join sys_dept d on w.dept_id = d.dept_id
+        left join sys_dept sd on w.source_dept_id = sd.dept_id
+        left join fe_fire_point fp on w.fire_point_id = fp.fire_point_id
+        left join fe_gateway g on w.gateway_id = g.gateway_id
+        left join fe_sensor s on w.sensor_id = s.sensor_id
+        left join fe_extinguisher e on w.extinguisher_id = e.extinguisher_id
+    </sql>
+
+    <sql id="sensorExtinguisherLink">
+        select sensor_id, min(extinguisher_id) as extinguisher_id, min(dept_id) as dept_id,
+               min(source_dept_id) as source_dept_id, min(fire_point_id) as fire_point_id
+        from fe_extinguisher
+        where del_flag is null or del_flag = '0'
+        group by sensor_id
+    </sql>
+
+    <select id="selectFeDeviceWarningByWarningId" parameterType="Long" resultMap="FeDeviceWarningResult">
+        <include refid="selectFeDeviceWarningVo" />
+        where w.warning_id = #{warningId}
+          and w.del_flag = '0'
+    </select>
+
+    <select id="selectFeDeviceWarningList" parameterType="FeDeviceWarning" resultMap="FeDeviceWarningResult">
+        <include refid="selectFeDeviceWarningVo" />
+        <where>
+            w.del_flag = '0'
+            <if test="warningType != null and warningType != ''"> and w.warning_type = #{warningType}</if>
+            <if test="objectType != null and objectType != ''"> and w.object_type = #{objectType}</if>
+            <if test="objectId != null"> and w.object_id = #{objectId}</if>
+            <if test="deptId != null"> and w.dept_id = #{deptId}</if>
+            <if test="deptProvince != null and deptProvince != ''"> and d.province = #{deptProvince}</if>
+            <if test="deptCity != null and deptCity != ''"> and d.city = #{deptCity}</if>
+            <if test="deptArea != null and deptArea != ''"> and d.area = #{deptArea}</if>
+            <if test="sourceDeptId != null"> and w.source_dept_id = #{sourceDeptId}</if>
+            <if test="firePointId != null"> and w.fire_point_id = #{firePointId}</if>
+            <if test="firePointName != null and firePointName != ''"> and fp.fire_point_name like concat('%', #{firePointName}, '%')</if>
+            <if test="gatewayId != null"> and w.gateway_id = #{gatewayId}</if>
+            <if test="sensorId != null"> and w.sensor_id = #{sensorId}</if>
+            <if test="extinguisherId != null"> and w.extinguisher_id = #{extinguisherId}</if>
+            <if test="warningStatus != null and warningStatus != ''"> and w.warning_status = #{warningStatus}</if>
+            <if test="params.beginLastTriggerTime != null and params.beginLastTriggerTime != ''">
+                and w.last_trigger_time &gt;= concat(#{params.beginLastTriggerTime}, ' 00:00:00')
+            </if>
+            <if test="params.endLastTriggerTime != null and params.endLastTriggerTime != ''">
+                and w.last_trigger_time &lt;= concat(#{params.endLastTriggerTime}, ' 23:59:59')
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and (
+                    w.evidence_summary like concat('%', #{keyword}, '%')
+                    or w.threshold_snapshot like concat('%', #{keyword}, '%')
+                    or fp.fire_point_name like concat('%', #{keyword}, '%')
+                    or s.sensor_code like concat('%', #{keyword}, '%')
+                    or g.imei like concat('%', #{keyword}, '%')
+                    or e.label_code like concat('%', #{keyword}, '%')
+                )
+            </if>
+            ${params.dataScope}
+        </where>
+        order by w.last_trigger_time desc, w.warning_id desc
+    </select>
+
+    <select id="countOpenWarnings" parameterType="FeDeviceWarning" resultType="int">
+        select count(1)
+        from fe_device_warning w
+        <where>
+            w.del_flag = '0'
+            and w.warning_status in ('pending', 'processing')
+            ${params.dataScope}
+        </where>
+    </select>
+
+    <select id="countOpenSevereWarnings" parameterType="FeDeviceWarning" resultType="int">
+        select count(1)
+        from fe_device_warning w
+        <where>
+            w.del_flag = '0'
+            and w.warning_status in ('pending', 'processing')
+            and w.warning_type = 'suspected_fire'
+            ${params.dataScope}
+        </where>
+    </select>
+
+    <select id="selectRecentDashboardWarnings" parameterType="FeDeviceWarning" resultMap="FeDeviceWarningResult">
+        <include refid="selectFeDeviceWarningVo" />
+        <where>
+            w.del_flag = '0'
+            and w.warning_status in ('pending', 'processing')
+            ${params.dataScope}
+        </where>
+        order by w.last_trigger_time desc, w.warning_id desc
+        limit 5
+    </select>
+
+    <select id="selectOpenWarningByObject" resultMap="FeDeviceWarningResult">
+        <include refid="selectFeDeviceWarningVo" />
+        where w.warning_type = #{warningType}
+          and w.object_type = #{objectType}
+          and w.object_id = #{objectId}
+          and w.warning_status in ('pending', 'processing')
+          and w.del_flag = '0'
+        order by w.warning_id desc
+        limit 1
+    </select>
+
+    <select id="selectSuspectedFireCandidates" resultMap="FeDeviceWarningResult">
+        select 'suspected_fire' as warning_type,
+               'sensor' as object_type,
+               h.sensor_id as object_id,
+               coalesce(s.dept_id, e.dept_id) as dept_id,
+               coalesce(s.source_dept_id, e.source_dept_id) as source_dept_id,
+               coalesce(g.fire_point_id, e.fire_point_id) as fire_point_id,
+               s.gateway_id,
+               h.sensor_id,
+               e.extinguisher_id,
+               h.create_time as trigger_time,
+               h.create_time as last_trigger_time,
+               h.create_time as window_start_time,
+               h.create_time as window_end_time,
+               1 as sample_count,
+               'temperature between 70 and 200' as threshold_snapshot,
+               concat('sensor=', coalesce(s.sensor_code, h.sensor_code, h.sensor_id),
+                      ', temperature=', h.temperature,
+                      ', sample_time=', date_format(h.create_time, '%Y-%m-%d %H:%i:%s')) as evidence_summary,
+               'pending' as warning_status
+        from fe_sensor_history h
+        left join fe_sensor s on h.sensor_id = s.sensor_id
+        left join fe_gateway g on s.gateway_id = g.gateway_id
+        left join (<include refid="sensorExtinguisherLink" />) e on e.sensor_id = h.sensor_id
+        where h.temperature &gt;= 70
+          and h.temperature &lt;= 200
+          and h.sensor_id is not null
+          and h.create_time is not null
+          <if test="sourceDeptId != null">and coalesce(s.source_dept_id, e.source_dept_id) = #{sourceDeptId}</if>
+          and not exists (
+              select 1
+              from fe_sensor_history h2
+              where h2.sensor_id = h.sensor_id
+                and h2.temperature &gt;= 70
+                and h2.temperature &lt;= 200
+                and h2.create_time is not null
+                and (
+                    h2.create_time &gt; h.create_time
+                    or (h2.create_time = h.create_time and h2.history_id &gt; h.history_id)
+                )
+          )
+    </select>
+
+    <select id="selectLowBatteryCandidates" resultMap="FeDeviceWarningResult">
+        select 'low_battery' as warning_type,
+               'sensor' as object_type,
+               s.sensor_id as object_id,
+               coalesce(s.dept_id, e.dept_id) as dept_id,
+               coalesce(s.source_dept_id, e.source_dept_id) as source_dept_id,
+               coalesce(g.fire_point_id, e.fire_point_id) as fire_point_id,
+               s.gateway_id,
+               s.sensor_id,
+               e.extinguisher_id,
+               latest.window_end_time as trigger_time,
+               latest.window_end_time as last_trigger_time,
+               latest.window_start_time,
+               latest.window_end_time,
+               latest.sample_count,
+               'battery_level &lt;= 20, consecutive=3' as threshold_snapshot,
+               concat('sensor=', coalesce(s.sensor_code, s.sensor_id), ', samples=', latest.samples) as evidence_summary,
+               'pending' as warning_status
+        from fe_sensor s
+        left join fe_gateway g on s.gateway_id = g.gateway_id
+        left join (<include refid="sensorExtinguisherLink" />) e on e.sensor_id = s.sensor_id
+        join (
+            select x.sensor_id,
+                   min(x.create_time) as window_start_time,
+                   max(x.create_time) as window_end_time,
+                   count(1) as sample_count,
+                   sum(case when x.battery_level &lt;= 20 then 1 else 0 end) as abnormal_count,
+                   group_concat(concat(x.battery_level, '% @ ', date_format(x.create_time, '%Y-%m-%d %H:%i:%s'))
+                                order by x.create_time separator '; ') as samples
+            from fe_sensor_history x
+            where x.battery_level is not null
+              and x.create_time is not null
+              and (
+                  select count(1)
+                  from fe_sensor_history y
+                  where y.sensor_id = x.sensor_id
+                    and y.battery_level is not null
+                    and y.create_time is not null
+                    and (y.create_time &gt; x.create_time or (y.create_time = x.create_time and y.history_id &gt; x.history_id))
+              ) &lt; 3
+            group by x.sensor_id
+            having sample_count = 3 and abnormal_count = 3
+        ) latest on latest.sensor_id = s.sensor_id
+        where (s.del_flag is null or s.del_flag = '0')
+          <if test="sourceDeptId != null">and coalesce(s.source_dept_id, e.source_dept_id) = #{sourceDeptId}</if>
+    </select>
+
+    <select id="selectLowPressureCandidates" resultMap="FeDeviceWarningResult">
+        select 'low_pressure' as warning_type,
+               'sensor' as object_type,
+               s.sensor_id as object_id,
+               coalesce(s.dept_id, e.dept_id) as dept_id,
+               coalesce(s.source_dept_id, e.source_dept_id) as source_dept_id,
+               coalesce(g.fire_point_id, e.fire_point_id) as fire_point_id,
+               s.gateway_id,
+               s.sensor_id,
+               e.extinguisher_id,
+               latest.window_end_time as trigger_time,
+               latest.window_end_time as last_trigger_time,
+               latest.window_start_time,
+               latest.window_end_time,
+               latest.sample_count,
+               'pressure &lt; 1000, valid_range=0..2000, consecutive=3' as threshold_snapshot,
+               concat('sensor=', coalesce(s.sensor_code, s.sensor_id), ', samples=', latest.samples) as evidence_summary,
+               'pending' as warning_status
+        from fe_sensor s
+        left join fe_gateway g on s.gateway_id = g.gateway_id
+        left join (<include refid="sensorExtinguisherLink" />) e on e.sensor_id = s.sensor_id
+        join (
+            select x.sensor_id,
+                   min(x.create_time) as window_start_time,
+                   max(x.create_time) as window_end_time,
+                   count(1) as sample_count,
+                   sum(case when x.pressure &lt; 1000 then 1 else 0 end) as abnormal_count,
+                   group_concat(concat(x.pressure, ' @ ', date_format(x.create_time, '%Y-%m-%d %H:%i:%s'))
+                                order by x.create_time separator '; ') as samples
+            from fe_sensor_history x
+            where x.pressure is not null
+              and x.pressure &gt;= 0
+              and x.pressure &lt;= 2000
+              and x.create_time is not null
+              and (
+                  select count(1)
+                  from fe_sensor_history y
+                  where y.sensor_id = x.sensor_id
+                    and y.pressure is not null
+                    and y.pressure &gt;= 0
+                    and y.pressure &lt;= 2000
+                    and y.create_time is not null
+                    and (y.create_time &gt; x.create_time or (y.create_time = x.create_time and y.history_id &gt; x.history_id))
+              ) &lt; 3
+            group by x.sensor_id
+            having sample_count = 3 and abnormal_count = 3
+        ) latest on latest.sensor_id = s.sensor_id
+        where (s.del_flag is null or s.del_flag = '0')
+          <if test="sourceDeptId != null">and coalesce(s.source_dept_id, e.source_dept_id) = #{sourceDeptId}</if>
+    </select>
+
+    <select id="selectHighPressureCandidates" resultMap="FeDeviceWarningResult">
+        select 'high_pressure' as warning_type,
+               'sensor' as object_type,
+               s.sensor_id as object_id,
+               coalesce(s.dept_id, e.dept_id) as dept_id,
+               coalesce(s.source_dept_id, e.source_dept_id) as source_dept_id,
+               coalesce(g.fire_point_id, e.fire_point_id) as fire_point_id,
+               s.gateway_id,
+               s.sensor_id,
+               e.extinguisher_id,
+               latest.window_end_time as trigger_time,
+               latest.window_end_time as last_trigger_time,
+               latest.window_start_time,
+               latest.window_end_time,
+               latest.sample_count,
+               'pressure &gt; 1400, valid_range=0..2000, consecutive=3' as threshold_snapshot,
+               concat('sensor=', coalesce(s.sensor_code, s.sensor_id), ', samples=', latest.samples) as evidence_summary,
+               'pending' as warning_status
+        from fe_sensor s
+        left join fe_gateway g on s.gateway_id = g.gateway_id
+        left join (<include refid="sensorExtinguisherLink" />) e on e.sensor_id = s.sensor_id
+        join (
+            select x.sensor_id,
+                   min(x.create_time) as window_start_time,
+                   max(x.create_time) as window_end_time,
+                   count(1) as sample_count,
+                   sum(case when x.pressure &gt; 1400 then 1 else 0 end) as abnormal_count,
+                   group_concat(concat(x.pressure, ' @ ', date_format(x.create_time, '%Y-%m-%d %H:%i:%s'))
+                                order by x.create_time separator '; ') as samples
+            from fe_sensor_history x
+            where x.pressure is not null
+              and x.pressure &gt;= 0
+              and x.pressure &lt;= 2000
+              and x.create_time is not null
+              and (
+                  select count(1)
+                  from fe_sensor_history y
+                  where y.sensor_id = x.sensor_id
+                    and y.pressure is not null
+                    and y.pressure &gt;= 0
+                    and y.pressure &lt;= 2000
+                    and y.create_time is not null
+                    and (y.create_time &gt; x.create_time or (y.create_time = x.create_time and y.history_id &gt; x.history_id))
+              ) &lt; 3
+            group by x.sensor_id
+            having sample_count = 3 and abnormal_count = 3
+        ) latest on latest.sensor_id = s.sensor_id
+        where (s.del_flag is null or s.del_flag = '0')
+          <if test="sourceDeptId != null">and coalesce(s.source_dept_id, e.source_dept_id) = #{sourceDeptId}</if>
+    </select>
+
+    <select id="selectInsufficientExtinguisherCandidates" resultMap="FeDeviceWarningResult">
+        select 'insufficient_extinguisher' as warning_type,
+               'fire_point' as object_type,
+               fp.fire_point_id as object_id,
+               fp.dept_id,
+               fp.source_dept_id,
+               fp.fire_point_id,
+               null as gateway_id,
+               null as sensor_id,
+               null as extinguisher_id,
+               latest.window_end_time as trigger_time,
+               latest.window_end_time as last_trigger_time,
+               latest.window_start_time,
+               latest.window_end_time,
+               latest.sample_count,
+               'actual_extinguisher_count &lt; expected_extinguisher_count, consecutive=3' as threshold_snapshot,
+               concat('fire_point=', coalesce(fp.fire_point_name, fp.fire_point_code, fp.fire_point_id),
+                      ', snapshots=', latest.samples) as evidence_summary,
+               'pending' as warning_status
+        from fe_fire_point fp
+        join (
+            select x.fire_point_id,
+                   min(x.snapshot_time) as window_start_time,
+                   max(x.snapshot_time) as window_end_time,
+                   count(1) as sample_count,
+                   sum(case when x.expected_extinguisher_count &gt; 0 and x.actual_extinguisher_count &lt; x.expected_extinguisher_count
+                            then 1 else 0 end) as abnormal_count,
+                   group_concat(concat(x.actual_extinguisher_count, '/', x.expected_extinguisher_count,
+                                       ' @ ', date_format(x.snapshot_time, '%Y-%m-%d %H:%i:%s'))
+                                order by x.snapshot_time separator '; ') as samples
+            from fe_fire_point_device_snapshot x
+            where x.snapshot_time is not null
+              and (
+                  select count(1)
+                  from fe_fire_point_device_snapshot y
+                  where y.fire_point_id = x.fire_point_id
+                    and y.snapshot_time is not null
+                    and (y.snapshot_time &gt; x.snapshot_time or (y.snapshot_time = x.snapshot_time and y.snapshot_id &gt; x.snapshot_id))
+              ) &lt; 3
+            group by x.fire_point_id
+            having sample_count = 3 and abnormal_count = 3
+        ) latest on latest.fire_point_id = fp.fire_point_id
+        where (fp.del_flag is null or fp.del_flag = '0')
+          <if test="sourceDeptId != null">and fp.source_dept_id = #{sourceDeptId}</if>
+    </select>
+
+    <select id="selectExpiredExtinguisherCandidates" resultMap="FeDeviceWarningResult">
+        select 'extinguisher_expired' as warning_type,
+               'extinguisher' as object_type,
+               e.extinguisher_id as object_id,
+               e.dept_id,
+               e.source_dept_id,
+               e.fire_point_id,
+               s.gateway_id,
+               e.sensor_id,
+               e.extinguisher_id,
+               now() as trigger_time,
+               now() as last_trigger_time,
+               e.expiry_date as window_start_time,
+               e.expiry_date as window_end_time,
+               1 as sample_count,
+               'expiry_date &lt;= current_date' as threshold_snapshot,
+               concat('extinguisher=', coalesce(e.label_code, e.extinguisher_id),
+                      ', expiry_date=', date_format(e.expiry_date, '%Y-%m-%d')) as evidence_summary,
+               'pending' as warning_status
+        from fe_extinguisher e
+        left join fe_sensor s on e.sensor_id = s.sensor_id
+        where (e.del_flag is null or e.del_flag = '0')
+          and e.expiry_date is not null
+          and e.expiry_date &lt;= curdate()
+          <if test="sourceDeptId != null">and e.source_dept_id = #{sourceDeptId}</if>
+    </select>
+
+    <select id="selectAbnormalTemperatureCandidates" resultMap="FeDeviceWarningResult">
+        select 'abnormal_temperature' as warning_type,
+               'extinguisher' as object_type,
+               e.extinguisher_id as object_id,
+               e.dept_id,
+               e.source_dept_id,
+               e.fire_point_id,
+               s.gateway_id,
+               e.sensor_id,
+               e.extinguisher_id,
+               max(h.create_time) as trigger_time,
+               max(h.create_time) as last_trigger_time,
+               min(h.create_time) as window_start_time,
+               max(h.create_time) as window_end_time,
+               count(1) as sample_count,
+               concat('temperature outside [', e.temp_lower - 5, ', ', e.temp_upper + 5, '], consecutive=3') as threshold_snapshot,
+               concat('extinguisher=', coalesce(e.label_code, e.extinguisher_id),
+                      ', range=', e.temperature_range,
+                      ', samples=', group_concat(concat(h.temperature, ' @ ', date_format(h.create_time, '%Y-%m-%d %H:%i:%s'))
+                                                order by h.create_time separator '; ')) as evidence_summary,
+               'pending' as warning_status
+        from (
+            select fe.*,
+                   cast(substring_index(replace(fe.temperature_range, ' ', ''), '~', 1) as decimal(10,2)) as temp_lower,
+                   cast(substring_index(replace(fe.temperature_range, ' ', ''), '~', -1) as decimal(10,2)) as temp_upper
+            from fe_extinguisher fe
+            where (fe.del_flag is null or fe.del_flag = '0')
+              and fe.sensor_id is not null
+              and fe.temperature_range is not null
+              and replace(fe.temperature_range, ' ', '') regexp '^[+-]?[0-9]+(\\.[0-9]+)?~[+-]?[0-9]+(\\.[0-9]+)?$'
+        ) e
+        left join fe_sensor s on e.sensor_id = s.sensor_id
+        join fe_sensor_history h on h.sensor_id = e.sensor_id
+        where h.temperature is not null
+          and h.create_time is not null
+          and (
+              select count(1)
+              from fe_sensor_history y
+              where y.sensor_id = h.sensor_id
+                and y.temperature is not null
+                and y.create_time is not null
+                and (y.create_time &gt; h.create_time or (y.create_time = h.create_time and y.history_id &gt; h.history_id))
+          ) &lt; 3
+          <if test="sourceDeptId != null">and e.source_dept_id = #{sourceDeptId}</if>
+        group by e.extinguisher_id, e.dept_id, e.source_dept_id, e.fire_point_id, s.gateway_id,
+                 e.sensor_id, e.label_code, e.temperature_range, e.temp_lower, e.temp_upper
+        having sample_count = 3
+           and sum(case when h.temperature &lt; e.temp_lower - 5 or h.temperature &gt; e.temp_upper + 5 then 1 else 0 end) = 3
+    </select>
+
+    <insert id="insertFeDeviceWarning" parameterType="FeDeviceWarning" useGeneratedKeys="true" keyProperty="warningId">
+        insert into fe_device_warning (
+            warning_type, object_type, object_id, dept_id, source_dept_id,
+            fire_point_id, gateway_id, sensor_id, extinguisher_id,
+            trigger_time, last_trigger_time, window_start_time, window_end_time, sample_count,
+            threshold_snapshot, evidence_summary, warning_status,
+            confirm_by, confirm_time, handle_by, handle_time, resolve_by, resolve_time,
+            false_alarm_reason, remark, create_by, create_time, update_by, update_time, del_flag
+        ) values (
+            #{warningType}, #{objectType}, #{objectId}, #{deptId}, #{sourceDeptId},
+            #{firePointId}, #{gatewayId}, #{sensorId}, #{extinguisherId},
+            #{triggerTime}, #{lastTriggerTime}, #{windowStartTime}, #{windowEndTime}, #{sampleCount},
+            #{thresholdSnapshot}, #{evidenceSummary}, #{warningStatus},
+            #{confirmBy}, #{confirmTime}, #{handleBy}, #{handleTime}, #{resolveBy}, #{resolveTime},
+            #{falseAlarmReason}, #{remark}, #{createBy}, #{createTime}, #{updateBy}, #{updateTime},
+            <choose>
+                <when test="delFlag != null">#{delFlag}</when>
+                <otherwise>'0'</otherwise>
+            </choose>
+        )
+    </insert>
+
+    <update id="updateFeDeviceWarning" parameterType="FeDeviceWarning">
+        update fe_device_warning
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="warningType != null">warning_type = #{warningType},</if>
+            <if test="objectType != null">object_type = #{objectType},</if>
+            <if test="objectId != null">object_id = #{objectId},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="sourceDeptId != null">source_dept_id = #{sourceDeptId},</if>
+            <if test="firePointId != null">fire_point_id = #{firePointId},</if>
+            <if test="gatewayId != null">gateway_id = #{gatewayId},</if>
+            <if test="sensorId != null">sensor_id = #{sensorId},</if>
+            <if test="extinguisherId != null">extinguisher_id = #{extinguisherId},</if>
+            <if test="triggerTime != null">trigger_time = #{triggerTime},</if>
+            <if test="lastTriggerTime != null">last_trigger_time = #{lastTriggerTime},</if>
+            <if test="windowStartTime != null">window_start_time = #{windowStartTime},</if>
+            <if test="windowEndTime != null">window_end_time = #{windowEndTime},</if>
+            <if test="sampleCount != null">sample_count = #{sampleCount},</if>
+            <if test="thresholdSnapshot != null">threshold_snapshot = #{thresholdSnapshot},</if>
+            <if test="evidenceSummary != null">evidence_summary = #{evidenceSummary},</if>
+            <if test="warningStatus != null">warning_status = #{warningStatus},</if>
+            <if test="confirmBy != null">confirm_by = #{confirmBy},</if>
+            <if test="confirmTime != null">confirm_time = #{confirmTime},</if>
+            <if test="handleBy != null">handle_by = #{handleBy},</if>
+            <if test="handleTime != null">handle_time = #{handleTime},</if>
+            <if test="resolveBy != null">resolve_by = #{resolveBy},</if>
+            <if test="resolveTime != null">resolve_time = #{resolveTime},</if>
+            <if test="falseAlarmReason != null">false_alarm_reason = #{falseAlarmReason},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where warning_id = #{warningId}
+    </update>
+</mapper>

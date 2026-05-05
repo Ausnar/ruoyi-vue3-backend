@@ -44,6 +44,8 @@ public class FeExtinguisherScopedServiceImpl implements IFeExtinguisherService
     public int insertFeExtinguisher(FeExtinguisher feExtinguisher)
     {
         validateTargetDept(feExtinguisher.getDeptId());
+        FeExtinguisherBusinessFieldUtils.completeWarningBusinessFields(feExtinguisher);
+        FeExtinguisherBusinessFieldUtils.markManualProfileEdit(feExtinguisher, null);
         feExtinguisher.setCreateTime(DateUtils.getNowDate());
         return feExtinguisherMapper.insertFeExtinguisher(feExtinguisher);
     }
@@ -51,8 +53,10 @@ public class FeExtinguisherScopedServiceImpl implements IFeExtinguisherService
     @Override
     public int updateFeExtinguisher(FeExtinguisher feExtinguisher)
     {
-        selectFeExtinguisherByExtinguisherId(feExtinguisher.getExtinguisherId());
+        FeExtinguisher existing = selectFeExtinguisherByExtinguisherId(feExtinguisher.getExtinguisherId());
         validateTargetDept(feExtinguisher.getDeptId());
+        FeExtinguisherBusinessFieldUtils.completeWarningBusinessFields(feExtinguisher);
+        FeExtinguisherBusinessFieldUtils.markManualProfileEdit(feExtinguisher, existing == null ? null : existing.getProfileSource());
         feExtinguisher.setUpdateTime(DateUtils.getNowDate());
         return feExtinguisherMapper.updateFeExtinguisher(feExtinguisher);
     }

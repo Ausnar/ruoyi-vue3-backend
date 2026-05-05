@@ -8,6 +8,14 @@
         <result property="externalCompanyId" column="external_company_id" />
         <result property="labelCode" column="label_code" />
         <result property="specification" column="specification" />
+        <result property="extinguisherType" column="extinguisher_type" />
+        <result property="extinguisherForm" column="extinguisher_form" />
+        <result property="standardCode" column="standard_code" />
+        <result property="temperatureRange" column="temperature_range" />
+        <result property="profileSource" column="profile_source" />
+        <result property="profileSyncTime" column="profile_sync_time" />
+        <result property="profileSyncStatus" column="profile_sync_status" />
+        <result property="profileSyncMessage" column="profile_sync_message" />
         <result property="sensorId" column="sensor_id" />
         <result property="sensorCode" column="sensor_code" />
         <result property="deptId" column="dept_id" />
@@ -42,7 +50,9 @@
 
     <sql id="selectFeExtinguisherVo">
         select e.extinguisher_id, e.external_extinguisher_id, e.external_company_id, e.label_code,
-               e.specification, e.sensor_id, e.sensor_code, e.dept_id, d.dept_name,
+               e.specification, e.extinguisher_type, e.extinguisher_form, e.standard_code, e.temperature_range,
+               e.profile_source, e.profile_sync_time, e.profile_sync_status, e.profile_sync_message,
+               e.sensor_id, e.sensor_code, e.dept_id, d.dept_name,
                d.province as dept_province, d.city as dept_city, d.area as dept_area,
                e.source_dept_id, sd.dept_name as source_dept_name, ec.external_company_name, e.product_name, e.manufacturer,
                e.service_provider, e.production_date, e.inspection_date, e.expiry_date, e.scrap_date,
@@ -61,6 +71,8 @@
             <if test="labelCode != null and labelCode != ''"> and e.label_code = #{labelCode}</if>
             <if test="externalExtinguisherId != null"> and e.external_extinguisher_id = #{externalExtinguisherId}</if>
             <if test="externalCompanyId != null"> and e.external_company_id = #{externalCompanyId}</if>
+            <if test="extinguisherType != null and extinguisherType != ''"> and e.extinguisher_type = #{extinguisherType}</if>
+            <if test="extinguisherForm != null and extinguisherForm != ''"> and e.extinguisher_form = #{extinguisherForm}</if>
             <if test="sensorId != null"> and e.sensor_id = #{sensorId}</if>
             <if test="sensorCode != null and sensorCode != ''"> and e.sensor_code = #{sensorCode}</if>
             <if test="deptId != null"> and e.dept_id = #{deptId}</if>
@@ -107,6 +119,14 @@
             <if test="externalCompanyId != null">external_company_id,</if>
             <if test="labelCode != null and labelCode != ''">label_code,</if>
             <if test="specification != null">specification,</if>
+            <if test="extinguisherType != null">extinguisher_type,</if>
+            <if test="extinguisherForm != null">extinguisher_form,</if>
+            <if test="standardCode != null">standard_code,</if>
+            <if test="temperatureRange != null">temperature_range,</if>
+            <if test="profileSource != null">profile_source,</if>
+            <if test="profileSyncTime != null">profile_sync_time,</if>
+            <if test="profileSyncStatus != null">profile_sync_status,</if>
+            <if test="profileSyncMessage != null">profile_sync_message,</if>
             <if test="sensorId != null">sensor_id,</if>
             <if test="sensorCode != null">sensor_code,</if>
             <if test="deptId != null">dept_id,</if>
@@ -136,6 +156,14 @@
             <if test="externalCompanyId != null">#{externalCompanyId},</if>
             <if test="labelCode != null and labelCode != ''">#{labelCode},</if>
             <if test="specification != null">#{specification},</if>
+            <if test="extinguisherType != null">#{extinguisherType},</if>
+            <if test="extinguisherForm != null">#{extinguisherForm},</if>
+            <if test="standardCode != null">#{standardCode},</if>
+            <if test="temperatureRange != null">#{temperatureRange},</if>
+            <if test="profileSource != null">#{profileSource},</if>
+            <if test="profileSyncTime != null">#{profileSyncTime},</if>
+            <if test="profileSyncStatus != null">#{profileSyncStatus},</if>
+            <if test="profileSyncMessage != null">#{profileSyncMessage},</if>
             <if test="sensorId != null">#{sensorId},</if>
             <if test="sensorCode != null">#{sensorCode},</if>
             <if test="deptId != null">#{deptId},</if>
@@ -169,6 +197,14 @@
             <if test="externalCompanyId != null">external_company_id = #{externalCompanyId},</if>
             <if test="labelCode != null and labelCode != ''">label_code = #{labelCode},</if>
             <if test="specification != null">specification = #{specification},</if>
+            extinguisher_type = #{extinguisherType},
+            extinguisher_form = #{extinguisherForm},
+            standard_code = #{standardCode},
+            temperature_range = #{temperatureRange},
+            profile_source = #{profileSource},
+            profile_sync_time = #{profileSyncTime},
+            profile_sync_status = #{profileSyncStatus},
+            profile_sync_message = #{profileSyncMessage},
             <if test="sensorId != null">sensor_id = #{sensorId},</if>
             <if test="sensorCode != null">sensor_code = #{sensorCode},</if>
             <if test="deptId != null">dept_id = #{deptId},</if>
@@ -178,7 +214,7 @@
             <if test="serviceProvider != null">service_provider = #{serviceProvider},</if>
             <if test="productionDate != null">production_date = #{productionDate},</if>
             <if test="inspectionDate != null">inspection_date = #{inspectionDate},</if>
-            <if test="expiryDate != null">expiry_date = #{expiryDate},</if>
+            expiry_date = #{expiryDate},
             <if test="scrapDate != null">scrap_date = #{scrapDate},</if>
             <if test="firePointId != null">fire_point_id = #{firePointId},</if>
             <if test="installLocation != null">install_location = #{installLocation},</if>

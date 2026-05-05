@@ -20,6 +20,21 @@ public class FeExtinguisher extends BaseEntity
     private String labelCode;
     @Excel(name = "规格型号")
     private String specification;
+    @Excel(name = "灭火器类型")
+    private String extinguisherType;
+    @Excel(name = "灭火器形式")
+    private String extinguisherForm;
+    @Excel(name = "执行标准")
+    private String standardCode;
+    @Excel(name = "使用温度范围")
+    private String temperatureRange;
+    @Excel(name = "预警资料来源")
+    private String profileSource;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date profileSyncTime;
+    @Excel(name = "预警资料同步状态")
+    private String profileSyncStatus;
+    private String profileSyncMessage;
     private Long sensorId;
     private String sensorCode;
     private Long deptId;
@@ -70,6 +85,22 @@ public class FeExtinguisher extends BaseEntity
     public void setLabelCode(String labelCode) { this.labelCode = labelCode; }
     public String getSpecification() { return specification; }
     public void setSpecification(String specification) { this.specification = specification; }
+    public String getExtinguisherType() { return extinguisherType; }
+    public void setExtinguisherType(String extinguisherType) { this.extinguisherType = extinguisherType; }
+    public String getExtinguisherForm() { return extinguisherForm; }
+    public void setExtinguisherForm(String extinguisherForm) { this.extinguisherForm = extinguisherForm; }
+    public String getStandardCode() { return standardCode; }
+    public void setStandardCode(String standardCode) { this.standardCode = standardCode; }
+    public String getTemperatureRange() { return temperatureRange; }
+    public void setTemperatureRange(String temperatureRange) { this.temperatureRange = temperatureRange; }
+    public String getProfileSource() { return profileSource; }
+    public void setProfileSource(String profileSource) { this.profileSource = profileSource; }
+    public Date getProfileSyncTime() { return profileSyncTime; }
+    public void setProfileSyncTime(Date profileSyncTime) { this.profileSyncTime = profileSyncTime; }
+    public String getProfileSyncStatus() { return profileSyncStatus; }
+    public void setProfileSyncStatus(String profileSyncStatus) { this.profileSyncStatus = profileSyncStatus; }
+    public String getProfileSyncMessage() { return profileSyncMessage; }
+    public void setProfileSyncMessage(String profileSyncMessage) { this.profileSyncMessage = profileSyncMessage; }
     public Long getSensorId() { return sensorId; }
     public void setSensorId(Long sensorId) { this.sensorId = sensorId; }
     public String getSensorCode() { return sensorCode; }
@@ -130,6 +161,14 @@ public class FeExtinguisher extends BaseEntity
             .append("externalCompanyId", getExternalCompanyId())
             .append("labelCode", getLabelCode())
             .append("specification", getSpecification())
+            .append("extinguisherType", getExtinguisherType())
+            .append("extinguisherForm", getExtinguisherForm())
+            .append("standardCode", getStandardCode())
+            .append("temperatureRange", getTemperatureRange())
+            .append("profileSource", getProfileSource())
+            .append("profileSyncTime", getProfileSyncTime())
+            .append("profileSyncStatus", getProfileSyncStatus())
+            .append("profileSyncMessage", getProfileSyncMessage())
             .append("sensorId", getSensorId())
             .append("sensorCode", getSensorCode())
             .append("deptId", getDeptId())
