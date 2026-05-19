@@ -29,128 +29,74 @@
         and (e.del_flag is null or e.del_flag = '0')
     </sql>
 
-    <sql id="latestValidPressureWindow">
-        and h.create_time is not null
-        and h.create_time &lt; #{endTimeExclusive}
-        and h.pressure is not null
-        and h.pressure &gt;= 0
-        and h.pressure &lt;= 2000
-        and (
-            select count(1)
-            from fe_sensor_history h2
-            where h2.sensor_id = h.sensor_id
-              and h2.create_time is not null
-              and h2.create_time &lt; #{endTimeExclusive}
-              and h2.pressure is not null
-              and h2.pressure &gt;= 0
-              and h2.pressure &lt;= 2000
-              and (
-                  h2.create_time &gt; h.create_time
-                  or (h2.create_time = h.create_time and h2.history_id &gt; h.history_id)
-              )
-        ) &lt; 3
-    </sql>
-
-    <sql id="latestValidBatteryWindow">
-        and h.create_time is not null
-        and h.create_time &lt; #{endTimeExclusive}
-        and h.battery_level is not null
-        and (
-            select count(1)
-            from fe_sensor_history h2
-            where h2.sensor_id = h.sensor_id
-              and h2.create_time is not null
-              and h2.create_time &lt; #{endTimeExclusive}
-              and h2.battery_level is not null
-              and (
-                  h2.create_time &gt; h.create_time
-                  or (h2.create_time = h.create_time and h2.history_id &gt; h.history_id)
-              )
-        ) &lt; 3
-    </sql>
-
     <sql id="confirmedLowPressurePredicate">
         (
-            select count(1)
+            select substring_index(
+                group_concat(case when h.pressure &lt; 1000 then '1' else '0' end order by h.create_time desc, h.history_id desc),
+                ',', 3
+            )
             from fe_sensor_history h
             where h.sensor_id = s.sensor_id
-            <include refid="latestValidPressureWindow"/>
-        ) = 3
-        and (
-            select count(1)
-            from fe_sensor_history h
-            where h.sensor_id = s.sensor_id
-            <include refid="latestValidPressureWindow"/>
-              and h.pressure &lt; 1000
-        ) = 3
+              and h.create_time is not null
+              and h.create_time &lt; #{endTimeExclusive}
+              and h.pressure is not null
+              and h.pressure &gt;= 0
+              and h.pressure &lt;= 2000
+        ) = '1,1,1'
     </sql>
 
     <sql id="confirmedHighPressurePredicate">
         (
-            select count(1)
+            select substring_index(
+                group_concat(case when h.pressure &gt; 1400 then '1' else '0' end order by h.create_time desc, h.history_id desc),
+                ',', 3
+            )
             from fe_sensor_history h
             where h.sensor_id = s.sensor_id
-            <include refid="latestValidPressureWindow"/>
-        ) = 3
-        and (
-            select count(1)
-            from fe_sensor_history h
-            where h.sensor_id = s.sensor_id
-            <include refid="latestValidPressureWindow"/>
-              and h.pressure &gt; 1400
-        ) = 3
+              and h.create_time is not null
+              and h.create_time &lt; #{endTimeExclusive}
+              and h.pressure is not null
+              and h.pressure &gt;= 0
+              and h.pressure &lt;= 2000
+        ) = '1,1,1'
     </sql>
 
     <sql id="confirmedLowBatteryPredicate">
         (
-            select count(1)
+            select substring_index(
+                group_concat(case when h.battery_level &lt;= 20 then '1' else '0' end order by h.create_time desc, h.history_id desc),
+                ',', 3
+            )
             from fe_sensor_history h
             where h.sensor_id = s.sensor_id
-            <include refid="latestValidBatteryWindow"/>
-        ) = 3
-        and (
-            select count(1)
-            from fe_sensor_history h
-            where h.sensor_id = s.sensor_id
-            <include refid="latestValidBatteryWindow"/>
-              and h.battery_level &lt;= 20
-        ) = 3
-    </sql>
-
-    <sql id="latestFirePointSnapshotWindow">
-        and fs.snapshot_time is not null
-        and fs.snapshot_time &lt; #{endTimeExclusive}
-        and (
-            select count(1)
-            from fe_fire_point_device_snapshot fs2
-            where fs2.fire_point_id = fs.fire_point_id
-              and fs2.snapshot_time is not null
-              and fs2.snapshot_time &lt; #{endTimeExclusive}
-              and (
-                  fs2.snapshot_time &gt; fs.snapshot_time
-                  or (fs2.snapshot_time = fs.snapshot_time and fs2.snapshot_id &gt; fs.snapshot_id)
-              )
-        ) &lt; 3
+              and h.create_time is not null
+              and h.create_time &lt; #{endTimeExclusive}
+              and h.battery_level is not null
+        ) = '1,1,1'
     </sql>
 
     <sql id="confirmedFirePointShortagePredicate">
         f.expected_extinguisher_count is not null
         and f.expected_extinguisher_count &gt; 0
         and (
-            select count(1)
+            select substring_index(
+                group_concat(
+                    case
+                        when fs.expected_extinguisher_count is not null
+                             and fs.expected_extinguisher_count &gt; 0
+                             and fs.actual_extinguisher_count &lt; fs.expected_extinguisher_count
+                        then '1'
+                        else '0'
+                    end
+                    order by fs.snapshot_time desc, fs.snapshot_id desc
+                ),
+                ',', 3
+            )
             from fe_fire_point_device_snapshot fs
             where fs.fire_point_id = f.fire_point_id
-            <include refid="latestFirePointSnapshotWindow"/>
-        ) = 3
-        and (
-            select count(1)
-            from fe_fire_point_device_snapshot fs
-            where fs.fire_point_id = f.fire_point_id
-            <include refid="latestFirePointSnapshotWindow"/>
-              and fs.expected_extinguisher_count is not null
-              and fs.expected_extinguisher_count &gt; 0
-              and fs.actual_extinguisher_count &lt; fs.expected_extinguisher_count
-        ) = 3
+              and fs.snapshot_time is not null
+              and fs.snapshot_time &lt; #{endTimeExclusive}
+        ) = '1,1,1'
     </sql>
 
     <select id="selectOverview" parameterType="com.ruoyi.manage.domain.report.DeviceReportQuery" resultType="com.ruoyi.manage.domain.report.DeviceReportOverview">
