@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeIotCardMapper">
+
+    <resultMap id="FeIotCardResult" type="FeIotCard">
+        <result property="cardId" column="card_id" />
+        <result property="iccid" column="iccid" />
+        <result property="msisdn" column="msisdn" />
+        <result property="providerAccount" column="provider_account" />
+        <result property="cardStatus" column="card_status" />
+        <result property="cardStatusName" column="card_status_name" />
+        <result property="activeTime" column="active_time" />
+        <result property="packageName" column="package_name" />
+        <result property="totalFlow" column="total_flow" />
+        <result property="usedFlow" column="used_flow" />
+        <result property="leftFlow" column="left_flow" />
+        <result property="packageStartDate" column="package_start_date" />
+        <result property="packageStopDate" column="package_stop_date" />
+        <result property="periodStartDate" column="period_start_date" />
+        <result property="periodStopDate" column="period_stop_date" />
+        <result property="period" column="period" />
+        <result property="currentMonth" column="current_month" />
+        <result property="monthUsedFlow" column="month_used_flow" />
+        <result property="expiryLevel" column="expiry_level" />
+        <result property="flowLevel" column="flow_level" />
+        <result property="riskSummary" column="risk_summary" />
+        <result property="gatewayId" column="gateway_id" />
+        <result property="gatewayImei" column="gateway_imei" />
+        <result property="firePointId" column="fire_point_id" />
+        <result property="firePointName" column="fire_point_name" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="sourceDeptId" column="source_dept_id" />
+        <result property="sourceDeptName" column="source_dept_name" />
+        <result property="dataSource" column="data_source" />
+        <result property="syncStatus" column="sync_status" />
+        <result property="syncMessage" column="sync_message" />
+        <result property="lastSyncTime" column="last_sync_time" />
+        <result property="rawCardInfo" column="raw_card_info" />
+        <result property="rawPackageInfo" column="raw_package_info" />
+        <result property="rawMonthFlow" column="raw_month_flow" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="delFlag" column="del_flag" />
+    </resultMap>
+
+    <sql id="selectFeIotCardVo">
+        select c.card_id, c.iccid, c.msisdn, c.provider_account, c.card_status, c.card_status_name,
+               c.active_time, c.package_name, c.total_flow, c.used_flow, c.left_flow,
+               c.package_start_date, c.package_stop_date, c.period_start_date, c.period_stop_date, c.period,
+               c.current_month, c.month_used_flow, c.expiry_level, c.flow_level, c.risk_summary,
+               c.gateway_id, c.gateway_imei, c.fire_point_id, fp.fire_point_name,
+               c.dept_id, d.dept_name, c.source_dept_id, sd.dept_name as source_dept_name,
+               c.data_source, c.sync_status, c.sync_message, c.last_sync_time,
+               c.raw_card_info, c.raw_package_info, c.raw_month_flow,
+               c.remark, c.create_by, c.create_time, c.update_by, c.update_time, c.del_flag
+        from fe_iot_card c
+        left join fe_fire_point fp on c.fire_point_id = fp.fire_point_id
+        left join sys_dept d on c.dept_id = d.dept_id
+        left join sys_dept sd on c.source_dept_id = sd.dept_id
+    </sql>
+
+    <select id="selectFeIotCardByCardId" parameterType="Long" resultMap="FeIotCardResult">
+        <include refid="selectFeIotCardVo" />
+        where c.card_id = #{cardId}
+          and c.del_flag = '0'
+    </select>
+
+    <select id="selectFeIotCardList" parameterType="FeIotCard" resultMap="FeIotCardResult">
+        <include refid="selectFeIotCardVo" />
+        <where>
+            c.del_flag = '0'
+            <if test="iccid != null and iccid != ''"> and c.iccid like concat('%', #{iccid}, '%')</if>
+            <if test="msisdn != null and msisdn != ''"> and c.msisdn like concat('%', #{msisdn}, '%')</if>
+            <if test="providerAccount != null and providerAccount != ''"> and c.provider_account = #{providerAccount}</if>
+            <if test="cardStatus != null"> and c.card_status = #{cardStatus}</if>
+            <if test="expiryLevel != null and expiryLevel != ''"> and c.expiry_level = #{expiryLevel}</if>
+            <if test="flowLevel != null and flowLevel != ''"> and c.flow_level = #{flowLevel}</if>
+            <if test="syncStatus != null and syncStatus != ''"> and c.sync_status = #{syncStatus}</if>
+            <if test="gatewayImei != null and gatewayImei != ''"> and c.gateway_imei like concat('%', #{gatewayImei}, '%')</if>
+        </where>
+        order by c.last_sync_time desc, c.card_id desc
+    </select>
+
+    <select id="selectSyncableCards" resultMap="FeIotCardResult">
+        <include refid="selectFeIotCardVo" />
+        where c.del_flag = '0'
+          and c.iccid is not null
+          and c.iccid != ''
+        order by c.card_id asc
+    </select>
+
+    <insert id="insertFeIotCard" parameterType="FeIotCard" useGeneratedKeys="true" keyProperty="cardId">
+        insert into fe_iot_card
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="iccid != null and iccid != ''">iccid,</if>
+            <if test="msisdn != null and msisdn != ''">msisdn,</if>
+            <if test="providerAccount != null">provider_account,</if>
+            <if test="cardStatus != null">card_status,</if>
+            <if test="cardStatusName != null">card_status_name,</if>
+            <if test="activeTime != null">active_time,</if>
+            <if test="dataSource != null">data_source,</if>
+            <if test="syncStatus != null">sync_status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="iccid != null and iccid != ''">#{iccid},</if>
+            <if test="msisdn != null and msisdn != ''">#{msisdn},</if>
+            <if test="providerAccount != null">#{providerAccount},</if>
+            <if test="cardStatus != null">#{cardStatus},</if>
+            <if test="cardStatusName != null">#{cardStatusName},</if>
+            <if test="activeTime != null">#{activeTime},</if>
+            <if test="dataSource != null">#{dataSource},</if>
+            <if test="syncStatus != null">#{syncStatus},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+        </trim>
+    </insert>
+
+    <update id="updateFeIotCard" parameterType="FeIotCard">
+        update fe_iot_card
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="msisdn != null">msisdn = #{msisdn},</if>
+            <if test="providerAccount != null">provider_account = #{providerAccount},</if>
+            <if test="cardStatus != null">card_status = #{cardStatus},</if>
+            <if test="cardStatusName != null">card_status_name = #{cardStatusName},</if>
+            <if test="activeTime != null">active_time = #{activeTime},</if>
+            <if test="packageName != null">package_name = #{packageName},</if>
+            <if test="totalFlow != null">total_flow = #{totalFlow},</if>
+            <if test="usedFlow != null">used_flow = #{usedFlow},</if>
+            <if test="leftFlow != null">left_flow = #{leftFlow},</if>
+            <if test="packageStartDate != null">package_start_date = #{packageStartDate},</if>
+            <if test="packageStopDate != null">package_stop_date = #{packageStopDate},</if>
+            <if test="periodStartDate != null">period_start_date = #{periodStartDate},</if>
+            <if test="periodStopDate != null">period_stop_date = #{periodStopDate},</if>
+            <if test="period != null">period = #{period},</if>
+            <if test="currentMonth != null">current_month = #{currentMonth},</if>
+            <if test="monthUsedFlow != null">month_used_flow = #{monthUsedFlow},</if>
+            <if test="expiryLevel != null">expiry_level = #{expiryLevel},</if>
+            <if test="flowLevel != null">flow_level = #{flowLevel},</if>
+            <if test="riskSummary != null">risk_summary = #{riskSummary},</if>
+            <if test="gatewayId != null">gateway_id = #{gatewayId},</if>
+            <if test="gatewayImei != null">gateway_imei = #{gatewayImei},</if>
+            <if test="firePointId != null">fire_point_id = #{firePointId},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="sourceDeptId != null">source_dept_id = #{sourceDeptId},</if>
+            <if test="dataSource != null">data_source = #{dataSource},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="syncMessage != null">sync_message = #{syncMessage},</if>
+            <if test="lastSyncTime != null">last_sync_time = #{lastSyncTime},</if>
+            <if test="rawCardInfo != null">raw_card_info = #{rawCardInfo},</if>
+            <if test="rawPackageInfo != null">raw_package_info = #{rawPackageInfo},</if>
+            <if test="rawMonthFlow != null">raw_month_flow = #{rawMonthFlow},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where card_id = #{cardId}
+    </update>
+
+    <insert id="insertFromGatewaySims" parameterType="FeIotCard">
+        insert into fe_iot_card (
+            iccid, provider_account, gateway_id, gateway_imei, fire_point_id, dept_id, source_dept_id,
+            data_source, sync_status, create_by, create_time, update_by, update_time, del_flag
+        )
+        select s.iccid, #{providerAccount}, g.gateway_id, g.imei, g.fire_point_id, g.dept_id, g.source_dept_id,
+               #{dataSource}, #{syncStatus}, #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, '0'
+        from (
+            select trim(sim) as iccid, min(gateway_id) as gateway_id
+            from fe_gateway
+            where sim is not null
+              and trim(sim) != ''
+              and (del_flag is null or del_flag = '0')
+            group by trim(sim)
+        ) s
+        inner join fe_gateway g on g.gateway_id = s.gateway_id
+        on duplicate key update
+            gateway_id = ifnull(fe_iot_card.gateway_id, values(gateway_id)),
+            gateway_imei = ifnull(fe_iot_card.gateway_imei, values(gateway_imei)),
+            fire_point_id = ifnull(fe_iot_card.fire_point_id, values(fire_point_id)),
+            dept_id = ifnull(fe_iot_card.dept_id, values(dept_id)),
+            source_dept_id = ifnull(fe_iot_card.source_dept_id, values(source_dept_id)),
+            update_by = values(update_by),
+            update_time = values(update_time)
+    </insert>
+
+    <insert id="upsertMonthFlow" parameterType="FeIotCardMonthFlow">
+        insert into fe_iot_card_month_flow (
+            card_id, iccid, flow_month, month_used_flow, raw_response, sync_time,
+            create_by, create_time, update_by, update_time
+        ) values (
+            #{cardId}, #{iccid}, #{flowMonth}, #{monthUsedFlow}, #{rawResponse}, #{syncTime},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}
+        )
+        on duplicate key update
+            card_id = values(card_id),
+            month_used_flow = values(month_used_flow),
+            raw_response = values(raw_response),
+            sync_time = values(sync_time),
+            update_by = values(update_by),
+            update_time = values(update_time)
+    </insert>
+
+    <insert id="insertSyncLog" parameterType="FeIotCardSyncLog" useGeneratedKeys="true" keyProperty="syncLogId">
+        insert into fe_iot_card_sync_log (
+            sync_scope, sync_status, start_time, end_time, total_count, success_count, fail_count, message,
+            create_by, create_time, update_by, update_time
+        ) values (
+            #{syncScope}, #{syncStatus}, #{startTime}, #{endTime}, #{totalCount}, #{successCount}, #{failCount}, #{message},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}
+        )
+    </insert>
+
+    <update id="updateSyncLog" parameterType="FeIotCardSyncLog">
+        update fe_iot_card_sync_log
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="totalCount != null">total_count = #{totalCount},</if>
+            <if test="successCount != null">success_count = #{successCount},</if>
+            <if test="failCount != null">fail_count = #{failCount},</if>
+            <if test="message != null">message = #{message},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where sync_log_id = #{syncLogId}
+    </update>
+</mapper>

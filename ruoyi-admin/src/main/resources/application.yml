@@ -28,6 +28,13 @@ azdaps:
   pageLimit: 100
   historyUnit: hour
 
+# Hodo IOT card sync. Keep disabled locally because the API whitelist points to the server IP.
+hodo:
+  iot-card:
+    sync-enabled: false
+    connect-timeout-ms: 10000
+    read-timeout-ms: 30000
+
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为8080
