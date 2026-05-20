@@ -85,6 +85,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     private static final String ACTIVE_YES = "1";
     private static final String ACTIVE_NO = "0";
     private static final String SOURCE_SDK = "sdk";
+    private static final String DEPT_SOURCE_PLATFORM_ROOT = "platform_root";
     private static final String DEPT_SOURCE_SDK_COMPANY = "sdk_company";
     private static final String SENSOR_STATUS_NORMAL = "0";
     private static final String SENSOR_STATUS_OFFLINE = "2";
@@ -903,6 +904,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         {
             dept.setUpdateBy(operator);
             sysDeptService.updateDept(dept);
+            sysDeptMapper.updateDeptSdkCompanyMirror(dept);
             existing = sysDeptMapper.selectDeptByExternalCompanyId(externalCompanyId);
         }
         mirrored.add(externalCompanyId);
@@ -930,6 +932,20 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
                 }
             }
         }
+        return resolveSdkCompanyRootDeptId(config);
+    }
+
+    private Long resolveSdkCompanyRootDeptId(SysDeptApiConfig config)
+    {
+        SysDept query = new SysDept();
+        query.setDeptSource(DEPT_SOURCE_PLATFORM_ROOT);
+        List<SysDept> roots = sysDeptMapper.selectDeptList(query);
+        if (roots != null && !roots.isEmpty())
+        {
+            return roots.get(0).getDeptId();
+        }
+        log.warn("SDK company mirror platform root is missing, fallback to api config dept, configId={}, deptId={}",
+                config.getConfigId(), config.getDeptId());
         return config.getDeptId();
     }
 

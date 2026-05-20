@@ -24,13 +24,16 @@ import com.ruoyi.system.service.ISysDeptService;
 
 /**
  * 部门信息
- * 
+ *
  * @author ruoyi
  */
 @RestController
 @RequestMapping("/system/dept")
 public class SysDeptController extends BaseController
 {
+    private static final String DEPT_SOURCE_PLATFORM_ROOT = "platform_root";
+    private static final String DEPT_SOURCE_SDK_COMPANY = "sdk_company";
+
     @Autowired
     private ISysDeptService deptService;
 
@@ -46,7 +49,7 @@ public class SysDeptController extends BaseController
     }
 
     /**
-     * 查询部门列表（排除节点）
+     * 查询部门列表，排除节点。
      */
     @PreAuthorize("@ss.hasPermi('system:dept:list')")
     @GetMapping("/list/exclude/{deptId}")
@@ -76,6 +79,10 @@ public class SysDeptController extends BaseController
     @PostMapping
     public AjaxResult add(@Validated @RequestBody SysDept dept)
     {
+        if (isSourceControlledDept(dept))
+        {
+            return error("SDK镜像单位由同步维护，不允许手工新增");
+        }
         if (!deptService.checkDeptNameUnique(dept))
         {
             return error("新增部门'" + dept.getDeptName() + "'失败，部门名称已存在");
@@ -94,6 +101,11 @@ public class SysDeptController extends BaseController
     {
         Long deptId = dept.getDeptId();
         deptService.checkDeptDataScope(deptId);
+        SysDept oldDept = deptService.selectDeptById(deptId);
+        if (isSourceControlledDept(oldDept) && sourceControlledFieldsChanged(oldDept, dept))
+        {
+            return error("SDK镜像单位的单位名称和上级单位由同步维护，不允许手工修改");
+        }
         if (!deptService.checkDeptNameUnique(dept))
         {
             return error("修改部门'" + dept.getDeptName() + "'失败，部门名称已存在");
@@ -104,7 +116,7 @@ public class SysDeptController extends BaseController
         }
         else if (StringUtils.equals(UserConstants.DEPT_DISABLE, dept.getStatus()) && deptService.selectNormalChildrenDeptById(deptId) > 0)
         {
-            return error("该部门包含未停用的子部门！");
+            return error("该部门包含未停用的子部门");
         }
         dept.setUpdateBy(getUsername());
         return toAjax(deptService.updateDept(dept));
@@ -118,15 +130,32 @@ public class SysDeptController extends BaseController
     @DeleteMapping("/{deptId}")
     public AjaxResult remove(@PathVariable Long deptId)
     {
+        SysDept dept = deptService.selectDeptById(deptId);
+        if (isSourceControlledDept(dept))
+        {
+            return warn("SDK镜像单位由同步维护，不允许手工删除");
+        }
         if (deptService.hasChildByDeptId(deptId))
         {
-            return warn("存在下级部门,不允许删除");
+            return warn("存在下级部门，不允许删除");
         }
         if (deptService.checkDeptExistUser(deptId))
         {
-            return warn("部门存在用户,不允许删除");
+            return warn("部门存在用户，不允许删除");
         }
         deptService.checkDeptDataScope(deptId);
         return toAjax(deptService.deleteDeptById(deptId));
+    }
+
+    private boolean isSourceControlledDept(SysDept dept)
+    {
+        return dept != null && (StringUtils.equals(DEPT_SOURCE_PLATFORM_ROOT, dept.getDeptSource())
+                || StringUtils.equals(DEPT_SOURCE_SDK_COMPANY, dept.getDeptSource()));
+    }
+
+    private boolean sourceControlledFieldsChanged(SysDept oldDept, SysDept dept)
+    {
+        return !StringUtils.equals(oldDept.getDeptName(), dept.getDeptName())
+                || !StringUtils.equals(String.valueOf(oldDept.getParentId()), String.valueOf(dept.getParentId()));
     }
 }

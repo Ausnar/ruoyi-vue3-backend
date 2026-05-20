@@ -118,6 +118,14 @@ public interface SysDeptMapper
     public int updateDept(SysDept dept);
 
     /**
+     * 更新 SDK 镜像单位字段，包含可置空的外部父级字段。
+     *
+     * @param dept 单位镜像信息
+     * @return 结果
+     */
+    public int updateDeptSdkCompanyMirror(SysDept dept);
+
+    /**
      * 修改所在部门正常状态
      *
      * @param deptIds 部门ID组

@@ -56,6 +56,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			AND status = #{status}
 		</if>
 		<!-- 数据范围过滤 -->
+		<if test="deptSource != null and deptSource != ''">
+			AND dept_source = #{deptSource}
+		</if>
 		${params.dataScope}
 		order by d.parent_id, d.order_num
     </select>
@@ -193,6 +196,24 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
  			update_time = sysdate()
  		</set>
  		where dept_id = #{deptId}
+	</update>
+
+	<update id="updateDeptSdkCompanyMirror" parameterType="SysDept">
+		update sys_dept
+		set parent_id = #{parentId},
+			dept_name = #{deptName},
+			ancestors = #{ancestors},
+			order_num = #{orderNum},
+			dept_source = #{deptSource},
+			external_company_id = #{externalCompanyId},
+			external_parent_company_id = #{externalParentCompanyId},
+			external_org_path = #{externalOrgPath},
+			source_api_config_id = #{sourceApiConfigId},
+			last_company_sync_time = #{lastCompanySyncTime},
+			status = #{status},
+			update_by = #{updateBy},
+			update_time = sysdate()
+		where dept_id = #{deptId}
 	</update>
 
 	<update id="updateDeptChildren" parameterType="java.util.List">
