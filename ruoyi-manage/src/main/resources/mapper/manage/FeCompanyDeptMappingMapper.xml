@@ -16,6 +16,22 @@
         <result property="updateTime" column="update_time" />
     </resultMap>
 
+    <resultMap id="FeCompanyDeptMappingDiffResult" type="FeCompanyDeptMappingDiff">
+        <result property="externalCompanyId" column="external_company_id" />
+        <result property="externalCompanyName" column="external_company_name" />
+        <result property="oldMappingDeptId" column="old_mapping_dept_id" />
+        <result property="oldMappingDeptName" column="old_mapping_dept_name" />
+        <result property="sdkDeptId" column="sdk_dept_id" />
+        <result property="sdkDeptName" column="sdk_dept_name" />
+        <result property="sdkParentDeptId" column="sdk_parent_dept_id" />
+        <result property="sdkParentDeptName" column="sdk_parent_dept_name" />
+        <result property="diffStatus" column="diff_status" />
+        <result property="firePointCount" column="fire_point_count" />
+        <result property="gatewayCount" column="gateway_count" />
+        <result property="sensorCount" column="sensor_count" />
+        <result property="extinguisherCount" column="extinguisher_count" />
+    </resultMap>
+
     <sql id="selectFeCompanyDeptMappingVo">
         select m.mapping_id, m.external_company_id, m.external_company_name, m.dept_id,
                d.dept_name, m.sync_status, m.remark, m.create_by, m.create_time, m.update_by, m.update_time
@@ -44,6 +60,87 @@
             <if test="syncStatus != null and syncStatus != ''"> and m.sync_status = #{syncStatus}</if>
         </where>
         order by m.mapping_id desc
+    </select>
+
+    <select id="selectCompanyDeptMappingDiffList" parameterType="FeCompanyDeptMappingDiff" resultMap="FeCompanyDeptMappingDiffResult">
+        select *
+        from (
+            select base.external_company_id,
+                   coalesce(ec.external_company_name, m.external_company_name, sdk.dept_name) as external_company_name,
+                   coalesce(sdk.dept_id, m.dept_id) as dept_id,
+                   m.dept_id as old_mapping_dept_id,
+                   old_dept.dept_name as old_mapping_dept_name,
+                   sdk.dept_id as sdk_dept_id,
+                   sdk.dept_name as sdk_dept_name,
+                   sdk.parent_id as sdk_parent_dept_id,
+                   sdk_parent.dept_name as sdk_parent_dept_name,
+                   case
+                       when sdk.dept_id is null then 'no_sdk_mirror'
+                       when m.mapping_id is null then 'no_old_mapping'
+                       when m.dept_id = sdk.dept_id then 'same_dept'
+                       when old_dept.dept_name = sdk.dept_name then 'same_name_dept_diff'
+                       else 'dept_diff'
+                   end as diff_status,
+                   ifnull(fp.fire_point_count, 0) as fire_point_count,
+                   ifnull(gw.gateway_count, 0) as gateway_count,
+                   ifnull(se.sensor_count, 0) as sensor_count,
+                   ifnull(ex.extinguisher_count, 0) as extinguisher_count
+            from (
+                select external_company_id from fe_external_company where external_company_id is not null
+                union
+                select external_company_id from fe_company_dept_mapping where external_company_id is not null
+                union
+                select external_company_id from sys_dept where dept_source = 'sdk_company' and external_company_id is not null
+            ) base
+            left join fe_external_company ec on base.external_company_id = ec.external_company_id
+            left join fe_company_dept_mapping m on base.external_company_id = m.external_company_id
+            left join sys_dept old_dept on m.dept_id = old_dept.dept_id
+            left join sys_dept sdk on base.external_company_id = sdk.external_company_id and sdk.dept_source = 'sdk_company'
+            left join sys_dept sdk_parent on sdk.parent_id = sdk_parent.dept_id
+            left join (
+                select external_company_id, count(1) as fire_point_count
+                from fe_fire_point
+                where external_company_id is not null and (del_flag is null or del_flag = '0')
+                group by external_company_id
+            ) fp on base.external_company_id = fp.external_company_id
+            left join (
+                select external_company_id, count(1) as gateway_count
+                from fe_gateway
+                where external_company_id is not null and (del_flag is null or del_flag = '0')
+                group by external_company_id
+            ) gw on base.external_company_id = gw.external_company_id
+            left join (
+                select g.external_company_id, count(1) as sensor_count
+                from fe_sensor s
+                inner join fe_gateway g on s.gateway_id = g.gateway_id
+                where g.external_company_id is not null and (s.del_flag is null or s.del_flag = '0')
+                group by g.external_company_id
+            ) se on base.external_company_id = se.external_company_id
+            left join (
+                select external_company_id, count(1) as extinguisher_count
+                from fe_extinguisher
+                where external_company_id is not null and (del_flag is null or del_flag = '0')
+                group by external_company_id
+            ) ex on base.external_company_id = ex.external_company_id
+        ) t
+        <where>
+            <if test="externalCompanyId != null"> and t.external_company_id = #{externalCompanyId}</if>
+            <if test="externalCompanyName != null and externalCompanyName != ''">
+                and t.external_company_name like concat('%', #{externalCompanyName}, '%')
+            </if>
+            <if test="diffStatus != null and diffStatus != ''"> and t.diff_status = #{diffStatus}</if>
+            ${params.dataScope}
+        </where>
+        order by
+            case t.diff_status
+                when 'dept_diff' then 1
+                when 'same_name_dept_diff' then 2
+                when 'no_sdk_mirror' then 3
+                when 'no_old_mapping' then 4
+                else 5
+            end,
+            (t.fire_point_count + t.gateway_count + t.sensor_count + t.extinguisher_count) desc,
+            t.external_company_id asc
     </select>
 
     <insert id="insertFeCompanyDeptMapping" parameterType="FeCompanyDeptMapping" useGeneratedKeys="true" keyProperty="mappingId">

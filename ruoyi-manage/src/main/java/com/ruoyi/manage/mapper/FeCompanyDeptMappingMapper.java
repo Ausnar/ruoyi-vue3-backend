@@ -4,6 +4,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
 import com.ruoyi.manage.domain.FeCompanyDeptMapping;
+import com.ruoyi.manage.domain.FeCompanyDeptMappingDiff;
 
 public interface FeCompanyDeptMappingMapper
 {
@@ -12,6 +13,8 @@ public interface FeCompanyDeptMappingMapper
     FeCompanyDeptMapping selectByExternalCompanyId(Long externalCompanyId);
 
     List<FeCompanyDeptMapping> selectFeCompanyDeptMappingList(FeCompanyDeptMapping mapping);
+
+    List<FeCompanyDeptMappingDiff> selectCompanyDeptMappingDiffList(FeCompanyDeptMappingDiff diff);
 
     int insertFeCompanyDeptMapping(FeCompanyDeptMapping mapping);
 
