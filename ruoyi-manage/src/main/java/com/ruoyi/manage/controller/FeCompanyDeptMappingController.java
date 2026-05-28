@@ -19,6 +19,7 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.manage.domain.FeCompanyDeptMapping;
+import com.ruoyi.manage.domain.FeCompanyDeptMappingDiff;
 import com.ruoyi.manage.domain.FeExternalCompany;
 import com.ruoyi.manage.service.IFeCompanyDeptMappingService;
 
@@ -74,6 +75,15 @@ public class FeCompanyDeptMappingController extends BaseController
     public AjaxResult externalCompanies(FeExternalCompany company)
     {
         return success(feCompanyDeptMappingService.selectExternalCompanyOptions(company));
+    }
+
+    @PreAuthorize("@ss.hasPermi('manage:companyDeptMapping:list')")
+    @GetMapping("/diff/list")
+    public TableDataInfo diffList(FeCompanyDeptMappingDiff diff)
+    {
+        startPage();
+        List<FeCompanyDeptMappingDiff> list = feCompanyDeptMappingService.selectCompanyDeptMappingDiffList(diff);
+        return getDataTable(list);
     }
 
     @PreAuthorize("@ss.hasPermi('manage:companyDeptMapping:export')")

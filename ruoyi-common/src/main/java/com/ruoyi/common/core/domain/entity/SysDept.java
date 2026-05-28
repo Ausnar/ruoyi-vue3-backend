@@ -1,6 +1,7 @@
 package com.ruoyi.common.core.domain.entity;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
@@ -12,7 +13,7 @@ import com.ruoyi.common.core.domain.BaseEntity;
 
 /**
  * 部门表 sys_dept
- * 
+ *
  * @author ruoyi
  */
 public class SysDept extends BaseEntity
@@ -58,6 +59,24 @@ public class SysDept extends BaseEntity
     /** 纬度 */
     private String latitude;
 
+    /** Dept source: platform_root/sdk_company/manual */
+    private String deptSource;
+
+    /** SDK external company ID */
+    private Long externalCompanyId;
+
+    /** SDK external parent company ID */
+    private Long externalParentCompanyId;
+
+    /** SDK external company org path */
+    private String externalOrgPath;
+
+    /** Latest source API config ID */
+    private Long sourceApiConfigId;
+
+    /** Latest SDK company sync time */
+    private Date lastCompanySyncTime;
+
     /** 部门状态:0正常,1停用 */
     private String status;
 
@@ -66,7 +85,7 @@ public class SysDept extends BaseEntity
 
     /** 父部门名称 */
     private String parentName;
-    
+
     /** 子部门 */
     private List<SysDept> children = new ArrayList<SysDept>();
 
@@ -206,6 +225,66 @@ public class SysDept extends BaseEntity
         this.latitude = latitude;
     }
 
+    public String getDeptSource()
+    {
+        return deptSource;
+    }
+
+    public void setDeptSource(String deptSource)
+    {
+        this.deptSource = deptSource;
+    }
+
+    public Long getExternalCompanyId()
+    {
+        return externalCompanyId;
+    }
+
+    public void setExternalCompanyId(Long externalCompanyId)
+    {
+        this.externalCompanyId = externalCompanyId;
+    }
+
+    public Long getExternalParentCompanyId()
+    {
+        return externalParentCompanyId;
+    }
+
+    public void setExternalParentCompanyId(Long externalParentCompanyId)
+    {
+        this.externalParentCompanyId = externalParentCompanyId;
+    }
+
+    public String getExternalOrgPath()
+    {
+        return externalOrgPath;
+    }
+
+    public void setExternalOrgPath(String externalOrgPath)
+    {
+        this.externalOrgPath = externalOrgPath;
+    }
+
+    public Long getSourceApiConfigId()
+    {
+        return sourceApiConfigId;
+    }
+
+    public void setSourceApiConfigId(Long sourceApiConfigId)
+    {
+        this.sourceApiConfigId = sourceApiConfigId;
+    }
+
+    public Date getLastCompanySyncTime()
+    {
+        return lastCompanySyncTime;
+    }
+
+    public void setLastCompanySyncTime(Date lastCompanySyncTime)
+    {
+        this.lastCompanySyncTime = lastCompanySyncTime;
+    }
+
     public String getStatus()
     {
         return status;
@@ -262,6 +341,12 @@ public class SysDept extends BaseEntity
             .append("area", getArea())
             .append("longitude", getLongitude())
             .append("latitude", getLatitude())
+            .append("deptSource", getDeptSource())
+            .append("externalCompanyId", getExternalCompanyId())
+            .append("externalParentCompanyId", getExternalParentCompanyId())
+            .append("externalOrgPath", getExternalOrgPath())
+            .append("sourceApiConfigId", getSourceApiConfigId())
+            .append("lastCompanySyncTime", getLastCompanySyncTime())
             .append("status", getStatus())
             .append("delFlag", getDelFlag())
             .append("createBy", getCreateBy())

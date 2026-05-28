@@ -38,6 +38,7 @@ import org.springframework.web.util.UriUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ruoyi.common.core.domain.entity.SysDept;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.manage.config.AzdapsProperties;
 import com.ruoyi.manage.domain.FeApiConfigCompanyScope;
@@ -64,7 +65,9 @@ import com.ruoyi.manage.mapper.FeSensorMapper;
 import com.ruoyi.manage.service.IFeDeviceSdkSyncService;
 import com.ruoyi.manage.service.IFeDeviceWarningScanService;
 import com.ruoyi.system.domain.SysDeptApiConfig;
+import com.ruoyi.system.mapper.SysDeptMapper;
 import com.ruoyi.system.service.ISysDeptApiConfigService;
+import com.ruoyi.system.service.ISysDeptService;
 import com.ruoyi.visit.service.IFeVisitPassiveEventService;
 import com.ruoyi.visit.util.VisitGeoUtils;
 
@@ -82,6 +85,8 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     private static final String ACTIVE_YES = "1";
     private static final String ACTIVE_NO = "0";
     private static final String SOURCE_SDK = "sdk";
+    private static final String DEPT_SOURCE_PLATFORM_ROOT = "platform_root";
+    private static final String DEPT_SOURCE_SDK_COMPANY = "sdk_company";
     private static final String SENSOR_STATUS_NORMAL = "0";
     private static final String SENSOR_STATUS_OFFLINE = "2";
     private static final String EXTINGUISHER_STATUS_NORMAL = "0";
@@ -101,6 +106,8 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     @Autowired private AzdapsProperties azdapsProperties;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private ISysDeptApiConfigService sysDeptApiConfigService;
+    @Autowired private ISysDeptService sysDeptService;
+    @Autowired private SysDeptMapper sysDeptMapper;
     @Autowired private FeFirePointMapper feFirePointMapper;
     @Autowired private FeGatewayMapper feGatewayMapper;
     @Autowired private FeSensorMapper feSensorMapper;
@@ -815,6 +822,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         {
             return;
         }
+        Map<Long, JsonNode> companyNodeMap = new LinkedHashMap<>();
         for (JsonNode companyNode : companyNodes)
         {
             Long externalCompanyId = readLong(companyNode, "id");
@@ -826,9 +834,127 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             if (externalCompanyId != null)
             {
                 syncedCompanyIds.add(externalCompanyId);
+                companyNodeMap.put(externalCompanyId, companyNode);
             }
         }
+        Set<Long> visiting = new TreeSet<>();
+        Set<Long> mirrored = new TreeSet<>();
+        for (JsonNode companyNode : companyNodes)
+        {
+            upsertSdkCompanyDept(companyNode, companyNodeMap, config, operator, visiting, mirrored);
+        }
     }
+
+    private SysDept upsertSdkCompanyDept(JsonNode companyNode, Map<Long, JsonNode> companyNodeMap, SysDeptApiConfig config,
+                                         String operator, Set<Long> visiting, Set<Long> mirrored)
+    {
+        Long externalCompanyId = readLong(companyNode, "id");
+        if (externalCompanyId == null)
+        {
+            return null;
+        }
+        SysDept existing = sysDeptMapper.selectDeptByExternalCompanyId(externalCompanyId);
+        if (mirrored.contains(externalCompanyId) && existing != null)
+        {
+            return existing;
+        }
+        if (visiting.contains(externalCompanyId))
+        {
+            log.warn("Skip cyclic SDK company dept mirror, externalCompanyId={}", externalCompanyId);
+            return existing;
+        }
+
+        visiting.add(externalCompanyId);
+        Long parentExternalCompanyId = readLong(companyNode, "parent");
+        Long parentDeptId = resolveSdkCompanyParentDeptId(externalCompanyId, parentExternalCompanyId, companyNodeMap, config, operator, visiting, mirrored);
+        SysDept parentDept = parentDeptId == null ? null : sysDeptMapper.selectDeptById(parentDeptId);
+        if (parentDept == null)
+        {
+            visiting.remove(externalCompanyId);
+            log.warn("Skip SDK company dept mirror because parent dept is missing, externalCompanyId={}, parentDeptId={}", externalCompanyId, parentDeptId);
+            return existing;
+        }
+
+        Date now = DateUtils.getNowDate();
+        String companyName = normalizeDeptName(readText(companyNode, "name"), externalCompanyId);
+        String orgPath = readText(companyNode, "org_path");
+        SysDept dept = existing == null ? new SysDept() : existing;
+        dept.setParentId(parentDept.getDeptId());
+        dept.setDeptName(companyName);
+        dept.setDeptSource(DEPT_SOURCE_SDK_COMPANY);
+        dept.setExternalCompanyId(externalCompanyId);
+        dept.setExternalParentCompanyId(parentExternalCompanyId);
+        dept.setExternalOrgPath(StringUtils.left(orgPath, 500));
+        dept.setSourceApiConfigId(config.getConfigId());
+        dept.setLastCompanySyncTime(now);
+        dept.setStatus("0");
+        if (dept.getOrderNum() == null)
+        {
+            Integer maxOrderNum = sysDeptMapper.selectMaxOrderNumByParentId(parentDept.getDeptId());
+            dept.setOrderNum(maxOrderNum == null ? 1 : maxOrderNum + 1);
+        }
+
+        if (existing == null)
+        {
+            dept.setCreateBy(operator);
+            sysDeptService.insertDept(dept);
+            existing = sysDeptMapper.selectDeptByExternalCompanyId(externalCompanyId);
+        }
+        else
+        {
+            dept.setUpdateBy(operator);
+            sysDeptService.updateDept(dept);
+            sysDeptMapper.updateDeptSdkCompanyMirror(dept);
+            existing = sysDeptMapper.selectDeptByExternalCompanyId(externalCompanyId);
+        }
+        mirrored.add(externalCompanyId);
+        visiting.remove(externalCompanyId);
+        return existing;
+    }
+
+    private Long resolveSdkCompanyParentDeptId(Long externalCompanyId, Long parentExternalCompanyId, Map<Long, JsonNode> companyNodeMap,
+                                               SysDeptApiConfig config, String operator, Set<Long> visiting, Set<Long> mirrored)
+    {
+        if (parentExternalCompanyId != null && !Objects.equals(parentExternalCompanyId, externalCompanyId))
+        {
+            SysDept parentDept = sysDeptMapper.selectDeptByExternalCompanyId(parentExternalCompanyId);
+            if (parentDept != null)
+            {
+                return parentDept.getDeptId();
+            }
+            JsonNode parentNode = companyNodeMap.get(parentExternalCompanyId);
+            if (parentNode != null)
+            {
+                parentDept = upsertSdkCompanyDept(parentNode, companyNodeMap, config, operator, visiting, mirrored);
+                if (parentDept != null)
+                {
+                    return parentDept.getDeptId();
+                }
+            }
+        }
+        return resolveSdkCompanyRootDeptId(config);
+    }
+
+    private Long resolveSdkCompanyRootDeptId(SysDeptApiConfig config)
+    {
+        SysDept query = new SysDept();
+        query.setDeptSource(DEPT_SOURCE_PLATFORM_ROOT);
+        List<SysDept> roots = sysDeptMapper.selectDeptList(query);
+        if (roots != null && !roots.isEmpty())
+        {
+            return roots.get(0).getDeptId();
+        }
+        log.warn("SDK company mirror platform root is missing, fallback to api config dept, configId={}, deptId={}",
+                config.getConfigId(), config.getDeptId());
+        return config.getDeptId();
+    }
+
+    private String normalizeDeptName(String companyName, Long externalCompanyId)
+    {
+        String fallback = externalCompanyId == null ? "SDK Company" : "SDK Company " + externalCompanyId;
+        return StringUtils.left(StringUtils.defaultIfBlank(companyName, fallback), 30);
+    }
+
     private FeSensor upsertSensor(JsonNode sensorNode, SysDeptApiConfig config, String operator)
     {
         Long externalSensorId = readLong(sensorNode, "id");
@@ -1229,6 +1355,11 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     private Long resolveDeptId(Long externalCompanyId)
     {
         if (externalCompanyId == null) return null;
+        SysDept dept = sysDeptMapper.selectDeptByExternalCompanyId(externalCompanyId);
+        if (dept != null)
+        {
+            return dept.getDeptId();
+        }
         FeCompanyDeptMapping mapping = feCompanyDeptMappingMapper.selectByExternalCompanyId(externalCompanyId);
         return mapping == null ? null : mapping.getDeptId();
     }

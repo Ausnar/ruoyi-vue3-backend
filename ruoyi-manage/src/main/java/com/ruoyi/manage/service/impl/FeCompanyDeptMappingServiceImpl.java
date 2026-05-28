@@ -5,10 +5,12 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.ruoyi.common.annotation.DataScope;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.manage.domain.FeCompanyDeptMapping;
+import com.ruoyi.manage.domain.FeCompanyDeptMappingDiff;
 import com.ruoyi.manage.domain.FeExternalCompany;
 import com.ruoyi.manage.mapper.FeCompanyDeptMappingMapper;
 import com.ruoyi.manage.mapper.FeExtinguisherMapper;
@@ -55,6 +57,13 @@ public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingSer
             mapping.setDeptId(SecurityUtils.getDeptId());
         }
         return feCompanyDeptMappingMapper.selectFeCompanyDeptMappingList(mapping);
+    }
+
+    @Override
+    @DataScope(deptAlias = "t")
+    public List<FeCompanyDeptMappingDiff> selectCompanyDeptMappingDiffList(FeCompanyDeptMappingDiff diff)
+    {
+        return feCompanyDeptMappingMapper.selectCompanyDeptMappingDiffList(diff);
     }
 
     @Override
