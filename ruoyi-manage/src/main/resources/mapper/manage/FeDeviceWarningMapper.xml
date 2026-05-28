@@ -88,7 +88,10 @@
             <if test="warningType != null and warningType != ''"> and w.warning_type = #{warningType}</if>
             <if test="objectType != null and objectType != ''"> and w.object_type = #{objectType}</if>
             <if test="objectId != null"> and w.object_id = #{objectId}</if>
-            <if test="deptId != null"> and w.dept_id = #{deptId}</if>
+            <if test="deptId != null">
+                and (w.dept_id = #{deptId}
+                    or w.dept_id in (select dept_id from sys_dept where find_in_set(#{deptId}, ancestors)))
+            </if>
             <if test="deptProvince != null and deptProvince != ''"> and d.province = #{deptProvince}</if>
             <if test="deptCity != null and deptCity != ''"> and d.city = #{deptCity}</if>
             <if test="deptArea != null and deptArea != ''"> and d.area = #{deptArea}</if>

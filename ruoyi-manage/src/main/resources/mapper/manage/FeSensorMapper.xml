@@ -52,7 +52,10 @@
         <where>
             <if test="sensorCode != null and sensorCode != ''"> and s.sensor_code = #{sensorCode}</if>
             <if test="externalSensorId != null"> and s.external_sensor_id = #{externalSensorId}</if>
-            <if test="deptId != null"> and s.dept_id = #{deptId}</if>
+            <if test="deptId != null">
+                and (s.dept_id = #{deptId}
+                    or s.dept_id in (select dept_id from sys_dept where find_in_set(#{deptId}, ancestors)))
+            </if>
             <if test="deptProvince != null and deptProvince != ''"> and d.province = #{deptProvince}</if>
             <if test="deptCity != null and deptCity != ''"> and d.city = #{deptCity}</if>
             <if test="deptArea != null and deptArea != ''"> and d.area = #{deptArea}</if>

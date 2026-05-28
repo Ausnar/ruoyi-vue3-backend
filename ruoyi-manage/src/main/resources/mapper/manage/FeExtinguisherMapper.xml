@@ -75,7 +75,10 @@
             <if test="extinguisherForm != null and extinguisherForm != ''"> and e.extinguisher_form = #{extinguisherForm}</if>
             <if test="sensorId != null"> and e.sensor_id = #{sensorId}</if>
             <if test="sensorCode != null and sensorCode != ''"> and e.sensor_code = #{sensorCode}</if>
-            <if test="deptId != null"> and e.dept_id = #{deptId}</if>
+            <if test="deptId != null">
+                and (e.dept_id = #{deptId}
+                    or e.dept_id in (select dept_id from sys_dept where find_in_set(#{deptId}, ancestors)))
+            </if>
             <if test="deptProvince != null and deptProvince != ''"> and d.province = #{deptProvince}</if>
             <if test="deptCity != null and deptCity != ''"> and d.city = #{deptCity}</if>
             <if test="deptArea != null and deptArea != ''"> and d.area = #{deptArea}</if>
