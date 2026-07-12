@@ -12,13 +12,20 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -31,6 +38,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -39,6 +47,7 @@ import org.springframework.web.util.UriUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ruoyi.common.core.domain.entity.SysDept;
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.manage.config.AzdapsProperties;
 import com.ruoyi.manage.domain.FeApiConfigCompanyScope;
@@ -133,9 +142,9 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             return buildBusyResult(null);
         }
 
-        List<SysDeptApiConfig> configs = sysDeptApiConfigService.selectActiveSysDeptApiConfigs();
         try
         {
+            List<SysDeptApiConfig> configs = sysDeptApiConfigService.selectActiveSysDeptApiConfigs();
             List<Map<String, Object>> details = new ArrayList<>();
             int successCount = 0;
             int failCount = 0;
@@ -194,6 +203,71 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
                 return result;
             }
             return syncConfig(config, operator);
+        }
+        finally
+        {
+            syncRunning.set(false);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SysDeptApiConfig createContractWithSdkMirror(SysDeptApiConfig contract, String operator)
+    {
+        if (contract == null)
+        {
+            throw new ServiceException("合同信息不能为空");
+        }
+        contract.setConfigId(null);
+        contract.setCreateBy(operator);
+        if (!syncRunning.compareAndSet(false, true))
+        {
+            throw new ServiceException("设备同步正在运行，请稍后再新增合同");
+        }
+        try
+        {
+            return saveContractWithSdkMirror(contract, operator, true);
+        }
+        finally
+        {
+            syncRunning.set(false);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SysDeptApiConfig updateContractWithSdkMirror(SysDeptApiConfig contract, String operator)
+    {
+        if (contract == null || contract.getConfigId() == null)
+        {
+            throw new ServiceException("合同配置ID不能为空");
+        }
+        SysDeptApiConfig existing = sysDeptApiConfigService.selectSysDeptApiConfigByConfigId(contract.getConfigId());
+        if (existing == null)
+        {
+            throw new ServiceException("合同配置不存在");
+        }
+
+        normalizeContractCredentials(contract);
+        contract.setUpdateBy(operator);
+        if (StringUtils.equals(existing.getApiId(), contract.getApiId())
+            && StringUtils.equals(existing.getApiKey(), contract.getApiKey())
+            && isSdkAuthorizationRoot(existing.getDeptId()))
+        {
+            contract.setDeptId(existing.getDeptId());
+            if (sysDeptApiConfigService.updateSysDeptApiConfig(contract) != 1)
+            {
+                throw new ServiceException("合同更新失败");
+            }
+            return sysDeptApiConfigService.selectSysDeptApiConfigByConfigId(contract.getConfigId());
+        }
+        if (!syncRunning.compareAndSet(false, true))
+        {
+            throw new ServiceException("设备同步正在运行，请稍后再修改 SDK 凭证");
+        }
+        try
+        {
+            return saveContractWithSdkMirror(contract, operator, false);
         }
         finally
         {
@@ -277,6 +351,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         {
             TokenContext tokenContext = login(config);
             syncLog.setTokenExpireTime(tokenContext.getTokenExpireTime());
+            updateSyncProgress(syncLog, "登录成功，正在拉取基础资料", operator, stats);
 
             List<JsonNode> stationNodes = fetchPagedItems(PATH_STATION, tokenContext, config);
             List<JsonNode> tboxNodes = fetchPagedItems(PATH_TBOX, tokenContext, config);
@@ -284,9 +359,12 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             List<JsonNode> sensorNodes = fetchPagedItems(PATH_SENSOR, tokenContext, config);
             List<JsonNode> extinguisherNodes = fetchPagedItems(PATH_EXTINGUISHER, tokenContext, config);
             List<JsonNode> companyNodes = fetchPagedItems(PATH_COMPANY, tokenContext, config);
+            updateSyncProgress(syncLog, "基础资料拉取完成，正在同步单位与设备", operator, stats);
 
             Set<Long> syncedCompanyIds = new TreeSet<>();
-            syncObservedCompanies(companyNodes, config, operator, syncedCompanyIds);
+            Long sdkSourceDeptId = syncObservedCompanies(companyNodes, config, operator, syncedCompanyIds);
+            migrateConfigToSdkCompanyDept(config, sdkSourceDeptId, syncedCompanyIds, operator, stats);
+            syncLog.setDeptId(config.getDeptId());
             List<FeSensor> syncedSensors = new ArrayList<>();
             for (JsonNode stationNode : stationNodes)
             {
@@ -317,7 +395,8 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
                 if (STATUS_UNBOUND.equals(extinguisher.getSyncStatus())) stats.incrementFail("binding");
                 stats.incrementSuccess("extinguisher");
             }
-            syncSensorValues(syncedSensors, tokenContext, config, stats);
+            syncSensorValues(syncedSensors, tokenContext, config, syncLog, operator, stats);
+            updateSyncProgress(syncLog, "设备历史值同步完成，正在生成快照与扫描预警", operator, stats);
             int snapshotCount = feFirePointDeviceSnapshotMapper.insertSnapshotsForSourceDept(
                 config.getConfigId(), config.getDeptId(), DateUtils.getNowDate(), operator);
             stats.addInfo("firePointSnapshot", snapshotCount);
@@ -423,6 +502,133 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         syncLog.setUpdateBy(operator);
         syncLog.setUpdateTime(now);
         return syncLog;
+    }
+
+    private SysDeptApiConfig saveContractWithSdkMirror(SysDeptApiConfig contract, String operator, boolean insert)
+    {
+        normalizeContractCredentials(contract);
+        String auditOperator = StringUtils.defaultIfBlank(operator, "contract-sdk");
+        Long platformRootDeptId = requireUniquePlatformRootDeptId();
+
+        List<JsonNode> companyNodes;
+        try
+        {
+            TokenContext tokenContext = login(contract);
+            companyNodes = fetchPagedItems(PATH_COMPANY, tokenContext, contract);
+        }
+        catch (Exception e)
+        {
+            log.warn("SDK contract credential validation failed, configId={}, errorType={}",
+                contract.getConfigId(), e.getClass().getSimpleName());
+            throw new ServiceException("SDK凭证校验或单位查询失败，请检查 API ID、API KEY 和外部平台状态");
+        }
+
+        if (companyNodes == null || companyNodes.isEmpty())
+        {
+            throw new ServiceException("SDK未返回单位数据，无法确定合同单位");
+        }
+        Map<Long, JsonNode> companyNodeMap = buildCompanyNodeMap(companyNodes);
+        Long rootExternalCompanyId = resolveUniqueRootExternalCompanyId(companyNodes, companyNodeMap);
+        if (rootExternalCompanyId == null)
+        {
+            throw new ServiceException("SDK单位树缺少唯一顶层单位，无法自动绑定合同");
+        }
+
+        contract.setDeptId(platformRootDeptId);
+        mirrorSdkCompanyDepts(companyNodes, companyNodeMap, contract, auditOperator);
+        SysDept sdkRootDept = sysDeptMapper.selectDeptByExternalCompanyId(rootExternalCompanyId);
+        if (sdkRootDept == null || !DEPT_SOURCE_SDK_COMPANY.equals(sdkRootDept.getDeptSource()))
+        {
+            throw new ServiceException("SDK顶层单位镜像创建失败");
+        }
+
+        contract.setDeptId(sdkRootDept.getDeptId());
+        int affected;
+        if (insert)
+        {
+            contract.setCreateBy(auditOperator);
+            affected = sysDeptApiConfigService.insertSysDeptApiConfig(contract);
+        }
+        else
+        {
+            contract.setUpdateBy(auditOperator);
+            affected = sysDeptApiConfigService.updateSysDeptApiConfig(contract);
+        }
+        if (affected != 1 || contract.getConfigId() == null)
+        {
+            throw new ServiceException(insert ? "合同新增失败" : "合同更新失败");
+        }
+
+        Set<Long> syncedCompanyIds = new TreeSet<>();
+        syncObservedCompanies(companyNodes, contract, auditOperator, syncedCompanyIds);
+        return sysDeptApiConfigService.selectSysDeptApiConfigByConfigId(contract.getConfigId());
+    }
+
+    private boolean isSdkAuthorizationRoot(Long deptId)
+    {
+        if (deptId == null)
+        {
+            return false;
+        }
+        SysDept dept = sysDeptMapper.selectDeptById(deptId);
+        if (dept == null || !DEPT_SOURCE_SDK_COMPANY.equals(dept.getDeptSource()))
+        {
+            return false;
+        }
+        SysDept parent = sysDeptMapper.selectDeptById(dept.getParentId());
+        return parent != null && DEPT_SOURCE_PLATFORM_ROOT.equals(parent.getDeptSource());
+    }
+
+    private void normalizeContractCredentials(SysDeptApiConfig contract)
+    {
+        contract.setContractNo(StringUtils.trim(contract.getContractNo()));
+        contract.setApiId(StringUtils.trim(contract.getApiId()));
+        contract.setApiKey(StringUtils.trim(contract.getApiKey()));
+        if (StringUtils.isBlank(contract.getContractNo()))
+        {
+            throw new ServiceException("合同号不能为空");
+        }
+        if (StringUtils.isBlank(contract.getApiId()) || StringUtils.isBlank(contract.getApiKey()))
+        {
+            throw new ServiceException("API ID 和 API KEY 不能为空");
+        }
+    }
+
+    private Long requireUniquePlatformRootDeptId()
+    {
+        SysDept query = new SysDept();
+        query.setDeptSource(DEPT_SOURCE_PLATFORM_ROOT);
+        List<SysDept> roots = sysDeptMapper.selectDeptList(query);
+        if (roots == null || roots.size() != 1)
+        {
+            throw new ServiceException("系统必须且只能存在一个平台根单位");
+        }
+        return roots.get(0).getDeptId();
+    }
+
+    private Map<Long, JsonNode> buildCompanyNodeMap(List<JsonNode> companyNodes)
+    {
+        Map<Long, JsonNode> companyNodeMap = new LinkedHashMap<>();
+        for (JsonNode companyNode : companyNodes)
+        {
+            Long externalCompanyId = readLong(companyNode, "id");
+            if (externalCompanyId != null)
+            {
+                companyNodeMap.put(externalCompanyId, companyNode);
+            }
+        }
+        return companyNodeMap;
+    }
+
+    private void mirrorSdkCompanyDepts(List<JsonNode> companyNodes, Map<Long, JsonNode> companyNodeMap,
+                                       SysDeptApiConfig config, String operator)
+    {
+        Set<Long> visiting = new TreeSet<>();
+        Set<Long> mirrored = new TreeSet<>();
+        for (JsonNode companyNode : companyNodes)
+        {
+            upsertSdkCompanyDept(companyNode, companyNodeMap, config, operator, visiting, mirrored);
+        }
     }
 
     private void validateConfig(SysDeptApiConfig config)
@@ -656,6 +862,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     private JsonNode requestJson(HttpMethod method, String path, Map<String, Object> queryParams,
                                  TokenContext tokenContext, SysDeptApiConfig config, boolean allowRelogin)
     {
+        String requestAccessToken = tokenContext == null ? null : tokenContext.getAccessToken();
         try
         {
             return doRequestJson(method, path, queryParams, tokenContext);
@@ -664,9 +871,16 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         {
             if (allowRelogin && e.getStatusCode().value() == 401 && tokenContext != null)
             {
-                TokenContext renewed = login(config);
-                tokenContext.setAccessToken(renewed.getAccessToken());
-                tokenContext.setRefreshToken(renewed.getRefreshToken());
+                synchronized (tokenContext)
+                {
+                    if (Objects.equals(requestAccessToken, tokenContext.getAccessToken()))
+                    {
+                        TokenContext renewed = login(config);
+                        tokenContext.setAccessToken(renewed.getAccessToken());
+                        tokenContext.setRefreshToken(renewed.getRefreshToken());
+                        tokenContext.setTokenExpireTime(renewed.getTokenExpireTime());
+                    }
+                }
                 return doRequestJson(method, path, queryParams, tokenContext);
             }
             throw new IllegalStateException("SDK request failed: " + StringUtils.defaultIfBlank(e.getResponseBodyAsString(), e.getMessage()), e);
@@ -816,11 +1030,11 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         return gateway;
     }
 
-    private void syncObservedCompanies(List<JsonNode> companyNodes, SysDeptApiConfig config, String operator, Set<Long> syncedCompanyIds)
+    private Long syncObservedCompanies(List<JsonNode> companyNodes, SysDeptApiConfig config, String operator, Set<Long> syncedCompanyIds)
     {
         if (companyNodes == null || companyNodes.isEmpty())
         {
-            return;
+            return null;
         }
         Map<Long, JsonNode> companyNodeMap = new LinkedHashMap<>();
         for (JsonNode companyNode : companyNodes)
@@ -842,6 +1056,140 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         for (JsonNode companyNode : companyNodes)
         {
             upsertSdkCompanyDept(companyNode, companyNodeMap, config, operator, visiting, mirrored);
+        }
+        return resolveObservedRootSdkDeptId(companyNodes, companyNodeMap);
+    }
+
+    private void updateSyncProgress(FeSdkSyncLog syncLog, String stage, String operator, SyncStats stats)
+    {
+        try
+        {
+            syncLog.setSuccessCount(stats.getSuccessCount());
+            syncLog.setFailCount(stats.getFailCount());
+            syncLog.setMessage(StringUtils.left(stage + "；" + stats.buildMessage(), 1900));
+            syncLog.setUpdateBy(operator);
+            syncLog.setUpdateTime(DateUtils.getNowDate());
+            feSdkSyncLogMapper.updateFeSdkSyncLog(syncLog);
+        }
+        catch (Exception e)
+        {
+            log.warn("[DeviceSync] update progress failed, syncLogId={}, stage={}, message={}",
+                syncLog.getSyncLogId(), stage, e.getMessage());
+        }
+    }
+
+    private Long resolveObservedRootSdkDeptId(List<JsonNode> companyNodes, Map<Long, JsonNode> companyNodeMap)
+    {
+        Long rootExternalCompanyId = resolveUniqueRootExternalCompanyId(companyNodes, companyNodeMap);
+        if (rootExternalCompanyId == null)
+        {
+            return null;
+        }
+        SysDept rootDept = sysDeptMapper.selectDeptByExternalCompanyId(rootExternalCompanyId);
+        return rootDept == null ? null : rootDept.getDeptId();
+    }
+
+    private Long resolveUniqueRootExternalCompanyId(List<JsonNode> companyNodes, Map<Long, JsonNode> companyNodeMap)
+    {
+        Long rootExternalCompanyId = null;
+        for (JsonNode companyNode : companyNodes)
+        {
+            Long externalCompanyId = readLong(companyNode, "id");
+            if (externalCompanyId == null)
+            {
+                continue;
+            }
+            Long parentExternalCompanyId = readLong(companyNode, "parent");
+            boolean root = parentExternalCompanyId == null
+                || Objects.equals(parentExternalCompanyId, externalCompanyId)
+                || !companyNodeMap.containsKey(parentExternalCompanyId);
+            if (!root)
+            {
+                continue;
+            }
+            if (rootExternalCompanyId != null && !Objects.equals(rootExternalCompanyId, externalCompanyId))
+            {
+                return null;
+            }
+            rootExternalCompanyId = externalCompanyId;
+        }
+        if (rootExternalCompanyId == null)
+        {
+            return null;
+        }
+        return rootExternalCompanyId;
+    }
+
+    private void migrateConfigToSdkCompanyDept(SysDeptApiConfig config, Long sdkSourceDeptId, Set<Long> syncedCompanyIds,
+                                               String operator, SyncStats stats)
+    {
+        if (config == null || config.getConfigId() == null || sdkSourceDeptId == null)
+        {
+            return;
+        }
+        Long oldDeptId = config.getDeptId();
+        if (Objects.equals(oldDeptId, sdkSourceDeptId))
+        {
+            return;
+        }
+
+        SysDept sdkDept = sysDeptMapper.selectDeptById(sdkSourceDeptId);
+        if (sdkDept == null || !DEPT_SOURCE_SDK_COMPANY.equals(sdkDept.getDeptSource()))
+        {
+            return;
+        }
+
+        try
+        {
+            config.setDeptId(sdkSourceDeptId);
+            config.setUpdateBy(operator);
+            sysDeptApiConfigService.updateSysDeptApiConfig(config);
+            syncObservedSourceDept(config.getConfigId(), oldDeptId, sdkSourceDeptId, syncedCompanyIds, operator);
+            stats.putInfo("apiConfigSourceDeptMigrated", String.valueOf(oldDeptId) + "->" + sdkSourceDeptId);
+        }
+        catch (Exception e)
+        {
+            config.setDeptId(oldDeptId);
+            stats.putInfo("apiConfigSourceDeptMigrationSkipped", StringUtils.left(e.getMessage(), 200));
+            log.warn("Skip migrating API config to SDK company dept, configId={}, oldDeptId={}, sdkDeptId={}",
+                config.getConfigId(), oldDeptId, sdkSourceDeptId, e);
+        }
+    }
+
+    private void syncObservedSourceDept(Long configId, Long oldDeptId, Long newDeptId, Set<Long> syncedCompanyIds, String operator)
+    {
+        if (configId == null || oldDeptId == null || newDeptId == null)
+        {
+            return;
+        }
+        FeApiConfigCompanyScope scopeQuery = new FeApiConfigCompanyScope();
+        scopeQuery.setConfigId(configId);
+        scopeQuery.setSourceDeptId(oldDeptId);
+        List<FeApiConfigCompanyScope> scopes = feApiConfigCompanyScopeMapper.selectFeApiConfigCompanyScopeList(scopeQuery);
+        if (scopes != null)
+        {
+            for (FeApiConfigCompanyScope scope : scopes)
+            {
+                scope.setSourceDeptId(newDeptId);
+                scope.setUpdateBy(operator);
+                scope.setUpdateTime(DateUtils.getNowDate());
+                feApiConfigCompanyScopeMapper.updateFeApiConfigCompanyScope(scope);
+            }
+        }
+        if (syncedCompanyIds == null || syncedCompanyIds.isEmpty())
+        {
+            return;
+        }
+        for (Long externalCompanyId : syncedCompanyIds)
+        {
+            FeExternalCompany company = feExternalCompanyMapper.selectByExternalCompanyId(externalCompanyId);
+            if (company != null && Objects.equals(company.getLastSourceDeptId(), oldDeptId))
+            {
+                company.setLastSourceDeptId(newDeptId);
+                company.setUpdateBy(operator);
+                company.setUpdateTime(DateUtils.getNowDate());
+                feExternalCompanyMapper.updateFeExternalCompany(company);
+            }
         }
     }
 
@@ -885,7 +1233,8 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         dept.setExternalCompanyId(externalCompanyId);
         dept.setExternalParentCompanyId(parentExternalCompanyId);
         dept.setExternalOrgPath(StringUtils.left(orgPath, 500));
-        dept.setSourceApiConfigId(config.getConfigId());
+        dept.setSourceApiConfigId(config.getConfigId() == null && existing != null
+            ? existing.getSourceApiConfigId() : config.getConfigId());
         dept.setLastCompanySyncTime(now);
         dept.setStatus("0");
         if (dept.getOrderNum() == null)
@@ -1227,52 +1576,167 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         latest.setUpdateTime(DateUtils.getNowDate());
         feExtinguisherMapper.updateFeExtinguisher(latest);
     }
-    private void syncSensorValues(List<FeSensor> sensors, TokenContext tokenContext, SysDeptApiConfig config, SyncStats stats)
+    private void syncSensorValues(List<FeSensor> sensors, TokenContext tokenContext, SysDeptApiConfig config,
+                                  FeSdkSyncLog syncLog, String operator, SyncStats stats)
     {
+        List<FeSensor> eligibleSensors = new ArrayList<>();
         for (FeSensor sensor : sensors)
         {
-            if (sensor.getExternalSensorId() == null || sensor.getSensorId() == null) continue;
-            stats.incrementInfo("valuesRequest");
-            JsonNode root;
-            try
+            if (sensor.getExternalSensorId() != null && sensor.getSensorId() != null)
             {
-                root = requestJson(HttpMethod.GET,
-                    PATH_SENSOR_VALUES.replace("{sensor_id}", String.valueOf(sensor.getExternalSensorId())),
-                    Collections.singletonMap("unit", azdapsProperties.getHistoryUnit()), tokenContext, config, true);
-            }
-            catch (Exception e)
-            {
-                stats.incrementFail("values");
-                continue;
-            }
-            JsonNode values = extractSensorValueArray(root);
-            if (values == null || !values.isArray() || values.size() == 0)
-            {
-                stats.incrementInfo("valuesEmpty");
-                continue;
-            }
-            for (JsonNode item : values)
-            {
-                Date createTime = parseDate(readText(item, "created_time"));
-                if (createTime == null) continue;
-                if (feSensorHistoryMapper.countBySensorIdAndCreateTime(sensor.getSensorId(), createTime) > 0)
-                {
-                    stats.incrementInfo("valuesDuplicate");
-                    continue;
-                }
-                FeSensorHistory history = new FeSensorHistory();
-                history.setSensorId(sensor.getSensorId());
-                history.setSensorCode(sensor.getSensorCode());
-                history.setPressure(readBigDecimal(item, "pressure"));
-                history.setTemperature(readBigDecimal(item, "temp"));
-                history.setBatteryLevel(readInteger(item, "battery"));
-                history.setSignalStrength(sensor.getSignalStrength());
-                history.setStatus(sensor.getStatus());
-                history.setCreateTime(createTime);
-                feSensorHistoryMapper.insertFeSensorHistory(history);
-                stats.incrementSuccess("values");
+                eligibleSensors.add(sensor);
             }
         }
+        int total = eligibleSensors.size();
+        stats.putInfo("valuesTotal", total);
+        stats.putInfo("valuesProcessed", 0);
+        if (total == 0)
+        {
+            return;
+        }
+
+        int concurrency = Math.max(1, Math.min(azdapsProperties.getHistoryConcurrency(), total));
+        ExecutorService executor = Executors.newFixedThreadPool(concurrency);
+        CompletionService<SensorValueFetchResult> completionService = new ExecutorCompletionService<>(executor);
+        for (FeSensor sensor : eligibleSensors)
+        {
+            completionService.submit(() -> fetchSensorValues(sensor, tokenContext, config));
+        }
+
+        updateSyncProgress(syncLog, "正在同步传感器历史值 0/" + total, operator, stats);
+        try
+        {
+            for (int completed = 1; completed <= total; completed++)
+            {
+                SensorValueFetchResult fetchResult = completionService.take().get();
+                stats.incrementInfo("valuesRequest");
+                if (fetchResult.errorMessage != null)
+                {
+                    stats.incrementFail("values");
+                    log.warn("[DeviceSync] fetch sensor values failed, configId={}, sensorId={}, externalSensorId={}, message={}",
+                        config.getConfigId(), fetchResult.sensor.getSensorId(),
+                        fetchResult.sensor.getExternalSensorId(), fetchResult.errorMessage);
+                }
+                else
+                {
+                    persistSensorValues(fetchResult.sensor, fetchResult.root, stats);
+                }
+                stats.putInfo("valuesProcessed", completed);
+                if (completed == total || completed % 5 == 0)
+                {
+                    updateSyncProgress(syncLog,
+                        "正在同步传感器历史值 " + completed + "/" + total, operator, stats);
+                }
+            }
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Sensor history sync was interrupted", e);
+        }
+        catch (ExecutionException e)
+        {
+            throw new IllegalStateException("Sensor history sync worker failed", e.getCause());
+        }
+        finally
+        {
+            executor.shutdownNow();
+        }
+    }
+
+    private SensorValueFetchResult fetchSensorValues(FeSensor sensor, TokenContext tokenContext, SysDeptApiConfig config)
+    {
+        try
+        {
+            JsonNode root = requestJson(HttpMethod.GET,
+                PATH_SENSOR_VALUES.replace("{sensor_id}", String.valueOf(sensor.getExternalSensorId())),
+                Collections.singletonMap("unit", azdapsProperties.getHistoryUnit()), tokenContext, config, true);
+            return new SensorValueFetchResult(sensor, root, null);
+        }
+        catch (Exception e)
+        {
+            return new SensorValueFetchResult(sensor, null, e.getMessage());
+        }
+    }
+
+    private void persistSensorValues(FeSensor sensor, JsonNode root, SyncStats stats)
+    {
+        JsonNode values = extractSensorValueArray(root);
+        if (values == null || !values.isArray() || values.size() == 0)
+        {
+            stats.incrementInfo("valuesEmpty");
+            return;
+        }
+
+        TreeMap<Long, FeSensorHistory> candidates = new TreeMap<>();
+        int duplicateCount = 0;
+        for (JsonNode item : values)
+        {
+            Date createTime = parseDate(readText(item, "created_time"));
+            if (createTime == null)
+            {
+                stats.incrementInfo("valuesInvalidTime");
+                continue;
+            }
+            FeSensorHistory history = new FeSensorHistory();
+            history.setSensorId(sensor.getSensorId());
+            history.setSensorCode(sensor.getSensorCode());
+            history.setPressure(readBigDecimal(item, "pressure"));
+            history.setTemperature(readBigDecimal(item, "temp"));
+            history.setBatteryLevel(readInteger(item, "battery"));
+            history.setSignalStrength(sensor.getSignalStrength());
+            history.setStatus(sensor.getStatus());
+            history.setCreateTime(createTime);
+            if (candidates.put(toEpochSecond(createTime), history) != null)
+            {
+                duplicateCount++;
+            }
+        }
+        if (candidates.isEmpty())
+        {
+            stats.addInfo("valuesDuplicate", duplicateCount);
+            return;
+        }
+
+        Date startTime = candidates.firstEntry().getValue().getCreateTime();
+        Date endTime = candidates.lastEntry().getValue().getCreateTime();
+        List<Date> existingTimes = feSensorHistoryMapper.selectExistingCreateTimes(
+            sensor.getSensorId(), startTime, endTime);
+        Set<Long> existingKeys = new HashSet<>();
+        for (Date existingTime : existingTimes == null ? Collections.<Date>emptyList() : existingTimes)
+        {
+            if (existingTime != null)
+            {
+                existingKeys.add(toEpochSecond(existingTime));
+            }
+        }
+
+        List<FeSensorHistory> pending = new ArrayList<>();
+        for (Map.Entry<Long, FeSensorHistory> entry : candidates.entrySet())
+        {
+            if (existingKeys.contains(entry.getKey()))
+            {
+                duplicateCount++;
+            }
+            else
+            {
+                pending.add(entry.getValue());
+            }
+        }
+        stats.addInfo("valuesDuplicate", duplicateCount);
+
+        int batchSize = Math.max(1, azdapsProperties.getHistoryBatchSize());
+        for (int fromIndex = 0; fromIndex < pending.size(); fromIndex += batchSize)
+        {
+            int toIndex = Math.min(fromIndex + batchSize, pending.size());
+            int inserted = feSensorHistoryMapper.batchInsertFeSensorHistory(pending.subList(fromIndex, toIndex));
+            stats.addSuccess("values", inserted);
+        }
+    }
+
+    private long toEpochSecond(Date value)
+    {
+        return value.getTime() / 1000L;
     }
 
     private JsonNode extractSensorValueArray(JsonNode root)
@@ -1634,6 +2098,20 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         public void setTokenExpireTime(Date tokenExpireTime) { this.tokenExpireTime = tokenExpireTime; }
     }
 
+    private static class SensorValueFetchResult
+    {
+        private final FeSensor sensor;
+        private final JsonNode root;
+        private final String errorMessage;
+
+        SensorValueFetchResult(FeSensor sensor, JsonNode root, String errorMessage)
+        {
+            this.sensor = sensor;
+            this.root = root;
+            this.errorMessage = errorMessage;
+        }
+    }
+
     private static class SyncStats
     {
         private final Map<String, Integer> detailSuccess = new LinkedHashMap<>();
@@ -1641,6 +2119,10 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         private final Map<String, Object> detailInfo = new LinkedHashMap<>();
 
         void incrementSuccess(String scope) { detailSuccess.merge(scope, 1, Integer::sum); }
+        void addSuccess(String scope, int count)
+        {
+            if (count > 0) detailSuccess.merge(scope, count, Integer::sum);
+        }
         void incrementFail(String scope) { detailFail.merge(scope, 1, Integer::sum); }
         void incrementInfo(String scope)
         {

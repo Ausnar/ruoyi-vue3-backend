@@ -51,11 +51,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by h.create_time asc
     </select>
 
-    <select id="countBySensorIdAndCreateTime" resultType="int">
-        select count(*)
+    <select id="selectExistingCreateTimes" resultType="java.util.Date">
+        select create_time
         from fe_sensor_history
         where sensor_id = #{sensorId}
-          and create_time = #{createTime}
+          and create_time between #{startTime} and #{endTime}
     </select>
 
     <insert id="insertFeSensorHistory" parameterType="FeSensorHistory" useGeneratedKeys="true" keyProperty="historyId">
@@ -80,6 +80,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="status != null">#{status},</if>
             <if test="createTime != null">#{createTime},</if>
          </trim>
+    </insert>
+
+    <insert id="batchInsertFeSensorHistory">
+        insert into fe_sensor_history
+            (sensor_id, sensor_code, pressure, temperature, battery_level, signal_strength, status, create_time)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.sensorId}, #{item.sensorCode}, #{item.pressure}, #{item.temperature},
+             #{item.batteryLevel}, #{item.signalStrength}, #{item.status}, #{item.createTime})
+        </foreach>
     </insert>
 
     <delete id="deleteFeSensorHistoryByHistoryId" parameterType="Long">

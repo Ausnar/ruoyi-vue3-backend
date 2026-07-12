@@ -19,6 +19,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="updateBy" column="update_by" />
         <result property="updateTime" column="update_time" />
         <result property="deptName" column="dept_name" />
+        <result property="deptSource" column="dept_source" />
         <result property="deptLeader" column="dept_leader" />
         <result property="deptPhone" column="dept_phone" />
         <result property="expireStatus" column="expire_status" />
@@ -30,6 +31,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                c.status, c.expire_date, c.remark,
                c.create_by, c.create_time, c.update_by, c.update_time,
                d.dept_name,
+               d.dept_source,
                d.leader as dept_leader,
                d.phone as dept_phone,
                case

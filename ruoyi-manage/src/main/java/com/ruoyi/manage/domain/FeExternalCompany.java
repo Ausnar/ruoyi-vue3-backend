@@ -73,6 +73,10 @@ public class FeExternalCompany extends BaseEntity
     @Excel(name = "当前映射合同单位")
     private String mappedDeptName;
 
+    private Long sdkDeptId;
+
+    private String sdkDeptName;
+
     private String duplicateMatchType;
 
     private String duplicateMatchReason;
@@ -299,6 +303,26 @@ public class FeExternalCompany extends BaseEntity
         this.mappedDeptName = mappedDeptName;
     }
 
+    public Long getSdkDeptId()
+    {
+        return sdkDeptId;
+    }
+
+    public void setSdkDeptId(Long sdkDeptId)
+    {
+        this.sdkDeptId = sdkDeptId;
+    }
+
+    public String getSdkDeptName()
+    {
+        return sdkDeptName;
+    }
+
+    public void setSdkDeptName(String sdkDeptName)
+    {
+        this.sdkDeptName = sdkDeptName;
+    }
+
     public String getDuplicateMatchType()
     {
         return duplicateMatchType;
@@ -355,6 +379,8 @@ public class FeExternalCompany extends BaseEntity
             .append("lastSourceDeptName", lastSourceDeptName)
             .append("mappedDeptId", mappedDeptId)
             .append("mappedDeptName", mappedDeptName)
+            .append("sdkDeptId", sdkDeptId)
+            .append("sdkDeptName", sdkDeptName)
             .append("duplicateMatchType", duplicateMatchType)
             .append("duplicateMatchReason", duplicateMatchReason)
             .append("duplicatePriority", duplicatePriority)

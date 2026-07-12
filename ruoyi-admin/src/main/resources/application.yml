@@ -27,6 +27,10 @@ azdaps:
   readTimeoutMs: 60000
   pageLimit: 100
   historyUnit: hour
+  # 单个合同配置同步传感器历史值时的最大并发请求数
+  historyConcurrency: 5
+  # 传感器历史值单次批量写库条数
+  historyBatchSize: 200
 
 # Hodo IOT card sync. Keep disabled locally because the API whitelist points to the server IP.
 hodo:

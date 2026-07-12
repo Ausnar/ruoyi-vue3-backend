@@ -19,6 +19,10 @@ public class AzdapsProperties
 
     private String historyUnit = "hour";
 
+    private int historyConcurrency = 5;
+
+    private int historyBatchSize = 200;
+
     public String getBaseUrl()
     {
         return baseUrl;
@@ -77,5 +81,25 @@ public class AzdapsProperties
     public void setHistoryUnit(String historyUnit)
     {
         this.historyUnit = historyUnit;
+    }
+
+    public int getHistoryConcurrency()
+    {
+        return historyConcurrency;
+    }
+
+    public void setHistoryConcurrency(int historyConcurrency)
+    {
+        this.historyConcurrency = historyConcurrency;
+    }
+
+    public int getHistoryBatchSize()
+    {
+        return historyBatchSize;
+    }
+
+    public void setHistoryBatchSize(int historyBatchSize)
+    {
+        this.historyBatchSize = historyBatchSize;
     }
 }

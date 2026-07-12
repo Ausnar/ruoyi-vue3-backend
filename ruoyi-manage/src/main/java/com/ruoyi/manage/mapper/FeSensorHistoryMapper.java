@@ -16,9 +16,13 @@ public interface FeSensorHistoryMapper
                                                                  @Param("startTime") String startTime,
                                                                  @Param("endTime") String endTime);
 
-    public int countBySensorIdAndCreateTime(@Param("sensorId") Long sensorId, @Param("createTime") java.util.Date createTime);
+    public List<java.util.Date> selectExistingCreateTimes(@Param("sensorId") Long sensorId,
+                                                           @Param("startTime") java.util.Date startTime,
+                                                           @Param("endTime") java.util.Date endTime);
 
     public int insertFeSensorHistory(FeSensorHistory feSensorHistory);
+
+    public int batchInsertFeSensorHistory(@Param("list") List<FeSensorHistory> list);
 
     public int deleteFeSensorHistoryByHistoryId(Long historyId);
 

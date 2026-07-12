@@ -24,6 +24,7 @@ import com.ruoyi.manage.service.IFeCompanyDeptMappingService;
 public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingService
 {
     private static final String STATUS_ACTIVE = "active";
+    private static final String READONLY_MESSAGE = "外部单位手工映射已切换为历史只读，请以 SDK 镜像单位为准";
 
     @Autowired
     private FeCompanyDeptMappingMapper feCompanyDeptMappingMapper;
@@ -70,6 +71,7 @@ public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingSer
     @Transactional(rollbackFor = Exception.class)
     public int insertFeCompanyDeptMapping(FeCompanyDeptMapping mapping)
     {
+        rejectLegacyMappingWrite();
         fillExternalCompanySnapshot(mapping);
         validateUniqueExternalCompany(mapping);
         mapping.setSyncStatus(defaultSyncStatus(mapping.getSyncStatus()));
@@ -86,6 +88,7 @@ public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingSer
     @Transactional(rollbackFor = Exception.class)
     public int updateFeCompanyDeptMapping(FeCompanyDeptMapping mapping)
     {
+        rejectLegacyMappingWrite();
         fillExternalCompanySnapshot(mapping);
         validateUniqueExternalCompany(mapping);
         mapping.setSyncStatus(defaultSyncStatus(mapping.getSyncStatus()));
@@ -100,6 +103,7 @@ public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingSer
     @Transactional(rollbackFor = Exception.class)
     public int deleteFeCompanyDeptMappingByMappingIds(Long[] mappingIds)
     {
+        rejectLegacyMappingWrite();
         List<Long> externalCompanyIds = new ArrayList<Long>();
         for (Long mappingId : mappingIds)
         {
@@ -121,6 +125,7 @@ public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingSer
     @Transactional(rollbackFor = Exception.class)
     public int deleteFeCompanyDeptMappingByMappingId(Long mappingId)
     {
+        rejectLegacyMappingWrite();
         FeCompanyDeptMapping mapping = feCompanyDeptMappingMapper.selectFeCompanyDeptMappingByMappingId(mappingId);
         int rows = feCompanyDeptMappingMapper.deleteFeCompanyDeptMappingByMappingId(mappingId);
         if (mapping != null && mapping.getExternalCompanyId() != null)
@@ -161,6 +166,11 @@ public class FeCompanyDeptMappingServiceImpl implements IFeCompanyDeptMappingSer
             throw new ServiceException("当前外部单位不是生效状态，请重新选择");
         }
         mapping.setExternalCompanyName(externalCompany.getExternalCompanyName());
+    }
+
+    private void rejectLegacyMappingWrite()
+    {
+        throw new ServiceException(READONLY_MESSAGE);
     }
 
     private void validateUniqueExternalCompany(FeCompanyDeptMapping mapping)

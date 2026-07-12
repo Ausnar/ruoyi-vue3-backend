@@ -60,6 +60,9 @@ public class SysDeptApiConfig extends BaseEntity
     @Excel(name = "部门名称")
     private String deptName;
 
+    /** 部门来源类型 */
+    private String deptSource;
+
     /** 部门负责人 */
     private String deptLeader;
 
@@ -186,6 +189,16 @@ public class SysDeptApiConfig extends BaseEntity
         return deptName;
     }
 
+    public void setDeptSource(String deptSource)
+    {
+        this.deptSource = deptSource;
+    }
+
+    public String getDeptSource()
+    {
+        return deptSource;
+    }
+
     public void setDeptLeader(String deptLeader) 
     {
         this.deptLeader = deptLeader;
@@ -242,6 +255,7 @@ public class SysDeptApiConfig extends BaseEntity
             .append("configId", getConfigId())
             .append("deptId", getDeptId())
             .append("deptName", getDeptName())
+            .append("deptSource", getDeptSource())
             .append("contractNo", getContractNo())
             .append("apiId", getApiId())
             .append("apiKey", getApiKey())

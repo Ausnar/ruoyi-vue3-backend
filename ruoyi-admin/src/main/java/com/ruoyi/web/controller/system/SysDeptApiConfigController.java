@@ -22,6 +22,7 @@ import com.ruoyi.system.domain.SysDeptApiConfig;
 import com.ruoyi.system.service.ISysDeptApiConfigService;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.manage.service.IFeDeviceSdkSyncService;
 
 /**
  * 合同管理Controller
@@ -35,6 +36,9 @@ public class SysDeptApiConfigController extends BaseController
 {
     @Autowired
     private ISysDeptApiConfigService sysDeptApiConfigService;
+
+    @Autowired
+    private IFeDeviceSdkSyncService feDeviceSdkSyncService;
 
     /**
      * 查询合同管理列表
@@ -79,7 +83,7 @@ public class SysDeptApiConfigController extends BaseController
     @PostMapping
     public AjaxResult add(@RequestBody SysDeptApiConfig sysDeptApiConfig)
     {
-        return toAjax(sysDeptApiConfigService.insertSysDeptApiConfig(sysDeptApiConfig));
+        return success(feDeviceSdkSyncService.createContractWithSdkMirror(sysDeptApiConfig, getUsername()));
     }
 
     /**
@@ -90,7 +94,7 @@ public class SysDeptApiConfigController extends BaseController
     @PutMapping
     public AjaxResult edit(@RequestBody SysDeptApiConfig sysDeptApiConfig)
     {
-        return toAjax(sysDeptApiConfigService.updateSysDeptApiConfig(sysDeptApiConfig));
+        return success(feDeviceSdkSyncService.updateContractWithSdkMirror(sysDeptApiConfig, getUsername()));
     }
 
     /**
