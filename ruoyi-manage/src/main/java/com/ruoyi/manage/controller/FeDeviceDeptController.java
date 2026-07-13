@@ -18,7 +18,7 @@ public class FeDeviceDeptController extends BaseController
     @Autowired
     private IFeDeviceDeptService deviceDeptService;
 
-    @PreAuthorize("@ss.hasAnyPermi('manage:sensor:list,manage:extinguisher:list,manage:point:list,manage:gateway:list,manage:deviceWarning:list,manage:deviceReport:list')")
+    @PreAuthorize("@ss.hasAnyPermi('manage:sensor:list,manage:extinguisher:list,manage:point:list,manage:gateway:list,manage:deviceWarning:list,manage:deviceReport:list,report:unitDevice:list')")
     @GetMapping("/tree")
     public AjaxResult tree(SysDept dept)
     {

@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.UnitDeviceReportMapper">
+
+    <sql id="deptFilter">
+        and d.dept_id in (
+            select dept_id
+            from sys_dept
+            where dept_id = #{deptId}
+               or find_in_set(#{deptId}, ancestors)
+        )
+    </sql>
+
+    <select id="selectUnitInfo" parameterType="com.ruoyi.manage.domain.report.UnitDeviceReportQuery"
+            resultType="com.ruoyi.manage.domain.report.UnitDeviceReportPreview$UnitInfo">
+        select d.dept_id as deptId,
+               d.dept_name as deptName,
+               p.dept_name as parentDeptName,
+               d.province,
+               d.city,
+               d.area,
+               d.leader,
+               d.phone,
+               d.email,
+               d.status
+        from sys_dept d
+        left join sys_dept p on d.parent_id = p.dept_id
+        where d.dept_id = #{deptId}
+          and d.del_flag = '0'
+          ${params.dataScope}
+        limit 1
+    </select>
+
+    <select id="selectOverview" parameterType="com.ruoyi.manage.domain.report.UnitDeviceReportQuery"
+            resultType="com.ruoyi.manage.domain.report.UnitDeviceReportPreview$Overview">
+        select
+            (
+                select greatest(count(1) - 1, 0)
+                from sys_dept d
+                where d.del_flag = '0'
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as childDeptCount,
+            (
+                select count(1)
+                from fe_fire_point f
+                left join sys_dept d on f.dept_id = d.dept_id
+                where (f.del_flag is null or f.del_flag = '0')
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as firePointCount,
+            (
+                select count(1)
+                from fe_gateway g
+                left join sys_dept d on g.dept_id = d.dept_id
+                where (g.del_flag is null or g.del_flag = '0')
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as gatewayCount,
+            (
+                select count(1)
+                from fe_sensor s
+                left join sys_dept d on s.dept_id = d.dept_id
+                where (s.del_flag is null or s.del_flag = '0')
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as sensorCount,
+            (
+                select count(1)
+                from fe_extinguisher e
+                left join sys_dept d on e.dept_id = d.dept_id
+                where (e.del_flag is null or e.del_flag = '0')
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as extinguisherCount,
+            (
+                select count(1)
+                from fe_gateway g
+                left join sys_dept d on g.dept_id = d.dept_id
+                where (g.del_flag is null or g.del_flag = '0')
+                  and g.fire_point_id is null
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as gatewayUnboundFirePointCount,
+            (
+                select count(1)
+                from fe_sensor s
+                left join sys_dept d on s.dept_id = d.dept_id
+                where (s.del_flag is null or s.del_flag = '0')
+                  and s.gateway_id is null
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as sensorUnboundGatewayCount,
+            (
+                select count(1)
+                from fe_extinguisher e
+                left join sys_dept d on e.dept_id = d.dept_id
+                where (e.del_flag is null or e.del_flag = '0')
+                  and e.sensor_id is null
+                <include refid="deptFilter"/>
+                ${params.dataScope}
+            ) as extinguisherUnboundSensorCount,
+            0 as missingDeptCount
+    </select>
+
+    <select id="selectFirePoints" parameterType="com.ruoyi.manage.domain.report.UnitDeviceReportQuery"
+            resultType="com.ruoyi.manage.domain.report.UnitDeviceReportPreview$FirePointRow">
+        select f.fire_point_id as firePointId,
+               d.dept_name as deptName,
+               f.fire_point_name as firePointName,
+               f.fire_point_code as firePointCode,
+               f.station_type as stationType,
+               f.location,
+               f.building,
+               f.floor,
+               f.expected_extinguisher_count as expectedExtinguisherCount,
+               (select count(1) from fe_extinguisher e
+                where e.fire_point_id = f.fire_point_id and (e.del_flag is null or e.del_flag = '0')) as actualExtinguisherCount,
+               (select count(1) from fe_sensor s
+                left join fe_gateway g on s.gateway_id = g.gateway_id
+                where g.fire_point_id = f.fire_point_id
+                  and (g.del_flag is null or g.del_flag = '0')
+                  and (s.del_flag is null or s.del_flag = '0')) as actualSensorCount,
+               f.status
+        from fe_fire_point f
+        left join sys_dept d on f.dept_id = d.dept_id
+        where (f.del_flag is null or f.del_flag = '0')
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+        order by d.dept_name, f.sort_order, f.fire_point_id
+    </select>
+
+    <select id="selectGateways" parameterType="com.ruoyi.manage.domain.report.UnitDeviceReportQuery"
+            resultType="com.ruoyi.manage.domain.report.UnitDeviceReportPreview$GatewayRow">
+        select g.gateway_id as gatewayId,
+               g.external_tbox_id as externalTboxId,
+               d.dept_name as deptName,
+               f.fire_point_name as firePointName,
+               g.imei,
+               g.sim,
+               g.status,
+               g.last_online_time as lastOnlineTime,
+               g.last_sync_time as lastSyncTime
+        from fe_gateway g
+        left join sys_dept d on g.dept_id = d.dept_id
+        left join fe_fire_point f on g.fire_point_id = f.fire_point_id
+        where (g.del_flag is null or g.del_flag = '0')
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+        order by d.dept_name, f.sort_order, g.gateway_id
+    </select>
+
+    <select id="selectSensors" parameterType="com.ruoyi.manage.domain.report.UnitDeviceReportQuery"
+            resultType="com.ruoyi.manage.domain.report.UnitDeviceReportPreview$SensorRow">
+        select s.sensor_id as sensorId,
+               d.dept_name as deptName,
+               f.fire_point_name as firePointName,
+               s.sensor_code as sensorCode,
+               coalesce(g.imei, s.gateway_code) as gatewayCode,
+               s.pressure,
+               s.temperature,
+               s.battery_level as batteryLevel,
+               s.status,
+               s.last_online_time as lastOnlineTime,
+               s.last_sync_time as lastSyncTime
+        from fe_sensor s
+        left join sys_dept d on s.dept_id = d.dept_id
+        left join fe_gateway g on s.gateway_id = g.gateway_id
+        left join fe_fire_point f on g.fire_point_id = f.fire_point_id
+        where (s.del_flag is null or s.del_flag = '0')
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+        order by d.dept_name, f.sort_order, s.sensor_id
+    </select>
+
+    <select id="selectExtinguishers" parameterType="com.ruoyi.manage.domain.report.UnitDeviceReportQuery"
+            resultType="com.ruoyi.manage.domain.report.UnitDeviceReportPreview$ExtinguisherRow">
+        select e.extinguisher_id as extinguisherId,
+               d.dept_name as deptName,
+               f.fire_point_name as firePointName,
+               e.label_code as labelCode,
+               e.product_name as productName,
+               e.specification,
+               e.extinguisher_type as extinguisherType,
+               e.extinguisher_form as extinguisherForm,
+               coalesce(s.sensor_code, e.sensor_code) as sensorCode,
+               e.production_date as productionDate,
+               e.expiry_date as expiryDate,
+               e.status,
+               e.last_sync_time as lastSyncTime
+        from fe_extinguisher e
+        left join sys_dept d on e.dept_id = d.dept_id
+        left join fe_fire_point f on e.fire_point_id = f.fire_point_id
+        left join fe_sensor s on e.sensor_id = s.sensor_id
+        where (e.del_flag is null or e.del_flag = '0')
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+        order by d.dept_name, f.sort_order, e.extinguisher_id
+    </select>
+
+</mapper>
