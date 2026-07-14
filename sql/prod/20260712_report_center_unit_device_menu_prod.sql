@@ -58,7 +58,7 @@ INSERT INTO sys_menu (
 )
 SELECT
   @unit_device_report_name, @report_center_id, 1, 'unitDevice', 'report/unitDevice/index', NULL, '',
-  1, 0, 'C', '0', '0', 'report:unitDevice:list', 'document',
+  1, 0, 'C', '0', '0', 'report:unitDevice:list', '#',
   'admin', NOW(), 'admin', NOW(), @unit_device_report_remark
 FROM dual
 WHERE @report_center_id IS NOT NULL
@@ -87,7 +87,7 @@ SET menu_name = @unit_device_report_name,
     visible = '0',
     status = '0',
     perms = 'report:unitDevice:list',
-    icon = 'document',
+    icon = '#',
     remark = @unit_device_report_remark,
     update_by = 'admin',
     update_time = NOW()

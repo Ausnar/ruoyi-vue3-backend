@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.RuntimeDetailMapper">
+
+    <sql id="deptFilter">
+        and d.dept_id in (
+            select dept_id from sys_dept
+            where dept_id = #{deptId} or find_in_set(#{deptId}, ancestors)
+        )
+    </sql>
+
+    <sql id="sensorWhere">
+        where h.create_time &gt;= #{beginTime}
+          and h.create_time &lt; #{endTime}
+          and (s.del_flag is null or s.del_flag = '0')
+        <include refid="deptFilter"/>
+        <if test="firePointId != null">and f.fire_point_id = #{firePointId}</if>
+        <if test="deviceId != null">and s.sensor_id = #{deviceId}</if>
+        ${params.dataScope}
+    </sql>
+
+    <sql id="gatewayWhere">
+        where h.gps_time &gt;= #{beginTime}
+          and h.gps_time &lt; #{endTime}
+          and (g.del_flag is null or g.del_flag = '0')
+        <include refid="deptFilter"/>
+        <if test="firePointId != null">and f.fire_point_id = #{firePointId}</if>
+        <if test="deviceId != null">and g.gateway_id = #{deviceId}</if>
+        ${params.dataScope}
+    </sql>
+
+    <sql id="sensorSelect">
+        select h.history_id as rowId,
+               'sensor' as detailType,
+               h.create_time as recordTime,
+               null as syncTime,
+               d.dept_id as deptId,
+               d.dept_name as deptName,
+               f.fire_point_id as firePointId,
+               f.fire_point_name as firePointName,
+               coalesce(h.sensor_code, s.sensor_code) as deviceCode,
+               coalesce(g.imei, s.gateway_code, cast(g.external_tbox_id as char)) as gatewayCode,
+               g.imei as gatewayImei,
+               h.pressure,
+               h.temperature,
+               h.battery_level as batteryLevel,
+               h.signal_strength as signalStrength,
+               cast(h.status as char) as status,
+               case
+                   when h.pressure is null then 'missing'
+                   when h.pressure &lt; 0 or h.pressure &gt; 2000 then 'dirty_pressure'
+                   else 'valid'
+               end as dataQuality,
+               null as longitude,
+               null as latitude
+        from fe_sensor_history h
+        join fe_sensor s on h.sensor_id = s.sensor_id
+        left join fe_gateway g on s.gateway_id = g.gateway_id
+        left join fe_fire_point f on g.fire_point_id = f.fire_point_id
+        join sys_dept d on s.dept_id = d.dept_id
+        <include refid="sensorWhere"/>
+    </sql>
+
+    <sql id="gatewaySelect">
+        select h.history_id as rowId,
+               'gateway' as detailType,
+               h.gps_time as recordTime,
+               h.sync_time as syncTime,
+               d.dept_id as deptId,
+               d.dept_name as deptName,
+               f.fire_point_id as firePointId,
+               f.fire_point_name as firePointName,
+               cast(coalesce(h.external_tbox_id, g.external_tbox_id) as char) as deviceCode,
+               cast(coalesce(h.external_tbox_id, g.external_tbox_id) as char) as gatewayCode,
+               g.imei as gatewayImei,
+               null as pressure,
+               null as temperature,
+               null as batteryLevel,
+               null as signalStrength,
+               null as status,
+               'valid' as dataQuality,
+               h.gps_longitude as longitude,
+               h.gps_latitude as latitude
+        from fe_gateway_gps_history h
+        join fe_gateway g on h.gateway_id = g.gateway_id
+        left join fe_fire_point f on g.fire_point_id = f.fire_point_id
+        join sys_dept d on h.dept_id = d.dept_id
+        <include refid="gatewayWhere"/>
+    </sql>
+
+    <select id="selectRuntimeDetailList" parameterType="com.ruoyi.manage.domain.report.RuntimeDetailQuery"
+            resultType="com.ruoyi.manage.domain.report.RuntimeDetailRow">
+        <choose>
+            <when test="detailType == 'gateway'"><include refid="gatewaySelect"/></when>
+            <otherwise><include refid="sensorSelect"/></otherwise>
+        </choose>
+        order by recordTime desc, rowId desc
+    </select>
+
+    <select id="selectRuntimeDetailExportBatch" parameterType="com.ruoyi.manage.domain.report.RuntimeDetailQuery"
+            resultType="com.ruoyi.manage.domain.report.RuntimeDetailRow">
+        <choose>
+            <when test="detailType == 'gateway'"><include refid="gatewaySelect"/></when>
+            <otherwise><include refid="sensorSelect"/></otherwise>
+        </choose>
+        order by recordTime desc, rowId desc
+        limit #{offset}, #{limit}
+    </select>
+
+    <select id="countRuntimeDetails" parameterType="com.ruoyi.manage.domain.report.RuntimeDetailQuery" resultType="long">
+        select count(1)
+        <choose>
+            <when test="detailType == 'gateway'">
+                from fe_gateway_gps_history h
+                join fe_gateway g on h.gateway_id = g.gateway_id
+                left join fe_fire_point f on g.fire_point_id = f.fire_point_id
+                join sys_dept d on h.dept_id = d.dept_id
+                <include refid="gatewayWhere"/>
+            </when>
+            <otherwise>
+                from fe_sensor_history h
+                join fe_sensor s on h.sensor_id = s.sensor_id
+                left join fe_gateway g on s.gateway_id = g.gateway_id
+                left join fe_fire_point f on g.fire_point_id = f.fire_point_id
+                join sys_dept d on s.dept_id = d.dept_id
+                <include refid="sensorWhere"/>
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectFirePointOptions" parameterType="com.ruoyi.manage.domain.report.RuntimeDetailQuery"
+            resultType="com.ruoyi.manage.domain.report.RuntimeDetailFirePointOption">
+        select f.fire_point_id as firePointId,
+               f.fire_point_name as firePointName,
+               d.dept_name as deptName
+        from fe_fire_point f
+        join sys_dept d on f.dept_id = d.dept_id
+        where (f.del_flag is null or f.del_flag = '0')
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+        order by d.dept_name, f.sort_order, f.fire_point_id
+    </select>
+
+    <select id="selectDeviceOptions" parameterType="com.ruoyi.manage.domain.report.RuntimeDetailQuery"
+            resultType="com.ruoyi.manage.domain.report.RuntimeDetailDeviceOption">
+        <choose>
+            <when test="detailType == 'gateway'">
+                select g.gateway_id as deviceId,
+                       cast(coalesce(g.external_tbox_id, g.gateway_id) as char) as deviceCode,
+                       g.imei as secondaryCode,
+                       f.fire_point_id as firePointId,
+                       f.fire_point_name as firePointName,
+                       d.dept_name as deptName
+                from fe_gateway g
+                left join fe_fire_point f on g.fire_point_id = f.fire_point_id
+                join sys_dept d on g.dept_id = d.dept_id
+                where (g.del_flag is null or g.del_flag = '0')
+                <include refid="deptFilter"/>
+                <if test="firePointId != null">and f.fire_point_id = #{firePointId}</if>
+                <if test="deviceKeyword != null and deviceKeyword != ''">
+                    and (cast(g.external_tbox_id as char) like concat('%', #{deviceKeyword}, '%')
+                      or g.imei like concat('%', #{deviceKeyword}, '%'))
+                </if>
+                ${params.dataScope}
+                order by d.dept_name, g.external_tbox_id, g.gateway_id
+                limit 50
+            </when>
+            <otherwise>
+                select s.sensor_id as deviceId,
+                       s.sensor_code as deviceCode,
+                       coalesce(g.imei, s.gateway_code, cast(g.external_tbox_id as char)) as secondaryCode,
+                       f.fire_point_id as firePointId,
+                       f.fire_point_name as firePointName,
+                       d.dept_name as deptName
+                from fe_sensor s
+                left join fe_gateway g on s.gateway_id = g.gateway_id
+                left join fe_fire_point f on g.fire_point_id = f.fire_point_id
+                join sys_dept d on s.dept_id = d.dept_id
+                where (s.del_flag is null or s.del_flag = '0')
+                <include refid="deptFilter"/>
+                <if test="firePointId != null">and f.fire_point_id = #{firePointId}</if>
+                <if test="deviceKeyword != null and deviceKeyword != ''">
+                    and (s.sensor_code like concat('%', #{deviceKeyword}, '%')
+                      or s.gateway_code like concat('%', #{deviceKeyword}, '%')
+                      or g.imei like concat('%', #{deviceKeyword}, '%')
+                      or cast(g.external_tbox_id as char) like concat('%', #{deviceKeyword}, '%'))
+                </if>
+                ${params.dataScope}
+                order by d.dept_name, s.sensor_code, s.sensor_id
+                limit 50
+            </otherwise>
+        </choose>
+    </select>
+
+</mapper>
