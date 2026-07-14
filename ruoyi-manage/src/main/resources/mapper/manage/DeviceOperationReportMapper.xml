@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.DeviceOperationReportMapper">
+
+    <sql id="deptFilter">
+        and d.dept_id in (
+            select dept_id
+            from sys_dept
+            where dept_id = #{deptId}
+               or find_in_set(#{deptId}, ancestors)
+        )
+    </sql>
+
+    <select id="selectUnitInfo" parameterType="com.ruoyi.manage.domain.report.DeviceOperationReportQuery"
+            resultType="com.ruoyi.manage.domain.report.DeviceOperationReportPreview$UnitInfo">
+        select d.dept_id as deptId,
+               d.dept_name as deptName,
+               p.dept_name as parentDeptName,
+               d.province,
+               d.city,
+               d.area
+        from sys_dept d
+        left join sys_dept p on d.parent_id = p.dept_id
+        where d.dept_id = #{deptId}
+          and d.del_flag = '0'
+        ${params.dataScope}
+        limit 1
+    </select>
+
+    <select id="selectAssetOverview" parameterType="com.ruoyi.manage.domain.report.DeviceOperationReportQuery"
+            resultType="com.ruoyi.manage.domain.report.DeviceOperationReportPreview$AssetOverview">
+        select
+            (select count(1) from fe_fire_point f left join sys_dept d on f.dept_id = d.dept_id
+             where (f.del_flag is null or f.del_flag = '0') <include refid="deptFilter"/> ${params.dataScope}) as firePointCount,
+            (select count(1) from fe_gateway g left join sys_dept d on g.dept_id = d.dept_id
+             where (g.del_flag is null or g.del_flag = '0') <include refid="deptFilter"/> ${params.dataScope}) as gatewayCount,
+            (select count(1) from fe_sensor s left join sys_dept d on s.dept_id = d.dept_id
+             where (s.del_flag is null or s.del_flag = '0') <include refid="deptFilter"/> ${params.dataScope}) as sensorCount,
+            (select count(1) from fe_extinguisher e left join sys_dept d on e.dept_id = d.dept_id
+             where (e.del_flag is null or e.del_flag = '0') <include refid="deptFilter"/> ${params.dataScope}) as extinguisherCount
+    </select>
+
+    <select id="selectSensorSummary" parameterType="com.ruoyi.manage.domain.report.DeviceOperationReportQuery"
+            resultType="com.ruoyi.manage.domain.report.DeviceOperationReportPreview$SensorSummary">
+        select count(distinct s.sensor_id) as sensorCount,
+               count(distinct case when h.history_id is not null then s.sensor_id end) as reportingSensorCount,
+               count(distinct s.sensor_id) - count(distinct case when h.history_id is not null then s.sensor_id end) as noSampleSensorCount,
+               count(h.history_id) as sampleCount,
+               coalesce(sum(case when h.pressure between 0 and 2000 then 1 else 0 end), 0) as validPressureCount,
+               coalesce(sum(case when h.pressure is not null and (h.pressure &lt; 0 or h.pressure &gt; 2000) then 1 else 0 end), 0) as invalidPressureCount,
+               coalesce(sum(case when h.history_id is not null and h.pressure is null then 1 else 0 end), 0) as missingPressureCount,
+               round(avg(case when h.pressure between 0 and 2000 then h.pressure end), 2) as avgPressure,
+               round(avg(h.temperature), 2) as avgTemperature,
+               round(avg(h.battery_level), 2) as avgBatteryLevel
+        from fe_sensor s
+        left join sys_dept d on s.dept_id = d.dept_id
+        left join fe_sensor_history h on h.sensor_id = s.sensor_id
+             and h.create_time &gt;= #{beginTime}
+             and h.create_time &lt; #{endTime}
+        where (s.del_flag is null or s.del_flag = '0')
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+    </select>
+
+    <select id="selectGatewaySummary" parameterType="com.ruoyi.manage.domain.report.DeviceOperationReportQuery"
+            resultType="com.ruoyi.manage.domain.report.DeviceOperationReportPreview$GatewaySummary">
+        select count(distinct g.gateway_id) as gatewayCount,
+               count(distinct case when h.history_id is not null then g.gateway_id end) as reportingGatewayCount,
+               count(distinct g.gateway_id) - count(distinct case when h.history_id is not null then g.gateway_id end) as noGpsGatewayCount,
+               count(h.history_id) as gpsRecordCount
+        from fe_gateway g
+        left join sys_dept d on g.dept_id = d.dept_id
+        left join fe_gateway_gps_history h on h.gateway_id = g.gateway_id
+             and h.gps_time &gt;= #{beginTime}
+             and h.gps_time &lt; #{endTime}
+        where (g.del_flag is null or g.del_flag = '0')
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+    </select>
+
+    <select id="selectExtinguisherSummary" parameterType="com.ruoyi.manage.domain.report.DeviceOperationReportQuery"
+            resultType="com.ruoyi.manage.domain.report.DeviceOperationReportPreview$ExtinguisherSummary">
+        select count(1) as extinguisherCount,
+               coalesce(sum(case when e.last_sync_time &gt;= #{beginTime} and e.last_sync_time &lt; #{endTime} then 1 else 0 end), 0) as syncedCount,
+               coalesce(sum(case when e.production_date is not null
+                                  and e.extinguisher_type is not null and e.extinguisher_type != ''
+                                  and e.extinguisher_form is not null and e.extinguisher_form != ''
+                                  and e.standard_code is not null and e.standard_code != ''
+                                  and e.temperature_range is not null and e.temperature_range != '' then 1 else 0 end), 0) as profileCompleteCount,
+               coalesce(sum(case when e.production_date is null
+                                  or e.extinguisher_type is null or e.extinguisher_type = ''
+                                  or e.extinguisher_form is null or e.extinguisher_form = ''
+                                  or e.standard_code is null or e.standard_code = ''
+                                  or e.temperature_range is null or e.temperature_range = '' then 1 else 0 end), 0) as profileIncompleteCount,
+               coalesce(sum(case when e.sensor_id is not null then 1 else 0 end), 0) as boundSensorCount,
+               coalesce(sum(case when e.sensor_id is null then 1 else 0 end), 0) as unboundSensorCount
+        from fe_extinguisher e
+        left join sys_dept d on e.dept_id = d.dept_id
+        where (e.del_flag is null or e.del_flag = '0')
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+    </select>
+
+    <select id="selectFirePointSummary" parameterType="com.ruoyi.manage.domain.report.DeviceOperationReportQuery"
+            resultType="com.ruoyi.manage.domain.report.DeviceOperationReportPreview$FirePointSummary">
+        select count(distinct f.fire_point_id) as firePointCount,
+               count(distinct case when h.snapshot_id is not null then f.fire_point_id end) as snapshotCoveredCount,
+               count(distinct f.fire_point_id) - count(distinct case when h.snapshot_id is not null then f.fire_point_id end) as noSnapshotCount,
+               count(h.snapshot_id) as snapshotCount,
+               count(distinct case when f.expected_extinguisher_count is not null and f.expected_extinguisher_count &gt; 0 then f.fire_point_id end) as expectedConfiguredCount
+        from fe_fire_point f
+        left join sys_dept d on f.dept_id = d.dept_id
+        left join fe_fire_point_device_snapshot h on h.fire_point_id = f.fire_point_id
+             and h.snapshot_time &gt;= #{beginTime}
+             and h.snapshot_time &lt; #{endTime}
+        where (f.del_flag is null or f.del_flag = '0')
+        <include refid="deptFilter"/>
+        ${params.dataScope}
+    </select>
+
+</mapper>
