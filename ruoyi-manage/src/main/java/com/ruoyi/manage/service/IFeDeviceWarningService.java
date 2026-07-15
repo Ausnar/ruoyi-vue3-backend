@@ -11,6 +11,9 @@ public interface IFeDeviceWarningService
     String STATUS_PROCESSING = "processing";
     String STATUS_RESOLVED = "resolved";
     String STATUS_FALSE_ALARM = "false_alarm";
+    String ALARM_STATE_ACTIVE = "active";
+    String ALARM_STATE_RECOVERED = "recovered";
+    String RECOVERY_SOURCE_SDK_DATA = "sdk_data";
 
     FeDeviceWarning selectFeDeviceWarningByWarningId(Long warningId);
 
@@ -18,11 +21,13 @@ public interface IFeDeviceWarningService
 
     Map<String, Object> selectDashboardOverview(FeDeviceWarning warning);
 
-    FeDeviceWarning selectOpenWarningByObject(String warningType, String objectType, Long objectId);
+    FeDeviceWarning selectActiveWarningByObject(String warningType, String objectType, Long objectId);
 
     int insertFeDeviceWarning(FeDeviceWarning warning);
 
     int updateFeDeviceWarning(FeDeviceWarning warning);
 
-    FeDeviceWarning saveOrRefreshOpenWarning(FeDeviceWarning warning, String operator);
+    FeDeviceWarning saveOrRefreshActiveWarning(FeDeviceWarning warning, String operator);
+
+    int recoverWarnings(List<FeDeviceWarning> warnings, String operator);
 }

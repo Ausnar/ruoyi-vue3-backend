@@ -29,8 +29,10 @@ public class FeDeviceWarningScanServiceImpl implements IFeDeviceWarningScanServi
         int lowPressureCount = saveWarnings(feDeviceWarningMapper.selectLowPressureCandidates(sourceDeptId), operator);
         int highPressureCount = saveWarnings(feDeviceWarningMapper.selectHighPressureCandidates(sourceDeptId), operator);
         int insufficientExtinguisherCount = saveWarnings(feDeviceWarningMapper.selectInsufficientExtinguisherCandidates(sourceDeptId), operator);
-        int extinguisherExpiredCount = saveWarnings(feDeviceWarningMapper.selectExpiredExtinguisherCandidates(sourceDeptId), operator);
+        int extinguisherScrapDueCount = saveWarnings(feDeviceWarningMapper.selectExtinguisherScrapDueCandidates(sourceDeptId), operator);
         int abnormalTemperatureCount = saveWarnings(feDeviceWarningMapper.selectAbnormalTemperatureCandidates(sourceDeptId), operator);
+        int recoveredCount = feDeviceWarningService.recoverWarnings(
+            feDeviceWarningMapper.selectRecoverableWarnings(sourceDeptId), operator);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("sourceDeptId", sourceDeptId);
@@ -41,8 +43,9 @@ public class FeDeviceWarningScanServiceImpl implements IFeDeviceWarningScanServi
         result.put("lowPressureCount", lowPressureCount);
         result.put("highPressureCount", highPressureCount);
         result.put("insufficientExtinguisherCount", insufficientExtinguisherCount);
-        result.put("extinguisherExpiredCount", extinguisherExpiredCount);
+        result.put("extinguisherScrapDueCount", extinguisherScrapDueCount);
         result.put("abnormalTemperatureCount", abnormalTemperatureCount);
+        result.put("recoveredCount", recoveredCount);
         result.put("gatewayOfflineEnabled", false);
         return result;
     }
@@ -52,7 +55,7 @@ public class FeDeviceWarningScanServiceImpl implements IFeDeviceWarningScanServi
         int count = 0;
         for (FeDeviceWarning warning : warnings)
         {
-            feDeviceWarningService.saveOrRefreshOpenWarning(warning, operator);
+            feDeviceWarningService.saveOrRefreshActiveWarning(warning, operator);
             count++;
         }
         return count;

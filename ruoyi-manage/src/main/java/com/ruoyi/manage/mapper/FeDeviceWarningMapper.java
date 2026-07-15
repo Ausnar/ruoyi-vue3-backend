@@ -18,9 +18,11 @@ public interface FeDeviceWarningMapper
 
     List<FeDeviceWarning> selectRecentDashboardWarnings(FeDeviceWarning warning);
 
-    FeDeviceWarning selectOpenWarningByObject(@Param("warningType") String warningType,
-                                              @Param("objectType") String objectType,
-                                              @Param("objectId") Long objectId);
+    FeDeviceWarning selectActiveWarningByObject(@Param("warningType") String warningType,
+                                                @Param("objectType") String objectType,
+                                                @Param("objectId") Long objectId);
+
+    List<FeDeviceWarning> selectRecoverableWarnings(@Param("sourceDeptId") Long sourceDeptId);
 
     List<FeDeviceWarning> selectSuspectedFireCandidates(@Param("sourceDeptId") Long sourceDeptId);
 
@@ -32,7 +34,7 @@ public interface FeDeviceWarningMapper
 
     List<FeDeviceWarning> selectInsufficientExtinguisherCandidates(@Param("sourceDeptId") Long sourceDeptId);
 
-    List<FeDeviceWarning> selectExpiredExtinguisherCandidates(@Param("sourceDeptId") Long sourceDeptId);
+    List<FeDeviceWarning> selectExtinguisherScrapDueCandidates(@Param("sourceDeptId") Long sourceDeptId);
 
     List<FeDeviceWarning> selectAbnormalTemperatureCandidates(@Param("sourceDeptId") Long sourceDeptId);
 

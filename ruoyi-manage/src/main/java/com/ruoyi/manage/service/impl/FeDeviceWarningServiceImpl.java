@@ -40,6 +40,10 @@ public class FeDeviceWarningServiceImpl implements IFeDeviceWarningService
     @DataScope(deptAlias = "w")
     public List<FeDeviceWarning> selectFeDeviceWarningList(FeDeviceWarning warning)
     {
+        if (StringUtils.isBlank(warning.getAlarmState()))
+        {
+            warning.setAlarmState(ALARM_STATE_ACTIVE);
+        }
         return feDeviceWarningMapper.selectFeDeviceWarningList(warning);
     }
 
@@ -55,9 +59,9 @@ public class FeDeviceWarningServiceImpl implements IFeDeviceWarningService
     }
 
     @Override
-    public FeDeviceWarning selectOpenWarningByObject(String warningType, String objectType, Long objectId)
+    public FeDeviceWarning selectActiveWarningByObject(String warningType, String objectType, Long objectId)
     {
-        return feDeviceWarningMapper.selectOpenWarningByObject(warningType, objectType, objectId);
+        return feDeviceWarningMapper.selectActiveWarningByObject(warningType, objectType, objectId);
     }
 
     @Override
@@ -66,6 +70,10 @@ public class FeDeviceWarningServiceImpl implements IFeDeviceWarningService
         if (StringUtils.isBlank(warning.getWarningStatus()))
         {
             warning.setWarningStatus(STATUS_PENDING);
+        }
+        if (StringUtils.isBlank(warning.getAlarmState()))
+        {
+            warning.setAlarmState(ALARM_STATE_ACTIVE);
         }
         warning.setCreateTime(DateUtils.getNowDate());
         return feDeviceWarningMapper.insertFeDeviceWarning(warning);
@@ -80,10 +88,10 @@ public class FeDeviceWarningServiceImpl implements IFeDeviceWarningService
 
     @Override
     @Transactional
-    public FeDeviceWarning saveOrRefreshOpenWarning(FeDeviceWarning warning, String operator)
+    public FeDeviceWarning saveOrRefreshActiveWarning(FeDeviceWarning warning, String operator)
     {
         Date now = DateUtils.getNowDate();
-        FeDeviceWarning existed = feDeviceWarningMapper.selectOpenWarningByObject(
+        FeDeviceWarning existed = feDeviceWarningMapper.selectActiveWarningByObject(
             warning.getWarningType(), warning.getObjectType(), warning.getObjectId());
         if (existed == null)
         {
@@ -96,6 +104,7 @@ public class FeDeviceWarningServiceImpl implements IFeDeviceWarningService
                 warning.setLastTriggerTime(warning.getTriggerTime());
             }
             warning.setWarningStatus(StringUtils.defaultIfBlank(warning.getWarningStatus(), STATUS_PENDING));
+            warning.setAlarmState(ALARM_STATE_ACTIVE);
             warning.setCreateBy(operator);
             warning.setCreateTime(now);
             warning.setUpdateBy(operator);
@@ -116,11 +125,33 @@ public class FeDeviceWarningServiceImpl implements IFeDeviceWarningService
         existed.setSampleCount(warning.getSampleCount());
         existed.setThresholdSnapshot(warning.getThresholdSnapshot());
         existed.setEvidenceSummary(warning.getEvidenceSummary());
+        existed.setAlarmState(ALARM_STATE_ACTIVE);
         existed.setRemark(warning.getRemark());
         existed.setUpdateBy(operator);
         existed.setUpdateTime(now);
         feDeviceWarningMapper.updateFeDeviceWarning(existed);
         return existed;
+    }
+
+    @Override
+    @Transactional
+    public int recoverWarnings(List<FeDeviceWarning> warnings, String operator)
+    {
+        int count = 0;
+        Date now = DateUtils.getNowDate();
+        for (FeDeviceWarning warning : warnings)
+        {
+            if (warning.getWarningId() == null || warning.getRecoveryTime() == null)
+            {
+                continue;
+            }
+            warning.setAlarmState(ALARM_STATE_RECOVERED);
+            warning.setRecoverySource(RECOVERY_SOURCE_SDK_DATA);
+            warning.setUpdateBy(operator);
+            warning.setUpdateTime(now);
+            count += feDeviceWarningMapper.updateFeDeviceWarning(warning);
+        }
+        return count;
     }
 
     private void checkDeptDataScope(Long deptId)

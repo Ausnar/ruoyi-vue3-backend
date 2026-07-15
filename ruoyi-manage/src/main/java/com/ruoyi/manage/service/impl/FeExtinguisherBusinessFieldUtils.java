@@ -60,7 +60,7 @@ final class FeExtinguisherBusinessFieldUtils
         Integer serviceLifeYears = getServiceLifeYears(extinguisher.getExtinguisherType());
         if (serviceLifeYears != null)
         {
-            extinguisher.setExpiryDate(toDate(productionDate.plusYears(serviceLifeYears)));
+            extinguisher.setScrapDate(toDate(productionDate.plusYears(serviceLifeYears)));
         }
 
         String standardCode = resolveStandardCode(extinguisher.getExtinguisherForm(), productionDate);

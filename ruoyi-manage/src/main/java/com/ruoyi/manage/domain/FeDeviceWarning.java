@@ -46,6 +46,11 @@ public class FeDeviceWarning extends BaseEntity
     private Integer sampleCount;
     private String thresholdSnapshot;
     private String evidenceSummary;
+    private String alarmState;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date recoveryTime;
+    private String recoverySource;
+    private String recoveryEvidence;
     private String warningStatus;
     private String confirmBy;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -114,6 +119,14 @@ public class FeDeviceWarning extends BaseEntity
     public void setThresholdSnapshot(String thresholdSnapshot) { this.thresholdSnapshot = thresholdSnapshot; }
     public String getEvidenceSummary() { return evidenceSummary; }
     public void setEvidenceSummary(String evidenceSummary) { this.evidenceSummary = evidenceSummary; }
+    public String getAlarmState() { return alarmState; }
+    public void setAlarmState(String alarmState) { this.alarmState = alarmState; }
+    public Date getRecoveryTime() { return recoveryTime; }
+    public void setRecoveryTime(Date recoveryTime) { this.recoveryTime = recoveryTime; }
+    public String getRecoverySource() { return recoverySource; }
+    public void setRecoverySource(String recoverySource) { this.recoverySource = recoverySource; }
+    public String getRecoveryEvidence() { return recoveryEvidence; }
+    public void setRecoveryEvidence(String recoveryEvidence) { this.recoveryEvidence = recoveryEvidence; }
     public String getWarningStatus() { return warningStatus; }
     public void setWarningStatus(String warningStatus) { this.warningStatus = warningStatus; }
     public String getConfirmBy() { return confirmBy; }
@@ -166,6 +179,10 @@ public class FeDeviceWarning extends BaseEntity
             .append("sampleCount", getSampleCount())
             .append("thresholdSnapshot", getThresholdSnapshot())
             .append("evidenceSummary", getEvidenceSummary())
+            .append("alarmState", getAlarmState())
+            .append("recoveryTime", getRecoveryTime())
+            .append("recoverySource", getRecoverySource())
+            .append("recoveryEvidence", getRecoveryEvidence())
             .append("warningStatus", getWarningStatus())
             .append("confirmBy", getConfirmBy())
             .append("confirmTime", getConfirmTime())

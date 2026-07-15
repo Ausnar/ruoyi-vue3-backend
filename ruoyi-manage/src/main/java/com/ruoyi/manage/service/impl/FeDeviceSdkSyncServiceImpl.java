@@ -451,19 +451,21 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             int lowPressureCount = getInt(scanResult, "lowPressureCount");
             int highPressureCount = getInt(scanResult, "highPressureCount");
             int insufficientExtinguisherCount = getInt(scanResult, "insufficientExtinguisherCount");
-            int extinguisherExpiredCount = getInt(scanResult, "extinguisherExpiredCount");
+            int extinguisherScrapDueCount = getInt(scanResult, "extinguisherScrapDueCount");
             int abnormalTemperatureCount = getInt(scanResult, "abnormalTemperatureCount");
+            int recoveredCount = getInt(scanResult, "recoveredCount");
 
             stats.putInfo("warningSuspectedFire", suspectedFireCount);
             stats.putInfo("warningLowBattery", lowBatteryCount);
             stats.putInfo("warningLowPressure", lowPressureCount);
             stats.putInfo("warningHighPressure", highPressureCount);
             stats.putInfo("warningInsufficientExtinguisher", insufficientExtinguisherCount);
-            stats.putInfo("warningExtinguisherExpired", extinguisherExpiredCount);
+            stats.putInfo("warningExtinguisherScrapDue", extinguisherScrapDueCount);
             stats.putInfo("warningAbnormalTemperature", abnormalTemperatureCount);
+            stats.putInfo("warningRecovered", recoveredCount);
             stats.putInfo("warningScanSummary", buildWarningScanSummary(suspectedFireCount, lowBatteryCount,
-                lowPressureCount, highPressureCount, insufficientExtinguisherCount, extinguisherExpiredCount,
-                abnormalTemperatureCount));
+                lowPressureCount, highPressureCount, insufficientExtinguisherCount, extinguisherScrapDueCount,
+                abnormalTemperatureCount, recoveredCount));
             stats.incrementInfo("warningScanSuccess");
         }
         catch (Exception e)
@@ -481,11 +483,12 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
 
     private String buildWarningScanSummary(int suspectedFireCount, int lowBatteryCount, int lowPressureCount,
                                            int highPressureCount, int insufficientExtinguisherCount,
-                                           int extinguisherExpiredCount, int abnormalTemperatureCount)
+                                           int extinguisherScrapDueCount, int abnormalTemperatureCount,
+                                           int recoveredCount)
     {
-        return String.format("预警扫描完成：疑似火灾%d条，低电量%d条，低压%d条，高压%d条，数量不足%d条，灭火器到期%d条，环境温度异常%d条",
+        return String.format("预警扫描完成：疑似火灾%d条，低电量%d条，低压%d条，高压%d条，数量不足%d条，灭火器临近报废%d条，环境温度异常%d条，自动恢复%d条",
             suspectedFireCount, lowBatteryCount, lowPressureCount, highPressureCount, insufficientExtinguisherCount,
-            extinguisherExpiredCount, abnormalTemperatureCount);
+            extinguisherScrapDueCount, abnormalTemperatureCount, recoveredCount);
     }
 
     private FeSdkSyncLog buildRunningLog(SysDeptApiConfig config, String operator, Date now)

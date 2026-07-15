@@ -2,7 +2,7 @@
 -- First version stores warning trigger results and reserved closure fields.
 CREATE TABLE IF NOT EXISTS fe_device_warning (
     warning_id bigint NOT NULL AUTO_INCREMENT COMMENT 'Warning ID',
-    warning_type varchar(64) NOT NULL COMMENT 'Warning type: low_pressure/high_pressure/low_battery/insufficient_extinguisher/extinguisher_expired/abnormal_temperature/gateway_offline/suspected_fire',
+    warning_type varchar(64) NOT NULL COMMENT 'Warning type: low_pressure/high_pressure/low_battery/insufficient_extinguisher/extinguisher_scrap_due/abnormal_temperature/suspected_fire; reserved: extinguishing_agent_expired/gateway_offline/low_signal/co2_weight_insufficient',
     object_type varchar(32) NOT NULL COMMENT 'Primary object type: sensor/extinguisher/fire_point/gateway',
     object_id bigint NOT NULL COMMENT 'Primary local object ID',
     dept_id bigint DEFAULT NULL COMMENT 'Local governed dept ID',
@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS fe_device_warning (
     sample_count int DEFAULT NULL COMMENT 'Consecutive sample or snapshot count',
     threshold_snapshot varchar(500) DEFAULT NULL COMMENT 'Threshold snapshot',
     evidence_summary varchar(1000) DEFAULT NULL COMMENT 'Evidence summary',
+    alarm_state varchar(16) NOT NULL DEFAULT 'active' COMMENT 'Device fact state: active/recovered',
+    recovery_time datetime DEFAULT NULL COMMENT 'Latest valid sample time that confirmed recovery',
+    recovery_source varchar(32) DEFAULT NULL COMMENT 'Recovery source: sdk_data',
+    recovery_evidence varchar(1000) DEFAULT NULL COMMENT 'Recovery evidence summary',
     warning_status varchar(32) NOT NULL DEFAULT 'pending' COMMENT 'Warning status: pending/processing/resolved/false_alarm',
     confirm_by varchar(64) DEFAULT NULL COMMENT 'Confirmed by',
     confirm_time datetime DEFAULT NULL COMMENT 'Confirmed time',
@@ -34,6 +38,7 @@ CREATE TABLE IF NOT EXISTS fe_device_warning (
     del_flag char(1) NOT NULL DEFAULT '0' COMMENT 'Delete flag: 0 exists, 2 deleted',
     PRIMARY KEY (warning_id),
     KEY idx_warning_object_status (warning_type, object_type, object_id, warning_status),
+    KEY idx_warning_alarm_time (alarm_state, last_trigger_time),
     KEY idx_warning_dept_time (dept_id, last_trigger_time),
     KEY idx_warning_fire_point (fire_point_id, warning_status),
     KEY idx_warning_sensor (sensor_id, warning_status),

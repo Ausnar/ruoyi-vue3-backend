@@ -123,16 +123,16 @@ UPDATE fe_extinguisher
    AND (standard_code IS NULL OR standard_code = '');
 
 UPDATE fe_extinguisher
-   SET expiry_date = CASE
+   SET scrap_date = CASE
         WHEN extinguisher_type = 'water_based' THEN date_add(production_date, interval 6 year)
         WHEN extinguisher_type IN ('dry_powder', 'clean_gas') THEN date_add(production_date, interval 10 year)
         WHEN extinguisher_type = 'co2' THEN date_add(production_date, interval 12 year)
-        ELSE expiry_date
+        ELSE scrap_date
        END
  WHERE production_date IS NOT NULL
    AND extinguisher_type IS NOT NULL
    AND extinguisher_type != ''
-   AND expiry_date IS NULL;
+   AND scrap_date IS NULL;
 
 UPDATE fe_extinguisher
    SET profile_sync_time = coalesce(profile_sync_time, now()),
