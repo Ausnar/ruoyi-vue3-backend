@@ -52,4 +52,21 @@
         </trim>
         where sync_log_id = #{syncLogId}
     </update>
+
+    <update id="closeAbandonedRunningLogs">
+        update fe_sdk_sync_log stale
+        left join fe_sdk_sync_log terminal
+          on terminal.dept_id = stale.dept_id
+         and terminal.sync_log_id &gt; stale.sync_log_id
+         and terminal.sync_status in ('success', 'failed')
+        set stale.sync_status = 'failed',
+            stale.end_time = #{closeTime},
+            stale.fail_count = coalesce(stale.fail_count, 0) + 1,
+            stale.message = left(concat_ws('; ', nullif(stale.message, ''), #{message}), 2000),
+            stale.update_by = #{operator},
+            stale.update_time = #{closeTime}
+        where stale.sync_status = 'running'
+          and (coalesce(stale.update_time, stale.start_time) &lt; #{cutoffTime}
+               or terminal.sync_log_id is not null)
+    </update>
 </mapper>

@@ -23,6 +23,8 @@ public class AzdapsProperties
 
     private int historyBatchSize = 200;
 
+    private int staleRunningTimeoutMinutes = 120;
+
     public String getBaseUrl()
     {
         return baseUrl;
@@ -101,5 +103,15 @@ public class AzdapsProperties
     public void setHistoryBatchSize(int historyBatchSize)
     {
         this.historyBatchSize = historyBatchSize;
+    }
+
+    public int getStaleRunningTimeoutMinutes()
+    {
+        return staleRunningTimeoutMinutes;
+    }
+
+    public void setStaleRunningTimeoutMinutes(int staleRunningTimeoutMinutes)
+    {
+        this.staleRunningTimeoutMinutes = staleRunningTimeoutMinutes;
     }
 }

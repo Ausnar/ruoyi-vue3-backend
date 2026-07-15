@@ -111,6 +111,8 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     private static final String PATH_COMPANY = "/api/company";
     private static final String PATH_SENSOR_VALUES = "/api/sensor/{sensor_id}";
     private static final String MESSAGE_SYNC_RUNNING = "Device sync is already running";
+    private static final String MESSAGE_ABANDONED_SYNC =
+        "同步进程异常中断、服务重启或已被后续任务取代，系统自动收口为失败";
 
     @Autowired private AzdapsProperties azdapsProperties;
     @Autowired private ObjectMapper objectMapper;
@@ -144,6 +146,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
 
         try
         {
+            closeAbandonedRunningLogs(operator);
             List<SysDeptApiConfig> configs = sysDeptApiConfigService.selectActiveSysDeptApiConfigs();
             List<Map<String, Object>> details = new ArrayList<>();
             int successCount = 0;
@@ -175,6 +178,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             result.put("successCount", successCount);
             result.put("failCount", failCount);
             result.put("details", details);
+            closeAbandonedRunningLogs(operator);
             return result;
         }
         finally
@@ -193,6 +197,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
 
         try
         {
+            closeAbandonedRunningLogs(operator);
             SysDeptApiConfig config = sysDeptApiConfigService.selectSysDeptApiConfigByConfigId(configId);
             if (config == null)
             {
@@ -202,7 +207,9 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
                 result.put("message", "Dept API config does not exist");
                 return result;
             }
-            return syncConfig(config, operator);
+            Map<String, Object> result = syncConfig(config, operator);
+            closeAbandonedRunningLogs(operator);
+            return result;
         }
         finally
         {
@@ -438,6 +445,27 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             result.put("message", e.getMessage());
             result.put("stats", stats.toMap());
             return result;
+        }
+    }
+
+    private void closeAbandonedRunningLogs(String operator)
+    {
+        try
+        {
+            Date closeTime = DateUtils.getNowDate();
+            int timeoutMinutes = Math.max(30, azdapsProperties.getStaleRunningTimeoutMinutes());
+            Date cutoffTime = new Date(closeTime.getTime() - timeoutMinutes * 60L * 1000L);
+            String auditOperator = StringUtils.defaultIfBlank(operator, "device-sync");
+            int closedCount = feSdkSyncLogMapper.closeAbandonedRunningLogs(
+                cutoffTime, closeTime, auditOperator, MESSAGE_ABANDONED_SYNC);
+            if (closedCount > 0)
+            {
+                log.warn("Closed {} abandoned SDK sync log(s), timeoutMinutes={}", closedCount, timeoutMinutes);
+            }
+        }
+        catch (Exception e)
+        {
+            log.warn("Failed to close abandoned SDK sync logs; device sync will continue", e);
         }
     }
 

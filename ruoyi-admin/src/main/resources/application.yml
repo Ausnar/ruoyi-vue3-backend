@@ -31,6 +31,8 @@ azdaps:
   historyConcurrency: 5
   # 传感器历史值单次批量写库条数
   historyBatchSize: 200
+  # SDK 同步日志保持 running 超过该时长后按异常中断收口，单位：分钟
+  staleRunningTimeoutMinutes: 120
 
 # Hodo IOT card sync. Keep disabled locally because the API whitelist points to the server IP.
 hodo:
