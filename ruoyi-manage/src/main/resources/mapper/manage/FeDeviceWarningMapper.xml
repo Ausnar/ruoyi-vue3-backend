@@ -136,7 +136,7 @@
         <where>
             w.del_flag = '0'
             and w.alarm_state = 'active'
-            and w.warning_status in ('pending', 'processing')
+            and w.warning_status in ('pending', 'dispatched', 'processing')
             ${params.dataScope}
         </where>
     </select>
@@ -147,7 +147,7 @@
         <where>
             w.del_flag = '0'
             and w.alarm_state = 'active'
-            and w.warning_status in ('pending', 'processing')
+            and w.warning_status in ('pending', 'dispatched', 'processing')
             and w.warning_type = 'suspected_fire'
             ${params.dataScope}
         </where>
@@ -158,7 +158,7 @@
         <where>
             w.del_flag = '0'
             and w.alarm_state = 'active'
-            and w.warning_status in ('pending', 'processing')
+            and w.warning_status in ('pending', 'dispatched', 'processing')
             ${params.dataScope}
         </where>
         order by w.last_trigger_time desc, w.warning_id desc

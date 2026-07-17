@@ -8,6 +8,7 @@ import com.ruoyi.manage.domain.FeDeviceWarning;
 public interface IFeDeviceWarningService
 {
     String STATUS_PENDING = "pending";
+    String STATUS_DISPATCHED = "dispatched";
     String STATUS_PROCESSING = "processing";
     String STATUS_RESOLVED = "resolved";
     String STATUS_FALSE_ALARM = "false_alarm";

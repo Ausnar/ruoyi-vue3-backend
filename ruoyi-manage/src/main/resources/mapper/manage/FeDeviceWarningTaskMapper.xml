@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.manage.mapper.FeDeviceWarningTaskMapper">
+
+    <resultMap id="FeDeviceWarningTaskResult" type="com.ruoyi.manage.domain.FeDeviceWarningTask">
+        <id property="taskId" column="task_id" />
+        <result property="warningId" column="warning_id" />
+        <result property="deptId" column="dept_id" />
+        <result property="sourceDeptId" column="source_dept_id" />
+        <result property="firePointId" column="fire_point_id" />
+        <result property="handlerRoleId" column="handler_role_id" />
+        <result property="handlerRoleKey" column="handler_role_key" />
+        <result property="handlerRoleName" column="handler_role_name" />
+        <result property="assigneeUserId" column="assignee_user_id" />
+        <result property="assigneeUserName" column="assignee_user_name" />
+        <result property="assigneeNickName" column="assignee_nick_name" />
+        <result property="taskStatus" column="task_status" />
+        <result property="dispatchSource" column="dispatch_source" />
+        <result property="dispatchTime" column="dispatch_time" />
+        <result property="dispatchBy" column="dispatch_by" />
+        <result property="firstViewTime" column="first_view_time" />
+        <result property="startTime" column="start_time" />
+        <result property="reassignCount" column="reassign_count" />
+        <result property="lastReassignTime" column="last_reassign_time" />
+        <result property="lastReassignBy" column="last_reassign_by" />
+        <result property="reassignReason" column="reassign_reason" />
+        <result property="endTime" column="end_time" />
+        <result property="endReason" column="end_reason" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="delFlag" column="del_flag" />
+        <result property="deptName" column="dept_name" />
+        <result property="sourceDeptName" column="source_dept_name" />
+        <result property="firePointName" column="fire_point_name" />
+        <result property="warningType" column="warning_type" />
+        <result property="alarmState" column="alarm_state" />
+        <result property="warningStatus" column="warning_status" />
+        <result property="triggerTime" column="trigger_time" />
+        <result property="lastTriggerTime" column="last_trigger_time" />
+        <result property="thresholdSnapshot" column="threshold_snapshot" />
+        <result property="evidenceSummary" column="evidence_summary" />
+        <result property="sensorCode" column="sensor_code" />
+        <result property="gatewayImei" column="gateway_imei" />
+        <result property="extinguisherLabelCode" column="extinguisher_label_code" />
+        <result property="recoveryTime" column="recovery_time" />
+        <result property="recoverySource" column="recovery_source" />
+        <result property="recoveryEvidence" column="recovery_evidence" />
+    </resultMap>
+
+    <resultMap id="FeDeviceWarningTaskRecordResult" type="com.ruoyi.manage.domain.FeDeviceWarningTaskRecord">
+        <id property="recordId" column="record_id" />
+        <result property="taskId" column="task_id" />
+        <result property="warningId" column="warning_id" />
+        <result property="actionType" column="action_type" />
+        <result property="actionChannel" column="action_channel" />
+        <result property="actionDescription" column="action_description" />
+        <result property="nextTaskStatus" column="next_task_status" />
+        <result property="operatorUserId" column="operator_user_id" />
+        <result property="operatorUserName" column="operator_user_name" />
+        <result property="operatorNickName" column="operator_nick_name" />
+        <result property="actionTime" column="action_time" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <sql id="selectTaskVo">
+        select t.task_id, t.warning_id, t.dept_id, t.source_dept_id, t.fire_point_id,
+               t.handler_role_id, t.handler_role_key, t.handler_role_name,
+               t.assignee_user_id, t.assignee_user_name, t.assignee_nick_name,
+               t.task_status, t.dispatch_source, t.dispatch_time, t.dispatch_by,
+               t.first_view_time, t.start_time, t.reassign_count, t.last_reassign_time,
+               t.last_reassign_by, t.reassign_reason, t.end_time, t.end_reason,
+               t.remark, t.create_by, t.create_time, t.update_by, t.update_time, t.del_flag,
+               d.dept_name, sd.dept_name as source_dept_name, fp.fire_point_name,
+               w.warning_type, w.alarm_state, w.warning_status, w.trigger_time,
+               w.last_trigger_time, w.threshold_snapshot, w.evidence_summary,
+               w.recovery_time, w.recovery_source, w.recovery_evidence,
+               s.sensor_code, g.imei as gateway_imei, e.label_code as extinguisher_label_code
+          from fe_device_warning_task t
+          inner join fe_device_warning w on t.warning_id = w.warning_id
+          left join sys_dept d on t.dept_id = d.dept_id
+          left join sys_dept sd on t.source_dept_id = sd.dept_id
+          left join fe_fire_point fp on t.fire_point_id = fp.fire_point_id
+          left join fe_sensor s on w.sensor_id = s.sensor_id
+          left join fe_gateway g on w.gateway_id = g.gateway_id
+          left join fe_extinguisher e on w.extinguisher_id = e.extinguisher_id
+    </sql>
+
+    <select id="selectFeDeviceWarningTaskList" parameterType="com.ruoyi.manage.domain.FeDeviceWarningTask" resultMap="FeDeviceWarningTaskResult">
+        <include refid="selectTaskVo" />
+        <where>
+            t.del_flag = '0'
+            and w.del_flag = '0'
+            <if test="taskStatus != null and taskStatus != ''">and t.task_status = #{taskStatus}</if>
+            <if test="warningType != null and warningType != ''">and w.warning_type = #{warningType}</if>
+            <if test="deptId != null">and t.dept_id = #{deptId}</if>
+            <if test="assigneeUserId != null">and t.assignee_user_id = #{assigneeUserId}</if>
+            <if test="params.beginDispatchTime != null and params.beginDispatchTime != ''">
+                and t.dispatch_time &gt;= #{params.beginDispatchTime}
+            </if>
+            <if test="params.endDispatchTime != null and params.endDispatchTime != ''">
+                and t.dispatch_time &lt;= #{params.endDispatchTime}
+            </if>
+            <if test="params.keyword != null and params.keyword != ''">
+                and (
+                    w.evidence_summary like concat('%', #{params.keyword}, '%')
+                    or fp.fire_point_name like concat('%', #{params.keyword}, '%')
+                    or s.sensor_code like concat('%', #{params.keyword}, '%')
+                    or g.imei like concat('%', #{params.keyword}, '%')
+                    or e.label_code like concat('%', #{params.keyword}, '%')
+                    or t.assignee_nick_name like concat('%', #{params.keyword}, '%')
+                )
+            </if>
+            ${params.dataScope}
+        </where>
+        order by case t.task_status
+                     when 'manual_pending' then 1
+                     when 'assigned' then 2
+                     when 'processing' then 3
+                     when 'waiting_external' then 4
+                     when 'verifying' then 5
+                     else 6
+                 end,
+                 coalesce(t.dispatch_time, t.create_time) desc,
+                 t.task_id desc
+    </select>
+
+    <select id="selectFeDeviceWarningTaskByTaskId" parameterType="Long" resultMap="FeDeviceWarningTaskResult">
+        <include refid="selectTaskVo" />
+        where t.task_id = #{taskId}
+          and t.del_flag = '0'
+          and w.del_flag = '0'
+        limit 1
+    </select>
+
+    <select id="selectFeDeviceWarningTaskByWarningId" parameterType="Long" resultMap="FeDeviceWarningTaskResult">
+        <include refid="selectTaskVo" />
+        where t.warning_id = #{warningId}
+          and t.del_flag = '0'
+          and w.del_flag = '0'
+        limit 1
+    </select>
+
+    <select id="selectActiveWarningsWithoutTask"
+            resultMap="com.ruoyi.manage.mapper.FeDeviceWarningMapper.FeDeviceWarningResult">
+        select w.*
+          from fe_device_warning w
+         where w.del_flag = '0'
+           and w.alarm_state = 'active'
+           <if test="sourceDeptId != null">and w.source_dept_id = #{sourceDeptId}</if>
+           and not exists (
+               select 1
+                 from fe_device_warning_task t
+                where t.warning_id = w.warning_id
+                  and t.del_flag = '0'
+           )
+         order by w.warning_id
+    </select>
+
+    <select id="selectHandlerRoleByRoleKey" parameterType="String" resultType="com.ruoyi.common.core.domain.entity.SysRole">
+        select role_id as roleId, role_name as roleName, role_key as roleKey,
+               role_sort as roleSort, data_scope as dataScope, status
+          from sys_role
+         where role_key = #{roleKey}
+           and status = '0'
+           and del_flag = '0'
+         limit 1
+    </select>
+
+    <select id="selectDispatchCandidates" resultType="com.ruoyi.common.core.domain.entity.SysUser">
+        select u.user_id as userId, u.dept_id as deptId, u.user_name as userName,
+               u.nick_name as nickName, u.status, last_dispatch.last_dispatch_time as loginDate
+          from sys_user u
+          inner join sys_user_role ur on u.user_id = ur.user_id
+          inner join sys_role r on ur.role_id = r.role_id
+          left join (
+              select assignee_user_id, max(dispatch_time) as last_dispatch_time
+                from fe_device_warning_task
+               where del_flag = '0'
+                 and assignee_user_id is not null
+               group by assignee_user_id
+          ) last_dispatch on u.user_id = last_dispatch.assignee_user_id
+         where u.dept_id = #{deptId}
+           and r.role_key = #{roleKey}
+           and r.status = '0'
+           and r.del_flag = '0'
+           and u.status = '0'
+           and u.del_flag = '0'
+         order by case when last_dispatch.last_dispatch_time is null then 0 else 1 end,
+                  last_dispatch.last_dispatch_time,
+                  u.user_id
+    </select>
+
+    <select id="selectManualDispatchCandidates" resultType="com.ruoyi.common.core.domain.entity.SysUser">
+        select distinct u.user_id as userId, u.dept_id as deptId, u.user_name as userName,
+               u.nick_name as nickName, u.status, last_dispatch.last_dispatch_time as loginDate
+          from sys_user u
+          inner join sys_dept ud on u.dept_id = ud.dept_id
+          inner join sys_user_role ur on u.user_id = ur.user_id
+          inner join sys_role r on ur.role_id = r.role_id
+          left join (
+              select assignee_user_id, max(dispatch_time) as last_dispatch_time
+                from fe_device_warning_task
+               where del_flag = '0'
+                 and assignee_user_id is not null
+               group by assignee_user_id
+          ) last_dispatch on u.user_id = last_dispatch.assignee_user_id
+         where (
+               (#{sourceDeptId} is not null
+                and (u.dept_id = #{sourceDeptId} or find_in_set(#{sourceDeptId}, ud.ancestors)))
+               or (#{sourceDeptId} is null and u.dept_id = #{deptId})
+           )
+           and r.role_key in (#{handlerRoleKey}, #{coordinatorRoleKey})
+           and r.status = '0'
+           and r.del_flag = '0'
+           and u.status = '0'
+           and u.del_flag = '0'
+         group by u.user_id, u.dept_id, u.user_name, u.nick_name, u.status,
+                  last_dispatch.last_dispatch_time
+         order by case when u.dept_id = #{deptId} then 0 else 1 end,
+                  min(case when r.role_key = #{handlerRoleKey} then 0 else 1 end),
+                  case when last_dispatch.last_dispatch_time is null then 0 else 1 end,
+                  last_dispatch.last_dispatch_time,
+                  u.user_id
+    </select>
+
+    <select id="selectEligibleAssignee" resultType="com.ruoyi.common.core.domain.entity.SysUser">
+        select distinct u.user_id as userId, u.dept_id as deptId, u.user_name as userName,
+               u.nick_name as nickName, u.status
+          from sys_user u
+          inner join sys_dept ud on u.dept_id = ud.dept_id
+          inner join sys_user_role ur on u.user_id = ur.user_id
+          inner join sys_role r on ur.role_id = r.role_id
+         where u.user_id = #{userId}
+           and (
+               (#{sourceDeptId} is not null
+                and (u.dept_id = #{sourceDeptId} or find_in_set(#{sourceDeptId}, ud.ancestors)))
+               or (#{sourceDeptId} is null and u.dept_id = #{deptId})
+           )
+           and r.role_key in (#{handlerRoleKey}, #{coordinatorRoleKey})
+           and r.status = '0'
+           and r.del_flag = '0'
+           and u.status = '0'
+           and u.del_flag = '0'
+         limit 1
+    </select>
+
+    <select id="selectAssigneeRole" resultType="com.ruoyi.common.core.domain.entity.SysRole">
+        select r.role_id as roleId, r.role_name as roleName, r.role_key as roleKey,
+               r.role_sort as roleSort, r.data_scope as dataScope, r.status
+          from sys_user_role ur
+          inner join sys_role r on ur.role_id = r.role_id
+         where ur.user_id = #{userId}
+           and r.role_key in (#{handlerRoleKey}, #{coordinatorRoleKey})
+           and r.status = '0'
+           and r.del_flag = '0'
+         order by case when r.role_key = #{handlerRoleKey} then 0 else 1 end
+         limit 1
+    </select>
+
+    <insert id="insertFeDeviceWarningTask" parameterType="com.ruoyi.manage.domain.FeDeviceWarningTask" useGeneratedKeys="true" keyProperty="taskId">
+        insert into fe_device_warning_task (
+            warning_id, dept_id, source_dept_id, fire_point_id,
+            handler_role_id, handler_role_key, handler_role_name,
+            assignee_user_id, assignee_user_name, assignee_nick_name,
+            task_status, dispatch_source, dispatch_time, dispatch_by,
+            first_view_time, start_time, reassign_count,
+            last_reassign_time, last_reassign_by, reassign_reason,
+            end_time, end_reason, remark,
+            create_by, create_time, update_by, update_time, del_flag
+        ) values (
+            #{warningId}, #{deptId}, #{sourceDeptId}, #{firePointId},
+            #{handlerRoleId}, #{handlerRoleKey}, #{handlerRoleName},
+            #{assigneeUserId}, #{assigneeUserName}, #{assigneeNickName},
+            #{taskStatus}, #{dispatchSource}, #{dispatchTime}, #{dispatchBy},
+            #{firstViewTime}, #{startTime}, #{reassignCount},
+            #{lastReassignTime}, #{lastReassignBy}, #{reassignReason},
+            #{endTime}, #{endReason}, #{remark},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, '0'
+        )
+    </insert>
+
+    <update id="updateTaskAssignment" parameterType="com.ruoyi.manage.domain.FeDeviceWarningTask">
+        update fe_device_warning_task
+           set handler_role_id = #{handlerRoleId},
+               handler_role_key = #{handlerRoleKey},
+               handler_role_name = #{handlerRoleName},
+               assignee_user_id = #{assigneeUserId},
+               assignee_user_name = #{assigneeUserName},
+               assignee_nick_name = #{assigneeNickName},
+               task_status = #{taskStatus},
+               dispatch_source = #{dispatchSource},
+               dispatch_time = #{dispatchTime},
+               dispatch_by = #{dispatchBy},
+               first_view_time = null,
+               reassign_count = #{reassignCount},
+               last_reassign_time = #{lastReassignTime},
+               last_reassign_by = #{lastReassignBy},
+               reassign_reason = #{reassignReason},
+               update_by = #{updateBy},
+               update_time = #{updateTime}
+         where task_id = #{taskId}
+           and del_flag = '0'
+           and task_status in ('manual_pending', 'assigned')
+    </update>
+
+    <update id="updateTaskStatus" parameterType="com.ruoyi.manage.domain.FeDeviceWarningTask">
+        update fe_device_warning_task
+           set task_status = #{taskStatus},
+               start_time = #{startTime},
+               end_time = #{endTime},
+               end_reason = #{endReason},
+               update_by = #{updateBy},
+               update_time = #{updateTime}
+         where task_id = #{taskId}
+           and del_flag = '0'
+           and task_status = 'assigned'
+    </update>
+
+    <update id="updateTaskTreatmentStatus">
+        update fe_device_warning_task
+           set task_status = #{taskStatus},
+               update_by = #{updateBy},
+               update_time = #{updateTime}
+         where task_id = #{taskId}
+           and del_flag = '0'
+           and task_status in ('processing', 'waiting_external', 'verifying')
+    </update>
+
+    <insert id="insertFeDeviceWarningTaskRecord"
+            parameterType="com.ruoyi.manage.domain.FeDeviceWarningTaskRecord"
+            useGeneratedKeys="true" keyProperty="recordId">
+        insert into fe_device_warning_task_record (
+            task_id, warning_id, action_type, action_channel, action_description,
+            next_task_status, operator_user_id, operator_user_name, operator_nick_name,
+            action_time, create_by, create_time
+        ) values (
+            #{taskId}, #{warningId}, #{actionType}, #{actionChannel}, #{actionDescription},
+            #{nextTaskStatus}, #{operatorUserId}, #{operatorUserName}, #{operatorNickName},
+            #{actionTime}, #{createBy}, #{createTime}
+        )
+    </insert>
+
+    <select id="selectTreatmentRecords" parameterType="Long" resultMap="FeDeviceWarningTaskRecordResult">
+        select record_id, task_id, warning_id, action_type, action_channel, action_description,
+               next_task_status, operator_user_id, operator_user_name, operator_nick_name,
+               action_time, create_by, create_time
+          from fe_device_warning_task_record
+         where task_id = #{taskId}
+         order by action_time desc, record_id desc
+    </select>
+
+    <update id="markTaskViewed">
+        update fe_device_warning_task
+           set first_view_time = #{viewTime},
+               update_by = #{updateBy},
+               update_time = #{updateTime}
+         where task_id = #{taskId}
+           and first_view_time is null
+           and del_flag = '0'
+    </update>
+
+    <update id="closeRecoveredTasks">
+        update fe_device_warning_task t
+        inner join fe_device_warning w on t.warning_id = w.warning_id
+           set t.task_status = 'recovered',
+               t.end_time = #{endTime},
+               t.end_reason = #{endReason},
+               t.update_by = #{updateBy},
+               t.update_time = #{updateTime}
+         where t.del_flag = '0'
+           and w.del_flag = '0'
+           and w.alarm_state = 'recovered'
+           <if test="sourceDeptId != null">and w.source_dept_id = #{sourceDeptId}</if>
+           and t.task_status in ('manual_pending', 'assigned', 'processing', 'waiting_external', 'verifying')
+    </update>
+</mapper>

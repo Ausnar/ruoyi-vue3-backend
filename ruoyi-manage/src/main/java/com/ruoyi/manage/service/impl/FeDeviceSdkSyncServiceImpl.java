@@ -73,6 +73,7 @@ import com.ruoyi.manage.mapper.FeSensorHistoryMapper;
 import com.ruoyi.manage.mapper.FeSensorMapper;
 import com.ruoyi.manage.service.IFeDeviceSdkSyncService;
 import com.ruoyi.manage.service.IFeDeviceWarningScanService;
+import com.ruoyi.manage.service.IFeDeviceWarningTaskService;
 import com.ruoyi.system.domain.SysDeptApiConfig;
 import com.ruoyi.system.mapper.SysDeptMapper;
 import com.ruoyi.system.service.ISysDeptApiConfigService;
@@ -131,6 +132,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     @Autowired private FeSdkSyncLogMapper feSdkSyncLogMapper;
     @Autowired private FeSensorHistoryMapper feSensorHistoryMapper;
     @Autowired private IFeDeviceWarningScanService feDeviceWarningScanService;
+    @Autowired private IFeDeviceWarningTaskService feDeviceWarningTaskService;
     @Autowired private IFeVisitPassiveEventService feVisitPassiveEventService;
 
     private volatile RestTemplate restTemplate;
@@ -178,6 +180,7 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             result.put("successCount", successCount);
             result.put("failCount", failCount);
             result.put("details", details);
+            reconcileWarningTasks(result, operator);
             closeAbandonedRunningLogs(operator);
             return result;
         }
@@ -214,6 +217,25 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
         finally
         {
             syncRunning.set(false);
+        }
+    }
+
+    private void reconcileWarningTasks(Map<String, Object> result, String operator)
+    {
+        try
+        {
+            int createdCount = feDeviceWarningTaskService.dispatchActiveWarnings(null, operator);
+            int recoveredCount = feDeviceWarningTaskService.closeRecoveredTasks(null, operator);
+            result.put("warningTaskCreated", createdCount);
+            result.put("warningTaskRecovered", recoveredCount);
+            log.info("Global warning task reconciliation completed, created={}, recovered={}",
+                createdCount, recoveredCount);
+        }
+        catch (Exception e)
+        {
+            result.put("warningTaskReconcileFailed", true);
+            result.put("warningTaskReconcileMessage", e.getMessage());
+            log.warn("Global warning task reconciliation failed; device sync result is retained", e);
         }
     }
 
@@ -482,6 +504,10 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             int extinguisherScrapDueCount = getInt(scanResult, "extinguisherScrapDueCount");
             int abnormalTemperatureCount = getInt(scanResult, "abnormalTemperatureCount");
             int recoveredCount = getInt(scanResult, "recoveredCount");
+            int recoveredTaskCount = getInt(scanResult, "recoveredTaskCount");
+            int dispatchedTaskCount = getInt(scanResult, "dispatchedTaskCount");
+            boolean scanSuccess = Boolean.TRUE.equals(scanResult.get("success"));
+            String failedStages = String.valueOf(scanResult.getOrDefault("failedStages", ""));
 
             stats.putInfo("warningSuspectedFire", suspectedFireCount);
             stats.putInfo("warningLowBattery", lowBatteryCount);
@@ -491,10 +517,23 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
             stats.putInfo("warningExtinguisherScrapDue", extinguisherScrapDueCount);
             stats.putInfo("warningAbnormalTemperature", abnormalTemperatureCount);
             stats.putInfo("warningRecovered", recoveredCount);
+            stats.putInfo("warningTasksRecovered", recoveredTaskCount);
+            stats.putInfo("warningTasksDispatched", dispatchedTaskCount);
+            if (StringUtils.isNotBlank(failedStages))
+            {
+                stats.putInfo("warningScanFailedStages", failedStages);
+            }
             stats.putInfo("warningScanSummary", buildWarningScanSummary(suspectedFireCount, lowBatteryCount,
                 lowPressureCount, highPressureCount, insufficientExtinguisherCount, extinguisherScrapDueCount,
-                abnormalTemperatureCount, recoveredCount));
-            stats.incrementInfo("warningScanSuccess");
+                abnormalTemperatureCount, recoveredCount, recoveredTaskCount, dispatchedTaskCount));
+            if (scanSuccess)
+            {
+                stats.incrementInfo("warningScanSuccess");
+            }
+            else
+            {
+                stats.incrementInfo("warningScanFailed");
+            }
         }
         catch (Exception e)
         {
@@ -512,11 +551,12 @@ public class FeDeviceSdkSyncServiceImpl implements IFeDeviceSdkSyncService
     private String buildWarningScanSummary(int suspectedFireCount, int lowBatteryCount, int lowPressureCount,
                                            int highPressureCount, int insufficientExtinguisherCount,
                                            int extinguisherScrapDueCount, int abnormalTemperatureCount,
-                                           int recoveredCount)
+                                           int recoveredCount, int recoveredTaskCount, int dispatchedTaskCount)
     {
-        return String.format("预警扫描完成：疑似火灾%d条，低电量%d条，低压%d条，高压%d条，数量不足%d条，灭火器临近报废%d条，环境温度异常%d条，自动恢复%d条",
+        return String.format("预警扫描完成：疑似火灾%d条，低电量%d条，低压%d条，高压%d条，数量不足%d条，灭火器临近报废%d条，环境温度异常%d条，自动恢复%d条，恢复终止任务%d条，新建分发任务%d条",
             suspectedFireCount, lowBatteryCount, lowPressureCount, highPressureCount, insufficientExtinguisherCount,
-            extinguisherScrapDueCount, abnormalTemperatureCount, recoveredCount);
+            extinguisherScrapDueCount, abnormalTemperatureCount, recoveredCount, recoveredTaskCount,
+            dispatchedTaskCount);
     }
 
     private FeSdkSyncLog buildRunningLog(SysDeptApiConfig config, String operator, Date now)
