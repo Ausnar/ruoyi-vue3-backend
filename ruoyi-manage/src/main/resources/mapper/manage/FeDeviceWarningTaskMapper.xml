@@ -68,6 +68,24 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="createTime" column="create_time" />
     </resultMap>
 
+    <resultMap id="FeDeviceWarningTaskAttachmentResult" type="com.ruoyi.manage.domain.FeDeviceWarningTaskAttachment">
+        <id property="attachmentId" column="attachment_id" />
+        <result property="taskId" column="task_id" />
+        <result property="warningId" column="warning_id" />
+        <result property="recordId" column="record_id" />
+        <result property="originalName" column="original_name" />
+        <result property="storedPath" column="stored_path" />
+        <result property="fileType" column="file_type" />
+        <result property="fileSize" column="file_size" />
+        <result property="uploaderUserId" column="uploader_user_id" />
+        <result property="uploaderUserName" column="uploader_user_name" />
+        <result property="uploaderNickName" column="uploader_nick_name" />
+        <result property="uploadTime" column="upload_time" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="delFlag" column="del_flag" />
+    </resultMap>
+
     <sql id="selectTaskVo">
         select t.task_id, t.warning_id, t.dept_id, t.source_dept_id, t.fire_point_id,
                t.handler_role_id, t.handler_role_key, t.handler_role_name,
@@ -353,6 +371,40 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           from fe_device_warning_task_record
          where task_id = #{taskId}
          order by action_time desc, record_id desc
+    </select>
+
+    <insert id="insertTreatmentAttachment"
+            parameterType="com.ruoyi.manage.domain.FeDeviceWarningTaskAttachment"
+            useGeneratedKeys="true" keyProperty="attachmentId">
+        insert into fe_device_warning_task_attachment (
+            task_id, warning_id, record_id, original_name, stored_path, file_type, file_size,
+            uploader_user_id, uploader_user_name, uploader_nick_name, upload_time,
+            create_by, create_time, del_flag
+        ) values (
+            #{taskId}, #{warningId}, #{recordId}, #{originalName}, #{storedPath}, #{fileType}, #{fileSize},
+            #{uploaderUserId}, #{uploaderUserName}, #{uploaderNickName}, #{uploadTime},
+            #{createBy}, #{createTime}, '0'
+        )
+    </insert>
+
+    <select id="selectTreatmentAttachments" parameterType="Long" resultMap="FeDeviceWarningTaskAttachmentResult">
+        select attachment_id, task_id, warning_id, record_id, original_name, stored_path,
+               file_type, file_size, uploader_user_id, uploader_user_name, uploader_nick_name,
+               upload_time, create_by, create_time, del_flag
+          from fe_device_warning_task_attachment
+         where task_id = #{taskId}
+           and del_flag = '0'
+         order by upload_time, attachment_id
+    </select>
+
+    <select id="selectTreatmentAttachmentById" parameterType="Long" resultMap="FeDeviceWarningTaskAttachmentResult">
+        select attachment_id, task_id, warning_id, record_id, original_name, stored_path,
+               file_type, file_size, uploader_user_id, uploader_user_name, uploader_nick_name,
+               upload_time, create_by, create_time, del_flag
+          from fe_device_warning_task_attachment
+         where attachment_id = #{attachmentId}
+           and del_flag = '0'
+         limit 1
     </select>
 
     <update id="markTaskViewed">

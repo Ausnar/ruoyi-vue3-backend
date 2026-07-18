@@ -1,10 +1,14 @@
 package com.ruoyi.manage.service.impl;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -12,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.ruoyi.common.annotation.DataScope;
 import com.ruoyi.common.core.domain.entity.SysRole;
@@ -21,11 +26,14 @@ import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.manage.domain.FeDeviceWarning;
 import com.ruoyi.manage.domain.FeDeviceWarningTask;
+import com.ruoyi.manage.domain.FeDeviceWarningTaskAttachment;
 import com.ruoyi.manage.domain.FeDeviceWarningTaskRecord;
 import com.ruoyi.manage.mapper.FeDeviceWarningMapper;
 import com.ruoyi.manage.mapper.FeDeviceWarningTaskMapper;
 import com.ruoyi.manage.service.IFeDeviceWarningService;
 import com.ruoyi.manage.service.IFeDeviceWarningTaskService;
+import com.ruoyi.manage.storage.DeviceWarningAttachmentStorage;
+import com.ruoyi.manage.storage.DeviceWarningAttachmentStorage.StoredFile;
 import com.ruoyi.system.service.ISysDeptService;
 
 @Service
@@ -59,6 +67,9 @@ public class FeDeviceWarningTaskServiceImpl implements IFeDeviceWarningTaskServi
     @Autowired
     private ISysDeptService sysDeptService;
 
+    @Autowired
+    private DeviceWarningAttachmentStorage attachmentStorage;
+
     @Override
     @DataScope(deptAlias = "t")
     public List<FeDeviceWarningTask> selectTaskList(FeDeviceWarningTask task)
@@ -82,7 +93,25 @@ public class FeDeviceWarningTaskServiceImpl implements IFeDeviceWarningTaskServi
             taskMapper.markTaskViewed(taskId, now, SecurityUtils.getUsername(), now);
             task.setFirstViewTime(now);
         }
-        task.setTreatmentRecords(taskMapper.selectTreatmentRecords(taskId));
+        List<FeDeviceWarningTaskRecord> records = taskMapper.selectTreatmentRecords(taskId);
+        Map<Long, List<FeDeviceWarningTaskAttachment>> attachmentsByRecord = new HashMap<Long, List<FeDeviceWarningTaskAttachment>>();
+        for (FeDeviceWarningTaskAttachment attachment : taskMapper.selectTreatmentAttachments(taskId))
+        {
+            List<FeDeviceWarningTaskAttachment> attachments = attachmentsByRecord.get(attachment.getRecordId());
+            if (attachments == null)
+            {
+                attachments = new ArrayList<FeDeviceWarningTaskAttachment>();
+                attachmentsByRecord.put(attachment.getRecordId(), attachments);
+            }
+            attachments.add(attachment);
+        }
+        for (FeDeviceWarningTaskRecord record : records)
+        {
+            List<FeDeviceWarningTaskAttachment> attachments = attachmentsByRecord.get(record.getRecordId());
+            record.setAttachments(attachments == null
+                ? Collections.<FeDeviceWarningTaskAttachment>emptyList() : attachments);
+        }
+        task.setTreatmentRecords(records);
         return task;
     }
 
@@ -206,7 +235,84 @@ public class FeDeviceWarningTaskServiceImpl implements IFeDeviceWarningTaskServi
 
     @Override
     @Transactional
-    public int submitTreatment(Long taskId, FeDeviceWarningTaskRecord record, Long userId, String operator,
+    public Long submitTreatment(Long taskId, FeDeviceWarningTaskRecord record, Long userId, String operator,
+        String operatorNickName)
+    {
+        return submitTreatmentInternal(taskId, record, userId, operator, operatorNickName);
+    }
+
+    @Override
+    @Transactional
+    public Long submitTreatmentWithAttachments(Long taskId, FeDeviceWarningTaskRecord record, MultipartFile[] files,
+        Long userId, String operator, String operatorNickName)
+    {
+        if (files != null && files.length > DeviceWarningAttachmentStorage.MAX_FILE_COUNT)
+        {
+            throw new ServiceException("每条处置记录最多上传5个附件");
+        }
+        List<String> storedPaths = new ArrayList<String>();
+        try
+        {
+            Long recordId = submitTreatmentInternal(taskId, record, userId, operator, operatorNickName);
+            if (files != null)
+            {
+                Date now = DateUtils.getNowDate();
+                for (MultipartFile file : files)
+                {
+                    StoredFile stored = attachmentStorage.store(file, taskId);
+                    storedPaths.add(stored.getStoredPath());
+                    FeDeviceWarningTaskAttachment attachment = new FeDeviceWarningTaskAttachment();
+                    attachment.setTaskId(taskId);
+                    attachment.setWarningId(record.getWarningId());
+                    attachment.setRecordId(recordId);
+                    attachment.setOriginalName(stored.getOriginalName());
+                    attachment.setStoredPath(stored.getStoredPath());
+                    attachment.setFileType(stored.getFileType());
+                    attachment.setFileSize(stored.getFileSize());
+                    attachment.setUploaderUserId(userId);
+                    attachment.setUploaderUserName(operator);
+                    attachment.setUploaderNickName(StringUtils.trimToNull(operatorNickName));
+                    attachment.setUploadTime(now);
+                    attachment.setCreateBy(operator);
+                    attachment.setCreateTime(now);
+                    if (taskMapper.insertTreatmentAttachment(attachment) == 0)
+                    {
+                        throw new ServiceException("处置附件元数据保存失败");
+                    }
+                }
+            }
+            return recordId;
+        }
+        catch (RuntimeException ex)
+        {
+            for (String storedPath : storedPaths)
+            {
+                attachmentStorage.delete(storedPath);
+            }
+            throw ex;
+        }
+    }
+
+    @Override
+    public FeDeviceWarningTaskAttachment selectTreatmentAttachment(Long attachmentId)
+    {
+        FeDeviceWarningTaskAttachment attachment = taskMapper.selectTreatmentAttachmentById(attachmentId);
+        if (attachment == null)
+        {
+            throw new ServiceException("处置附件不存在");
+        }
+        FeDeviceWarningTask task = requireTask(attachment.getTaskId());
+        checkTaskAccess(task, false);
+        return attachment;
+    }
+
+    @Override
+    public File resolveTreatmentAttachment(FeDeviceWarningTaskAttachment attachment)
+    {
+        return attachmentStorage.resolve(attachment.getStoredPath());
+    }
+
+    private Long submitTreatmentInternal(Long taskId, FeDeviceWarningTaskRecord record, Long userId, String operator,
         String operatorNickName)
     {
         FeDeviceWarningTask current = requireTask(taskId);
@@ -240,7 +346,11 @@ public class FeDeviceWarningTaskServiceImpl implements IFeDeviceWarningTaskServi
         record.setActionTime(now);
         record.setCreateBy(operator);
         record.setCreateTime(now);
-        return taskMapper.insertFeDeviceWarningTaskRecord(record);
+        if (taskMapper.insertFeDeviceWarningTaskRecord(record) == 0)
+        {
+            throw new ServiceException("处置记录保存失败");
+        }
+        return record.getRecordId();
     }
 
     @Override

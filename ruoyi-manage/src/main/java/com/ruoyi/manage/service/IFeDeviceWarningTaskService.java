@@ -1,9 +1,13 @@
 package com.ruoyi.manage.service;
 
+import java.io.File;
 import java.util.List;
+
+import org.springframework.web.multipart.MultipartFile;
 
 import com.ruoyi.common.core.domain.entity.SysUser;
 import com.ruoyi.manage.domain.FeDeviceWarningTask;
+import com.ruoyi.manage.domain.FeDeviceWarningTaskAttachment;
 import com.ruoyi.manage.domain.FeDeviceWarningTaskRecord;
 
 public interface IFeDeviceWarningTaskService
@@ -37,8 +41,15 @@ public interface IFeDeviceWarningTaskService
 
     int startTask(Long taskId, Long userId, String operator);
 
-    int submitTreatment(Long taskId, FeDeviceWarningTaskRecord record, Long userId, String operator,
+    Long submitTreatment(Long taskId, FeDeviceWarningTaskRecord record, Long userId, String operator,
         String operatorNickName);
+
+    Long submitTreatmentWithAttachments(Long taskId, FeDeviceWarningTaskRecord record, MultipartFile[] files,
+        Long userId, String operator, String operatorNickName);
+
+    FeDeviceWarningTaskAttachment selectTreatmentAttachment(Long attachmentId);
+
+    File resolveTreatmentAttachment(FeDeviceWarningTaskAttachment attachment);
 
     List<SysUser> selectTaskAssigneeCandidates(Long taskId);
 }

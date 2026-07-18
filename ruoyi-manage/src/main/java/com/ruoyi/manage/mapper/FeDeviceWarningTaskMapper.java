@@ -9,6 +9,7 @@ import com.ruoyi.common.core.domain.entity.SysRole;
 import com.ruoyi.common.core.domain.entity.SysUser;
 import com.ruoyi.manage.domain.FeDeviceWarning;
 import com.ruoyi.manage.domain.FeDeviceWarningTask;
+import com.ruoyi.manage.domain.FeDeviceWarningTaskAttachment;
 import com.ruoyi.manage.domain.FeDeviceWarningTaskRecord;
 
 public interface FeDeviceWarningTaskMapper
@@ -48,6 +49,12 @@ public interface FeDeviceWarningTaskMapper
     int insertFeDeviceWarningTaskRecord(FeDeviceWarningTaskRecord record);
 
     List<FeDeviceWarningTaskRecord> selectTreatmentRecords(Long taskId);
+
+    int insertTreatmentAttachment(FeDeviceWarningTaskAttachment attachment);
+
+    List<FeDeviceWarningTaskAttachment> selectTreatmentAttachments(Long taskId);
+
+    FeDeviceWarningTaskAttachment selectTreatmentAttachmentById(Long attachmentId);
 
     int markTaskViewed(@Param("taskId") Long taskId, @Param("viewTime") Date viewTime,
         @Param("updateBy") String updateBy, @Param("updateTime") Date updateTime);

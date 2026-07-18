@@ -1,6 +1,7 @@
 package com.ruoyi.manage.domain;
 
 import java.util.Date;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.core.domain.BaseEntity;
@@ -24,6 +25,7 @@ public class FeDeviceWarningTaskRecord extends BaseEntity
     private String operatorNickName;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date actionTime;
+    private List<FeDeviceWarningTaskAttachment> attachments;
 
     public Long getRecordId() { return recordId; }
     public void setRecordId(Long recordId) { this.recordId = recordId; }
@@ -47,4 +49,6 @@ public class FeDeviceWarningTaskRecord extends BaseEntity
     public void setOperatorNickName(String operatorNickName) { this.operatorNickName = operatorNickName; }
     public Date getActionTime() { return actionTime; }
     public void setActionTime(Date actionTime) { this.actionTime = actionTime; }
+    public List<FeDeviceWarningTaskAttachment> getAttachments() { return attachments; }
+    public void setAttachments(List<FeDeviceWarningTaskAttachment> attachments) { this.attachments = attachments; }
 }
